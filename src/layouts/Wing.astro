@@ -1,0 +1,37 @@
+---
+import Base from './Base.astro';
+import Rail from '../components/Rail.astro';
+import { site } from '../content/site';
+import type { Wing } from '../content/schema';
+interface Props { wing: Wing }
+const { wing } = Astro.props;
+const meta = site.wings[wing];
+---
+<Base title={`${meta.name} — JEL`} description={meta.tagline} wing={wing}>
+  <div class="frame">
+    <Rail current={wing} />
+    <main class="content">
+      <header class="wing-head">
+        <h1 class="display wing-name" data-wing-name>{meta.name}</h1>
+        <p class="wing-summary">{meta.summary}</p>
+      </header>
+      <slot />
+    </main>
+  </div>
+</Base>
+
+<style>
+  .frame { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: 100vh; }
+  .content { padding: 3rem clamp(1.25rem, 4vw, 4rem) 6rem; max-width: 1100px; }
+  .wing-head { margin-bottom: 3rem; }
+  .wing-name {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    color: var(--wing-light);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--wing-light) 55%, transparent), 0 0 2px var(--wing-light);
+  }
+  .wing-summary { margin-top: 1rem; color: var(--text-dim); font-size: 1.05rem; }
+  @media (max-width: 899px) {
+    .frame { grid-template-columns: 1fr; }
+    .content { padding-top: 2rem; }
+  }
+</style>

@@ -1,0 +1,12 @@
+---
+import Wing from '../layouts/Wing.astro';
+import { WINGS, type Wing as WingId } from '../content/schema';
+
+export function getStaticPaths() {
+  return WINGS.map((wing) => ({ params: { wing } }));
+}
+const wing = Astro.params.wing as WingId;
+---
+<Wing wing={wing}>
+  <ul data-project-list></ul>
+</Wing>

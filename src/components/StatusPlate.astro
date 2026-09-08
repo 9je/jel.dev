@@ -1,0 +1,44 @@
+---
+import { STATUS_LABEL, type Status } from '../content/schema';
+interface Props { status: Status }
+const { status } = Astro.props;
+---
+<span class="plate condensed" data-status={status}>{STATUS_LABEL[status]}</span>
+
+<style>
+  .plate {
+    display: inline-block;
+    padding: 0.15em 0.6em;
+    border: 1px solid var(--surface-edge);
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  .plate[data-status='operational'] { border-color: var(--wing-light); color: var(--wing-light); }
+  .plate[data-status='in-flight'] {
+    border-color: var(--wing-light);
+    color: var(--wing-light);
+    background: repeating-linear-gradient(135deg, transparent 0 4px, rgb(255 255 255 / 0.06) 4px 6px), var(--surface);
+  }
+  .plate[data-status='pending-release'] {
+    border-color: var(--hazard);
+    color: var(--hazard);
+    border-image: repeating-linear-gradient(135deg, var(--hazard) 0 6px, #111 6px 12px) 1;
+  }
+  .plate[data-status='restricted']::before {
+    content: '';
+    display: inline-block;
+    width: 0.6em; height: 0.9em;
+    margin-right: 0.45em;
+    vertical-align: -0.1em;
+    border: 1.5px solid currentColor;
+    border-radius: 1px;
+    background: linear-gradient(currentColor, currentColor) 50% 30% / 60% 1.5px no-repeat;
+  }
+  .plate[data-status='closed-source'] { border-color: var(--text-dim); color: var(--text-dim); }
+</style>
