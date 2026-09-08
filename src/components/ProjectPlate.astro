@@ -15,6 +15,7 @@ const d = entry.data;
   </summary>
   <div class="row-body">
     <Content />
+    {d.contentWarning && <p class="row-warning" data-content-warning>{d.contentWarning}</p>}
     {d.stack.length > 0 && <p class="row-stack">Built with {d.stack.join(', ')}.</p>}
     {d.links.length > 0 && (
       <ul class="row-links">{d.links.map((l) => <li><a href={l.href} rel="noopener">{l.label}</a></li>)}</ul>
@@ -40,7 +41,7 @@ const d = entry.data;
   .row-line { color: var(--text-dim); }
   .row[open] .row-summary { background: var(--surface); }
   .row-body { padding: 0.5rem 0.5rem 1.5rem; max-width: var(--measure); }
-  .row-stack { color: var(--text-dim); font-size: 0.95rem; }
+  .row-stack, .row-warning { color: var(--text-dim); font-size: 0.95rem; }
   .row-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
   @media (max-width: 700px) {
     .row-summary { grid-template-columns: 1fr auto; }

@@ -42,3 +42,14 @@ test('containment shows the redacted pending bay', async ({ page }) => {
   await expect(page.locator('[data-flagship] [data-redacted]')).toBeVisible();
   await expect(page.locator('[data-flagship] [data-unlocks]')).toContainText('disclosure');
 });
+
+test('project plates support content warnings', async ({ page }) => {
+  await page.goto('/recreation');
+  const plates = page.locator('details[data-project]');
+  await plates.first().locator('summary').click();
+  await expect(plates.first()).toHaveAttribute('open', '');
+  const platesWarnings = page.locator('details[data-project] [data-content-warning]');
+  await expect(platesWarnings).toHaveCount(0);
+  const flagshipWarning = page.locator('[data-flagship] [data-content-warning]');
+  await expect(flagshipWarning).toContainText('Torn City');
+});
