@@ -5,7 +5,7 @@ const { size = 'wall' } = Astro.props;
 const certs = await getCollection('certs');
 ---
 <section class="wall" data-cert-wall data-size={size} aria-labelledby="certs-h">
-  <h2 id="certs-h" class="wall-title">Certifications</h2>
+  <h3 id="certs-h" class="wall-title">Certifications</h3>
   <ul class="wall-list">
     {certs.map(({ data: c }) => (
       <li class="badge">

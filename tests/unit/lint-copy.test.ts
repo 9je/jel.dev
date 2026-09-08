@@ -15,4 +15,11 @@ describe('copy lint', () => {
     expect(v.length).toBe(1);
     expect(v[0].line).toBe(1);
   });
+  it('balances nested braces across multi-line JSX expressions', () => {
+    const clean = findViolations('a.astro', '<ul>{items.map((i) => (\n  <li>{i.name}</li>\n));}</ul>\nClean.');
+    expect(clean).toEqual([]);
+    const bad = findViolations('a.astro', '<ul>{items.map((i) => (\n  <li>{i.name}</li>\n));}</ul>\nBad; text');
+    expect(bad.length).toBe(1);
+    expect(bad[0].line).toBe(4);
+  });
 });

@@ -5,6 +5,23 @@ import { join, extname } from 'node:path';
 const BANNED = /[—–;]/;
 const ROOTS = ['src/content', 'src/pages', 'src/components', 'src/layouts'];
 
+// Blanks every character inside a balanced `{...}` expression (braces included),
+// tracking nesting depth so multi-line JS/JSX with its own `{`/`}` pairs (e.g.
+// `{items.map((i) => (\n  <li>{i.name}</li>\n));}`) is fully blanked rather than
+// stopping at the first inner `}`. Newlines are always preserved so line numbers
+// in reported violations stay accurate.
+function blankBraces(str) {
+  let depth = 0;
+  let out = '';
+  for (const ch of str) {
+    if (ch === '{') { depth++; out += ch === '\n' ? ch : ' '; continue; }
+    if (ch === '}') { if (depth > 0) depth--; out += ch === '\n' ? ch : ' '; continue; }
+    if (depth > 0) { out += ch === '\n' ? ch : ' '; continue; }
+    out += ch;
+  }
+  return out;
+}
+
 export function findViolations(file, text) {
   const ext = extname(file);
   const out = [];
@@ -23,7 +40,7 @@ export function findViolations(file, text) {
       .replace(/<style[\s\S]*?<\/style>/g, (m) => m.replace(/[^\n]/g, ' '));
     const fm = body.indexOf('---');
     if (fm === 0) { const end = body.indexOf('\n---', 3); if (end > 0) body = body.slice(0, end + 4).replace(/[^\n]/g, ' ') + body.slice(end + 4); }
-    body = body.replace(/<[^>]*>/g, (m) => m.replace(/[^\n]/g, ' ')).replace(/\{[^}]*\}/g, (m) => m.replace(/[^\n]/g, ' '));
+    body = blankBraces(body.replace(/<[^>]*>/g, (m) => m.replace(/[^\n]/g, ' ')));
     body.split('\n').forEach((l, i) => { if (BANNED.test(l)) out.push({ file, line: i + 1, text: lines[i].trim() }); });
   } else if (file.endsWith('site.ts')) {
     lines.forEach((l, i) => {

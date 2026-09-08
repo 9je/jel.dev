@@ -37,7 +37,8 @@ function wireEffectsToggle(els: WalkElements, tier: Tier) {
   btn.addEventListener('click', () => {
     try { localStorage.setItem('jel:effects', on ? 'off' : 'on'); } catch { /* ignore */ }
     const url = new URL(location.href); url.searchParams.delete('effects'); url.searchParams.delete('quality');
-    location.href = url.pathname + url.search + url.hash;
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+    location.reload();
   });
 }
 
@@ -72,6 +73,11 @@ function activate(els: WalkElements, id: StopId) {
 
 async function startFull(els: WalkElements, tier: Tier) {
   const gen = ++generation;
+  // Capture the requested stop before the scroll controller exists: ScrollTrigger's first
+  // onUpdate can fire off a stale scroll position (left over from the browser's own
+  // scroll-to-fragment while the page was still in boot layout) and rewrite location.hash via
+  // history.replaceState before we get a chance to read it, corrupting which stop we open on.
+  const initial = (location.hash.replace('#', '') || 'booth') as StopId;
   els.root.dataset.mode = 'full';
   els.preloader.dataset.state = 'loading';
   els.preloader.setAttribute('aria-busy', 'true');
@@ -91,7 +97,6 @@ async function startFull(els: WalkElements, tier: Tier) {
     for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) {
       a.addEventListener('click', (e) => { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); scroll?.jumpTo(a.dataset.stopLink as StopId); });
     }
-    const initial = (location.hash.replace('#', '') || 'booth') as StopId;
     activate(els, initial);
     if (initial !== 'booth') scroll.jumpTo(initial, true);
     els.preloader.dataset.state = 'done';

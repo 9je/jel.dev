@@ -51,8 +51,8 @@
 .walk[data-mode='full'] .walk-spacer { display: block; }
 .walk[data-mode='full'] .preloader[data-state='loading'], .walk[data-mode='full'] .preloader[data-state='slow'], .walk[data-mode='full'] .preloader[data-state='done'] { display: grid; }
 .walk[data-mode='full'] .stops { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
-.walk[data-mode='full'] .stop { position: absolute; inset: 0; min-height: 0; opacity: 0; transform: translateY(12px); transition: opacity 400ms ease, transform 400ms ease; }
+.walk[data-mode='full'] .stop { position: absolute; inset: 0; min-height: 0; opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity 400ms ease, transform 400ms ease, visibility 0s linear 400ms; }
 .walk[data-mode='full'] .stop::before { display: none; }
-.walk[data-mode='full'] .stop[data-active] { opacity: 1; transform: none; pointer-events: auto; }
+.walk[data-mode='full'] .stop[data-active] { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity 400ms ease, transform 400ms ease, visibility 0s; }
 .walk[data-mode='full'] .stop-inner { max-width: 40ch; }
 .walk[data-mode='full'] .stop-body { max-width: 40ch; max-height: 55vh; overflow: auto; }
