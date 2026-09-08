@@ -1,6 +1,45 @@
 ---
 import Base from '../layouts/Base.astro';
+import Console from '../components/Console.astro';
+import { WINGS } from '../content/schema';
+import { site } from '../content/site';
 ---
-<Base title="JEL — Jordan Eldridge Labs" description="Jordan Eldridge Labs: automation, products, community tooling, and security work.">
-  <main style="padding:2rem"><h1 class="display">JEL</h1><p>Bay under construction.</p></main>
+<Base title="JEL — Jordan Eldridge Labs" description={site.description}>
+  <div class="bay" data-bay data-mode="loading">
+    <canvas class="bay-canvas" data-bay-canvas aria-hidden="true"></canvas>
+    <img class="bay-still" src="/bay-still.jpg" alt="" width="1920" height="1080" decoding="async" />
+    <header class="bay-mark">
+      <h1 class="display">JEL</h1>
+      <p>Jordan Eldridge Labs</p>
+    </header>
+    <Console />
+    <noscript>
+      <style>.bay-still{display:block!important}.bay-canvas{display:none!important}[data-console]{opacity:1!important}</style>
+    </noscript>
+  </div>
+  <main class="below">
+    <p class="intro">{site.intro}</p>
+    <ul class="wing-list">
+      {WINGS.map((w) => <li><a href={`/${w}`}>{site.wings[w].name}</a><span>{site.wings[w].tagline}</span></li>)}
+    </ul>
+    <p><a href="/about">Personnel file</a></p>
+  </main>
+  <script src="../scenes/bay/index.ts"></script>
 </Base>
+
+<style>
+  .bay { position: relative; height: 100vh; height: 100svh; }
+  .bay-canvas, .bay-still { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+  .bay-still { display: none; }
+  .bay[data-mode='still'] .bay-still { display: block; }
+  .bay[data-mode='still'] .bay-canvas { display: none; }
+  .bay[data-still] [data-console], .bay[data-still] .bay-mark { visibility: hidden; }
+  .bay-mark { position: absolute; top: clamp(1rem, 4vw, 2rem); left: clamp(1rem, 4vw, 3rem); z-index: 2; }
+  .bay-mark h1 { font-size: 1.6rem; color: var(--panel-white); text-shadow: 0 0 14px rgb(110 193 214 / 0.6); }
+  .bay-mark p { margin: 0.25rem 0 0; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; font-weight: 600; font-stretch: 75%; }
+  .below { position: relative; z-index: 1; background: var(--bg); border-top: 1px solid var(--surface-edge); padding: 4rem clamp(1.25rem, 6vw, 6rem) 6rem; }
+  .intro { font-size: 1.15rem; }
+  .wing-list { list-style: none; margin: 2rem 0; padding: 0; display: grid; gap: 0.75rem; max-width: var(--measure); }
+  .wing-list a { margin-right: 0.75rem; font-weight: 600; }
+  .wing-list span { color: var(--text-dim); }
+</style>

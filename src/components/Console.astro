@@ -1,0 +1,62 @@
+---
+import { WINGS } from '../scenes/bay/constants';
+---
+<nav class="console" data-console aria-label="Wings">
+  <ul class="switches">
+    {WINGS.map((w) => (
+      <li>
+        <a class="switch" href={w.route} data-wing={w.id} style={`--wing-light:${w.light}`}>
+          <span class="toggle" aria-hidden="true"></span>
+          <span class="label">{w.name}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+  <a class="file" href="/about">Personnel file</a>
+</nav>
+
+<style>
+  .console {
+    position: absolute;
+    left: clamp(1rem, 4vw, 3rem);
+    bottom: clamp(1rem, 5vh, 3rem);
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 2.5rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(#34424e, #2a3641);
+    border-top: 1px solid #5a6b78;
+    border-radius: var(--radius);
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .console[data-lit] { opacity: 1; }
+  .switches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, auto); gap: 0.75rem 2rem; }
+  .switch, .file {
+    display: flex; align-items: center; gap: 0.75rem;
+    color: var(--panel-white);
+    text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 600; font-size: 0.9rem; font-stretch: 75%;
+  }
+  .toggle {
+    width: 14px; height: 26px;
+    border-radius: 2px;
+    background: #0d1319;
+    border: 1px solid #0a0e12;
+    box-shadow: inset 0 -12px 0 #1c2630;
+    transition: box-shadow 120ms, background 120ms;
+  }
+  .switch:hover .toggle, .switch:focus-visible .toggle, .switch[data-on] .toggle {
+    background: var(--wing-light);
+    box-shadow: 0 0 10px var(--wing-light), inset 0 12px 0 rgb(0 0 0 / 0.35);
+  }
+  .switch:hover, .switch:focus-visible { color: var(--wing-light); }
+  .file { color: var(--text-dim); font-size: 0.8rem; padding-bottom: 0.2rem; }
+  .file:hover, .file:focus-visible { color: var(--text); }
+  @media (max-width: 600px) {
+    .console { left: 1rem; right: 1rem; flex-direction: column; align-items: stretch; gap: 1rem; }
+    .switches { grid-template-columns: 1fr 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { .console { transition: none; } }
+</style>
