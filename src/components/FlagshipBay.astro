@@ -1,5 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
 import { render } from 'astro:content';
 import StatusPlate from './StatusPlate.astro';
 interface Props { entry: CollectionEntry<'projects'> }
@@ -10,7 +11,7 @@ const sealed = d.status === 'pending-release';
 ---
 <section class="bay" data-flagship={entry.id} data-sealed={sealed || undefined}>
   <div class="bay-visual" aria-hidden="true">
-    {d.image && !sealed ? <img src={d.image} alt="" loading="eager" /> : <div class="bay-hex"></div>}
+    {d.image && !sealed ? <Image src={d.image} alt="" width={960} height={540} loading="eager" /> : <div class="bay-hex"></div>}
   </div>
   <div class="bay-text">
     <div class="bay-head">

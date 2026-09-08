@@ -21,7 +21,6 @@ export const projectSchema = z.object({
   summary: z.string().min(1).max(220),
   stack: z.array(z.string()).default([]),
   links: z.array(z.object({ label: z.string().min(1), href: z.string().url() })).default([]),
-  image: z.string().optional(),
   started: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   order: z.number().int().default(100),
   contentWarning: z.string().optional(),

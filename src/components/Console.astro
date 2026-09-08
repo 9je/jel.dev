@@ -29,9 +29,11 @@ import { WINGS } from '../scenes/bay/constants';
     border-top: 1px solid #5a6b78;
     border-radius: var(--radius);
     opacity: 0;
+    /* visibility:hidden keeps the unlit console out of the tab order */
+    visibility: hidden;
     transition: opacity 400ms ease;
   }
-  .console[data-lit] { opacity: 1; }
+  .console[data-lit] { opacity: 1; visibility: visible; }
   .switches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, auto); gap: 0.75rem 2rem; }
   .switch, .file {
     display: flex; align-items: center; gap: 0.75rem;
@@ -39,7 +41,6 @@ import { WINGS } from '../scenes/bay/constants';
     text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em;
     font-weight: 600; font-size: 0.9rem; font-stretch: 75%;
   }
-  .switch { --wing-text: color-mix(in srgb, var(--wing-light) 78%, white 22%); }
   .toggle {
     width: 14px; height: 26px;
     border-radius: 2px;
@@ -52,7 +53,7 @@ import { WINGS } from '../scenes/bay/constants';
     background: var(--wing-light);
     box-shadow: 0 0 10px var(--wing-light), inset 0 12px 0 rgb(0 0 0 / 0.35);
   }
-  .switch:hover, .switch:focus-visible { color: var(--wing-text); }
+  .switch:hover, .switch:focus-visible { color: var(--panel-white); }
   .file { color: var(--text-dim); font-size: 0.8rem; padding-bottom: 0.2rem; }
   .file:hover, .file:focus-visible { color: var(--text); }
   @media (max-width: 600px) {

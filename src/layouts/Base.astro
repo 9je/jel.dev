@@ -7,6 +7,9 @@ import { ClientRouter } from 'astro:transitions';
 
 interface Props { title: string; description: string; wing?: string }
 const { title, description, wing } = Astro.props;
+// The build emits /recreation.html; the canonical URL is the extensionless path it is served at.
+const canonical = new URL(Astro.url.pathname.replace(/(?:index)?\.html$/, '') || '/', Astro.site);
+const ogImage = new URL('/bay-still.jpg', Astro.site);
 ---
 <html lang="en" data-wing={wing}>
   <head>
@@ -16,7 +19,15 @@ const { title, description, wing } = Astro.props;
     <meta name="description" content={description} />
     <meta name="theme-color" content="#0E161E" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1920" />
+    <meta property="og:image:height" content="1080" />
+    <meta name="twitter:card" content="summary_large_image" />
     <ClientRouter />
   </head>
   <body>

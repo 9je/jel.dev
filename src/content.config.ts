@@ -5,7 +5,7 @@ import { projectSchema, certSchema } from './content/schema';
 export const collections = {
   projects: defineCollection({
     loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
-    schema: projectSchema,
+    schema: ({ image }) => projectSchema.extend({ image: image().optional() }),
   }),
   certs: defineCollection({
     loader: file('./src/content/certs.json'),
