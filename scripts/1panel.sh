@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Usage: scripts/1panel.sh GET|POST /websites/search ['{"json":true}']
-# Signs a request to the 1Panel v1 API with the key in ~/.config/jel/1panel-api-key.
+# Signs a request to the 1Panel v1 API. Reads the panel base URL from
+# ~/.config/jel/1panel-url (no trailing slash, e.g. http://host:port) and the
+# API key from ~/.config/jel/1panel-api-key.
 set -euo pipefail
-BASE="http://108.181.184.181:32486/api/v1"
+[ -r "$HOME/.config/jel/1panel-url" ] || { echo "missing ~/.config/jel/1panel-url" >&2; exit 2; }
+BASE="$(cat "$HOME/.config/jel/1panel-url")/api/v1"
 KEY=$(cat "$HOME/.config/jel/1panel-api-key")
 TS=$(date +%s)
 TOKEN=$(printf '1panel%s%s' "$KEY" "$TS" | md5sum | cut -d' ' -f1)

@@ -17,7 +17,7 @@ Projects live in `src/content/projects/*.md` (frontmatter validated by `src/cont
 Certifications live in `src/content/certs.json`. Copy lives in `src/content/site.ts`.
 
 ## Deploy
-Push to `main`. GitHub Actions builds the image and redeploys the VPS. See `docs/superpowers/plans/2026-09-08-jel-dev-deploy.md`.
+Push to `main`. GitHub Actions builds the image and redeploys the VPS. Hosting details are in the Hosting section below.
 
 ## Hosting
 
