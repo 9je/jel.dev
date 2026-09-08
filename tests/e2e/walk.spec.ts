@@ -36,3 +36,20 @@ test('no JavaScript still shows every stop', async ({ browser }) => {
   await expect(page.locator('[data-preloader]')).toBeHidden();
   await ctx.close();
 });
+
+test('full path mounts the scene and the dock flies to a stop', async ({ page }) => {
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-walk]')).toHaveAttribute('data-mode', 'full', { timeout: 30_000 });
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
+  await expect(page.locator('section[data-stop="booth"]')).toHaveAttribute('data-active', '');
+  await page.locator('a[data-stop-link="fabrication"]').click();
+  await expect(page).toHaveURL(/#fabrication$/, { timeout: 15_000 });
+  await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
+  await expect(page.locator('section[data-stop="booth"]')).not.toHaveAttribute('data-active', '');
+});
+
+test('a hash on load opens at that stop on the full path', async ({ page }) => {
+  await page.goto('/?quality=low#credentials');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
+  await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
+});
