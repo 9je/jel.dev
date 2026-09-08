@@ -83,13 +83,15 @@ export function localProgress(t: number, id: StopId): number {
 
 const _ahead = new Vector3();
 const _look = new Vector3();
+const _tangent = new Vector3();
 
 export function cameraAt(t: number, out = { position: new Vector3(), target: new Vector3() }) {
   const u = clamp01(t);
   const p = travelParam(u);
   curve.getPointAt(p, out.position);
-  curve.getPointAt(Math.min(1, p + 0.02), _ahead);
-  if (p > 0.98) { curve.getPointAt(1, _ahead); _ahead.add(curve.getTangentAt(1).multiplyScalar(2)); }
+  const aheadP = p + 0.02;
+  if (aheadP <= 1) curve.getPointAt(aheadP, _ahead);
+  else { curve.getPointAt(1, _ahead); curve.getTangentAt(1, _tangent); _ahead.addScaledVector(_tangent, (aheadP - 1) * curve.getLength()); }
   const s = stopAt(u);
   _look.set(s.lookAt[0], s.lookAt[1], s.lookAt[2]);
   out.target.copy(_ahead).lerp(_look, holdWeight(u));

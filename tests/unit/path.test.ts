@@ -49,6 +49,15 @@ describe('camera', () => {
     const held = cameraAt(fab.t);
     expect(held.target.x).toBeCloseTo(fab.lookAt[0], 3); expect(held.target.z).toBeCloseTo(fab.lookAt[2], 3);
   });
+  it('has continuous look-ahead near path end', () => {
+    const samples = [0.9490, 0.9495, 0.9500, 0.9505, 0.9510];
+    for (let i = 0; i < samples.length - 1; i++) {
+      const t0 = samples[i], t1 = samples[i + 1];
+      const target0 = cameraAt(t0).target;
+      const target1 = cameraAt(t1).target;
+      expect(target0.distanceTo(target1)).toBeLessThan(1.5);
+    }
+  });
 });
 
 describe('lookup', () => {
