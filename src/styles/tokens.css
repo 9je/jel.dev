@@ -1,0 +1,29 @@
+:root {
+  --bay-black: #0E161E;
+  --steel: #2A3B4A;
+  --glass-cyan: #6EC1D6;
+  --panel-white: #D9E8EE;
+  --terra-blue: #2455A4;
+  --hazard: #E8B923;
+  --crate: #D8722C;
+  --warning: #C8322B;
+
+  --wing-light: var(--glass-cyan);
+
+  --bg: var(--bay-black);
+  --surface: #17222C;
+  --surface-edge: #34475A;
+  --text: var(--panel-white);
+  --text-dim: rgb(217 232 238 / 0.7);
+  --focus: var(--glass-cyan);
+
+  --font-display: 'Michroma', system-ui, sans-serif;
+  --font-body: 'Saira Variable', system-ui, sans-serif;
+  --measure: 66ch;
+  --radius: 2px;
+  --rail-w: 160px;
+}
+html[data-wing='operations']  { --wing-light: #CFE6EE; }
+html[data-wing='fabrication'] { --wing-light: #E0813A; }
+html[data-wing='recreation']  { --wing-light: #3D7BE0; }
+html[data-wing='containment'] { --wing-light: #D7383A; }

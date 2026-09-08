@@ -1,0 +1,25 @@
+---
+import '@fontsource/michroma';
+import '@fontsource-variable/saira/wdth.css';
+import '../styles/tokens.css';
+import '../styles/base.css';
+import { ClientRouter } from 'astro:transitions';
+
+interface Props { title: string; description: string; wing?: string }
+const { title, description, wing } = Astro.props;
+---
+<html lang="en" data-wing={wing}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0E161E" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <ClientRouter />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

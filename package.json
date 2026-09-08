@@ -1,0 +1,30 @@
+{
+  "name": "jel.dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview --port 4321",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typeface": "node scripts/make-typeface.mjs",
+    "still": "node scripts/render-still.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/saira": "5.3.0",
+    "@fontsource/michroma": "5.3.0",
+    "astro": "7.3.1",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@playwright/test": "1.63.0",
+    "@types/three": "0.185.4",
+    "opentype.js": "2.0.0",
+    "sharp": "0.35.4",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  }
+}
