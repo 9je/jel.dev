@@ -36,10 +36,10 @@ export function makeFloorTexture(): THREE.CanvasTexture {
   const W = 1024, H = 1792;
   const [c, ctx] = canvas(W, H);
   ctx.fillStyle = '#1a2630'; ctx.fillRect(0, 0, W, H);
-  for (let i = 0; i < 16000; i++) {
-    const g = 30 + Math.random() * 50;
+  for (let i = 0; i < 7000; i++) {
+    const g = 22 + Math.random() * 34;
     ctx.fillStyle = `rgb(${g},${g + 8},${g + 14})`;
-    ctx.beginPath(); ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 1.4, 0, Math.PI * 2); ctx.fill();
   }
   const hex = (cx: number, cy: number, r: number, fill: string) => {
     ctx.beginPath();

@@ -5,7 +5,7 @@ export interface Lights { banks: THREE.SpotLight[]; hemi: THREE.HemisphereLight;
 
 export function buildLights(root: THREE.Object3D): Lights {
   const banks = BANK_Z.map((z) => {
-    const l = new THREE.SpotLight(COLORS.panelWhite, 0, 40, Math.PI / 2.6, 0.6, 1.2);
+    const l = new THREE.SpotLight(COLORS.panelWhite, 0, 45, Math.PI / 3, 0.7, 1.6);
     l.position.set(0, HANGAR.height - 0.4, z);
     l.target.position.set(0, 0, z);
     root.add(l);

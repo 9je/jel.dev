@@ -19,8 +19,8 @@ export interface BayHandle {
   dispose(): void;
 }
 
-const GATE_IDLE = 0.6;
-const GATE_HOVER = 2.4;
+const GATE_IDLE = 1.4;
+const GATE_HOVER = 3.2;
 const GATE_FLARE = 6;
 const FLARE_MS = 260;
 
@@ -28,11 +28,11 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 'high', powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9;
+  renderer.toneMappingExposure = 0.8;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.bayBlack);
-  scene.fog = new THREE.FogExp2(COLORS.bayBlack, 0.012);
+  scene.fog = new THREE.FogExp2(COLORS.bayBlack, 0.010);
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 120);
   camera.position.set(CAMERA.x, CAMERA.y, CAMERA.zStart);
@@ -78,10 +78,10 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
     hangar.strips.forEach((bank, i) => {
       const v = s.banks[i] ?? 0;
       for (const m of bank) m.emissiveIntensity = v * 2.2;
-      lights.banks[i]!.intensity = v * 180;
+      lights.banks[i]!.intensity = v * 260;
     });
-    hangar.cubeInterior.emissiveIntensity = s.cube * 0.18;
-    hangar.cubeLight.intensity = s.cube * 1.5;
+    hangar.cubeInterior.emissiveIntensity = s.cube * 0.12;
+    hangar.cubeLight.intensity = s.cube * 1.0;
     if (sign) sign.edge.emissiveIntensity = s.sign * 3;
     lights.sign.intensity = s.sign * 5;
     for (const g of hangar.gates) {
@@ -90,7 +90,7 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
       const v = damp(gateNow.get(g.id) ?? 0, target, 10, dt);
       gateNow.set(g.id, v);
       g.frame.emissiveIntensity = v;
-      g.board.emissiveIntensity = Math.min(v, 1.2);
+      g.board.emissiveIntensity = Math.min(v, 1.6);
       g.light.intensity = v * 4;
     }
   }

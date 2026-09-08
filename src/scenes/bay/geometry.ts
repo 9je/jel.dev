@@ -54,7 +54,7 @@ export function buildHangar(quality: Quality): Hangar {
     ? new THREE.MeshPhysicalMaterial({ color: 0xcfe6ee, transmission: 0.92, roughness: 0.35, thickness: 0.6, ior: 1.45, metalness: 0 })
     : new THREE.MeshStandardMaterial({ color: 0xcfe6ee, transparent: true, opacity: 0.22, roughness: 0.4 });
   root.add(box(10, 4, 8, cubeMat, 0, 2, -5));
-  const cubeInterior = new THREE.MeshStandardMaterial({ color: 0xe8f2f5, emissive: 0xffffff, emissiveIntensity: 0, side: THREE.BackSide });
+  const cubeInterior = new THREE.MeshStandardMaterial({ color: 0x9fb6c2, emissive: 0xffffff, emissiveIntensity: 0, side: THREE.BackSide });
   root.add(box(9.6, 3.7, 7.6, cubeInterior, 0, 2, -5));
   const benchMat = new THREE.MeshStandardMaterial({ color: 0xb9c7cf, roughness: 0.5 });
   root.add(box(3, 0.9, 1, benchMat, -2.5, 0.45, -5));
@@ -94,11 +94,11 @@ export function buildHangar(quality: Quality): Hangar {
   for (const w of WINGS) {
     const color = new THREE.Color(w.light);
     const frame = new THREE.MeshStandardMaterial({ color: 0x0b1117, emissive: color, emissiveIntensity: 0 });
-    root.add(box(5.4, 6.4, 0.15, frame, w.gateX, 3.2, HANGAR.zBack + 0.1));
+    root.add(box(5.6, 6.6, 0.2, frame, w.gateX, 3.2, HANGAR.zBack + 0.1));
     root.add(box(5, 6, 0.3, innerMat, w.gateX, 3, HANGAR.zBack + 0.35));
     const boardTex = makeBoardTexture(w.name, w.light);
     const board = new THREE.MeshStandardMaterial({ map: boardTex, emissive: color, emissiveMap: boardTex, emissiveIntensity: 0 });
-    root.add(box(4, 1, 0.1, board, w.gateX, 7.1, HANGAR.zBack + 0.3));
+    root.add(box(4.6, 1.15, 0.1, board, w.gateX, 7.1, HANGAR.zBack + 0.3));
     const light = new THREE.PointLight(color, 0, 18, 1.8);
     light.position.set(w.gateX, 3, HANGAR.zBack + 3);
     root.add(light);
@@ -111,9 +111,9 @@ export function buildHangar(quality: Quality): Hangar {
     : new THREE.MeshStandardMaterial({ color: 0xcfe6ee, transparent: true, opacity: 0.08 });
   root.add(box(7, 3.2, 0.04, glassMat, 0, 2.1, BOOTH.glassZ));
   const mullionMat = new THREE.MeshStandardMaterial({ color: 0x1b242c, roughness: 0.5, metalness: 0.7 });
-  for (const x of [-3.5, 0, 3.5]) root.add(box(0.12, 3.3, 0.12, mullionMat, x, 2.1, BOOTH.glassZ));
-  for (const y of [0.5, 3.7]) root.add(box(7.1, 0.12, 0.12, mullionMat, 0, y, BOOTH.glassZ));
-  root.add(box(7, 0.5, 1.6, new THREE.MeshStandardMaterial({ color: 0x3a4650, roughness: 0.6 }), 0, 0.55, BOOTH.consoleZ));
+  for (const x of [-3.5, 3.5]) root.add(box(0.12, 3.3, 0.12, mullionMat, x, 2.1, BOOTH.glassZ));
+  for (const y of [0.35, 3.9]) root.add(box(7.1, 0.12, 0.12, mullionMat, 0, y, BOOTH.glassZ));
+  root.add(box(7, 0.5, 1.6, new THREE.MeshStandardMaterial({ color: 0x1b242c, roughness: 0.9, metalness: 0.2 }), 0, 0.3, BOOTH.consoleZ));
 
   return { root, strips, cubeInterior, cubeLight, gates };
 }
