@@ -9,14 +9,14 @@ test('the Bay mounts, lights up, and the console navigates to a wing', async ({ 
   await expect(page.locator('h1[data-wing-name]')).toHaveText('Recreation');
 });
 
-test('the console links work without JavaScript', async ({ browser }) => {
-  const ctx = await browser.newContext({ javaScriptEnabled: false });
-  const page = await ctx.newPage();
-  await page.goto('/');
-  await expect(page.locator('[data-console]')).toBeVisible();
-  await page.locator('a[data-wing="operations"]').click();
-  await expect(page).toHaveURL(/\/operations\/?$/);
-  await ctx.close();
+test.describe('without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+  test('the console links work without JavaScript', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-console]')).toBeVisible();
+    await page.locator('a[data-wing="operations"]').click();
+    await expect(page).toHaveURL(/\/operations\/?$/);
+  });
 });
 
 test('reduced motion lights the console immediately', async ({ page }) => {
