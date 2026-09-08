@@ -1,0 +1,32 @@
+{
+  "textures": {
+    "metal_plate":    { "id": "metal_plate",              "group": "booth",             "repeat": [2, 2] },
+    "rubber_floor":   { "id": "rubber_tiles",             "group": "booth",             "repeat": [4, 4] },
+    "metal_shutter":  { "id": "painted_metal_shutter",    "group": "booth",             "repeat": [2, 1] },
+    "concrete_floor": { "id": "concrete_floor_02",        "group": "fabrication",       "repeat": [8, 14] },
+    "concrete_wall":  { "id": "concrete_wall_008",        "group": "fabrication",       "repeat": [10, 3] },
+    "metal_sheet":    { "id": "box_profile_metal_sheet",  "group": "fabrication",       "repeat": [6, 1] }
+  },
+  "models": {
+    "desk":              { "id": "metal_office_desk",              "group": "booth" },
+    "stool":             { "id": "metal_stool_01",                 "group": "booth" },
+    "desk_lamp":         { "id": "desk_lamp_arm_01",               "group": "booth" },
+    "utility_box":       { "id": "utility_box_01",                 "group": "booth" },
+    "crate_wood_1":      { "id": "wooden_crate_01",                "group": "fabrication" },
+    "crate_wood_2":      { "id": "wooden_crate_02",                "group": "fabrication" },
+    "crate_plastic":     { "id": "plastic_crate_01",               "group": "fabrication" },
+    "barrel":            { "id": "barrel_03",                      "group": "fabrication" },
+    "airduct":           { "id": "modular_airduct_rectangular_01", "group": "fabrication" },
+    "fluorescent":       { "id": "mounted_fluorescent_lights",     "group": "fabrication" },
+    "cables":            { "id": "modular_electric_cables",        "group": "fabrication" },
+    "military_crate":    { "id": "old_military_crate",             "group": "fabrication-extra" },
+    "storage_cart":      { "id": "industrial_storage_cart",        "group": "fabrication-extra" },
+    "tool_cart":         { "id": "tool_cart",                      "group": "fabrication-extra" },
+    "metal_rack":        { "id": "worn_metal_rack",                "group": "fabrication-extra" },
+    "power_box":         { "id": "power_box_01",                   "group": "fabrication-extra" },
+    "hanging_lamp":      { "id": "hanging_industrial_lamp",        "group": "fabrication-extra" },
+    "fire_extinguisher": { "id": "korean_fire_extinguisher_01",    "group": "fabrication-extra" }
+  },
+  "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
+  "budgets": { "desktop": { "total": 15728640, "firstFrame": 1572864, "group": 3145728 }, "phone": { "total": 4194304 } }
+}

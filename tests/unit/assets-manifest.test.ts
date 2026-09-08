@@ -1,0 +1,19 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { planTargets } from '../../scripts/assets/build.mjs';
+
+const src = JSON.parse(readFileSync('scripts/assets/manifest.json', 'utf8'));
+
+describe('asset source manifest', () => {
+  it('names every group later tasks rely on', () => {
+    const groups = new Set([...Object.values(src.textures), ...Object.values(src.models)].map((e: any) => e.group));
+    expect([...groups].sort()).toEqual(['booth', 'fabrication', 'fabrication-extra']);
+  });
+  it('plans desktop and phone outputs for every entry', () => {
+    const plan = planTargets(src, 'desktop');
+    expect(plan.textures.metal_plate.out.diffuse).toBe('public/assets/desktop/textures/metal_plate/diffuse.webp');
+    expect(plan.textures.metal_plate.size).toBe(1024);
+    expect(plan.models.desk.out).toBe('public/assets/desktop/models/desk.glb');
+    expect(planTargets(src, 'phone').models.desk.size).toBe(256);
+  });
+});
