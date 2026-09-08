@@ -1,0 +1,22 @@
+---
+import Base from './Base.astro';
+import Preloader from '../components/Preloader.astro';
+import Dock from '../components/Dock.astro';
+import Ticker from '../components/Ticker.astro';
+import { SCROLL_LENGTH_VH } from '../scenes/walk/path';
+import '../styles/walk.css';
+interface Props { title: string; description: string; tickerLines: string[] }
+const { title, description, tickerLines } = Astro.props;
+---
+<Base title={title} description={description}>
+  <div class="walk" data-walk data-mode="boot" style={`--scroll-length:${SCROLL_LENGTH_VH}vh`}>
+    <Preloader />
+    <canvas class="walk-canvas" data-walk-canvas aria-hidden="true"></canvas>
+    <main class="stops" id="top"><slot /></main>
+    <div class="walk-spacer" data-spacer aria-hidden="true"></div>
+    <Dock />
+    <Ticker lines={tickerLines} />
+    <noscript><style>.walk [data-preloader]{display:none}.walk{--mode:lite}</style></noscript>
+  </div>
+  <script src="../scenes/walk/index.ts"></script>
+</Base>

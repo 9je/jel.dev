@@ -1,0 +1,12 @@
+---
+import { STOPS } from '../scenes/walk/path';
+import { site } from '../content/site';
+---
+<nav class="dock" data-dock aria-label="Stops">
+  <ol class="dock-list">
+    {STOPS.map((s) => (
+      <li><a class="dock-link" href={`#${s.id}`} data-stop-link={s.id} style={`--wing-light:${s.light}`}><span class="dock-dot" aria-hidden="true"></span><span class="dock-label">{site.stops[s.id].title}</span></a></li>
+    ))}
+  </ol>
+  <button type="button" class="dock-effects" data-effects aria-pressed="true">Effects on</button>
+</nav>

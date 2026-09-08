@@ -7,6 +7,7 @@
   --hazard: #E8B923;
   --crate: #D8722C;
   --warning: #C8322B;
+  --led: #F2C230;
 
   --wing-light: var(--glass-cyan);
   --wing-text: color-mix(in srgb, var(--wing-light) 78%, white 22%);

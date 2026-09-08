@@ -1,0 +1,14 @@
+---
+import type { StopId } from '../scenes/walk/path';
+import type { Wing } from '../content/schema';
+interface Props { id: StopId; title: string; lead: string; wing?: Wing; level?: 1 | 2; light: string }
+const { id, title, lead, wing, level = 2, light } = Astro.props;
+const Heading = level === 1 ? 'h1' : 'h2';
+---
+<section class="stop" id={id} data-stop={id} data-wing={wing} aria-labelledby={`${id}-title`} style={`--wing-light:${light}; --still:url(/stills/${id}.webp)`}>
+  <div class="stop-inner">
+    <Heading id={`${id}-title`} class="display stop-title">{title}</Heading>
+    <p class="stop-lead">{lead}</p>
+    <div class="stop-body"><slot /></div>
+  </div>
+</section>

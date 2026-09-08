@@ -1,8 +1,10 @@
 ---
 import { getCollection } from 'astro:content';
+interface Props { size?: 'wall' | 'hall' }
+const { size = 'wall' } = Astro.props;
 const certs = await getCollection('certs');
 ---
-<section class="wall" data-cert-wall aria-labelledby="certs-h">
+<section class="wall" data-cert-wall data-size={size} aria-labelledby="certs-h">
   <h2 id="certs-h" class="wall-title">Certifications</h2>
   <ul class="wall-list">
     {certs.map(({ data: c }) => (
@@ -33,4 +35,7 @@ const certs = await getCollection('certs');
   .badge img { width: 96px; height: 96px; object-fit: contain; }
   .badge-name { font-weight: 600; font-size: 0.95rem; }
   .badge-issuer { color: var(--text-dim); font-size: 0.85rem; }
+  .wall[data-size='hall'] .wall-list { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
+  .wall[data-size='hall'] .badge img { width: 160px; height: 160px; }
+  .wall[data-size='hall'] .wall-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>

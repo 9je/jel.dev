@@ -1,0 +1,8 @@
+---
+interface Props { lines: string[] }
+const { lines } = Astro.props;
+const text = lines.join('   •   ');
+---
+<div class="ticker" data-ticker aria-hidden="true">
+  <div class="ticker-track"><span>{text}</span><span>{text}</span></div>
+</div>

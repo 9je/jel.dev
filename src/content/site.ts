@@ -1,4 +1,5 @@
 import type { Wing } from './schema';
+import type { StopId } from '../scenes/walk/path';
 
 export const site = {
   name: 'JEL',
@@ -28,6 +29,15 @@ export const site = {
       summary: 'Offensive security work. Most of it cannot be shown until disclosure clears, so this wing fills in over time.',
     },
   } satisfies Record<Wing, { name: string; tagline: string; summary: string }>,
+  stops: {
+    booth: { title: 'Jordan Eldridge Labs', lead: 'One person, one facility. Everything I build lives here. Scroll to walk it.' },
+    fabrication: { title: 'Fabrication', lead: 'Products built to be used by strangers.' },
+    recreation: { title: 'Recreation', lead: 'Tools for the games and communities I am part of.' },
+    operations: { title: 'Operations', lead: 'Platform development and automation at a compliance MSP.' },
+    credentials: { title: 'Credentials', lead: 'Six plates on the wall. Each one earned.' },
+    containment: { title: 'Containment', lead: 'Offensive security work. Most of it stays sealed until disclosure clears.' },
+    file: { title: 'Personnel file', lead: 'Who is behind the door.' },
+  } satisfies Record<StopId, { title: string; lead: string }>,
   about: {
     line: 'Jordan Eldridge. 23. Self-taught. Platform Developer at a compliance-focused MSP.',
     body: [
