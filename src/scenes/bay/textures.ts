@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CUBE, HANGAR } from './constants';
 
 function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
@@ -52,7 +53,10 @@ export function makeFloorTexture(): THREE.CanvasTexture {
   };
   const R = 70;
   const cells: [number, number][] = [[0, 0], [1, 0], [-1, 0], [0.5, 1], [-0.5, 1], [0.5, -1], [-0.5, -1], [1.5, 1], [-1.5, -1]];
-  for (const [i, j] of cells) hex(W / 2 + i * R * Math.sqrt(3), H / 2 + j * R * 1.5, R - 4, j === 0 ? '#2455A4' : '#1c3f7a');
+  // Keep the inlay under the cube: floor u maps to x across HANGAR.width, v to z along HANGAR.length.
+  const hx = W * (0.5 + CUBE.x / HANGAR.width);
+  const hy = H * (0.5 - CUBE.z / HANGAR.length);
+  for (const [i, j] of cells) hex(hx + i * R * Math.sqrt(3), hy + j * R * 1.5, R - 4, j === 0 ? '#2455A4' : '#1c3f7a');
   ctx.lineWidth = 4; ctx.strokeStyle = '#d8b23a';
   ctx.beginPath(); ctx.moveTo(0, H * 0.72); ctx.bezierCurveTo(W * 0.3, H * 0.76, W * 0.5, H * 0.58, W, H * 0.64); ctx.stroke();
   ctx.lineWidth = 6; ctx.strokeStyle = '#0b0f13';

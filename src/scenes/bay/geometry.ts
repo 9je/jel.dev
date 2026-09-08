@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WINGS, HANGAR, BOOTH, BANK_Z, COLORS, type WingId } from './constants';
+import { WINGS, HANGAR, BOOTH, BANK_Z, CUBE, COLORS, type WingId } from './constants';
 import { makeFloorTexture, makeHazardTexture, makeNoiseTexture, makeBoardTexture } from './textures';
 
 export type Quality = 'high' | 'low';
@@ -53,17 +53,17 @@ export function buildHangar(quality: Quality): Hangar {
   const cubeMat: THREE.Material = quality === 'high'
     ? new THREE.MeshPhysicalMaterial({ color: 0xcfe6ee, transmission: 0.92, roughness: 0.35, thickness: 0.6, ior: 1.45, metalness: 0 })
     : new THREE.MeshStandardMaterial({ color: 0xcfe6ee, transparent: true, opacity: 0.22, roughness: 0.4 });
-  root.add(box(10, 4, 8, cubeMat, 0, 2, -5));
+  root.add(box(10, 4, 8, cubeMat, CUBE.x, 2, CUBE.z));
   const cubeInterior = new THREE.MeshStandardMaterial({ color: 0x9fb6c2, emissive: 0xffffff, emissiveIntensity: 0, side: THREE.BackSide });
-  root.add(box(9.6, 3.7, 7.6, cubeInterior, 0, 2, -5));
+  root.add(box(9.6, 3.7, 7.6, cubeInterior, CUBE.x, 2, CUBE.z));
   const benchMat = new THREE.MeshStandardMaterial({ color: 0xb9c7cf, roughness: 0.5 });
-  root.add(box(3, 0.9, 1, benchMat, -2.5, 0.45, -5));
-  root.add(box(3, 0.9, 1, benchMat, 2.5, 0.45, -6.5));
+  root.add(box(3, 0.9, 1, benchMat, CUBE.x - 2.5, 0.45, CUBE.z));
+  root.add(box(3, 0.9, 1, benchMat, CUBE.x + 2.5, 0.45, CUBE.z - 1.5));
   const edgeMat = new THREE.MeshStandardMaterial({ color: 0x9aa7ae, metalness: 0.8, roughness: 0.3 });
-  const cubeEdges: [number, number][] = [[-5, -1], [5, -1], [-5, -9], [5, -9]];
-  for (const [x, z] of cubeEdges) root.add(box(0.15, 4, 0.15, edgeMat, x, 2, z));
+  const cubeEdges: [number, number][] = [[-5, 4], [5, 4], [-5, -4], [5, -4]];
+  for (const [dx, dz] of cubeEdges) root.add(box(0.15, 4, 0.15, edgeMat, CUBE.x + dx, 2, CUBE.z + dz));
   const cubeLight = new THREE.PointLight(0xffffff, 0, 30, 1.5);
-  cubeLight.position.set(0, 3.5, -5);
+  cubeLight.position.set(CUBE.x, 3.5, CUBE.z);
   root.add(cubeLight);
 
   // columns with hazard bands
@@ -79,8 +79,8 @@ export function buildHangar(quality: Quality): Hangar {
   const crateMat = new THREE.MeshStandardMaterial({ color: COLORS.crate, roughness: 0.8 });
   const steelMat = new THREE.MeshStandardMaterial({ color: COLORS.steel, roughness: 0.7, metalness: 0.3 });
   const crates: [number, number, number, number, number, THREE.Material][] = [
-    [1.2, 1.0, 1.2, -9, 4, crateMat],
-    [1.4, 0.9, 1.4, -10.5, 0.5, steelMat],
+    [1.2, 1.0, 1.2, 9, 4, crateMat],
+    [1.4, 0.9, 1.4, 11, 0.5, steelMat],
     [1.0, 1.0, 1.0, 11, -3, crateMat],
     [1.6, 1.1, 1.2, 12.5, -6.5, steelMat],
     [1.2, 0.8, 1.2, 10, -10, steelMat],

@@ -23,12 +23,22 @@ const GATE_IDLE = 1.4;
 const GATE_HOVER = 3.2;
 const GATE_FLARE = 6;
 const FLARE_MS = 260;
+/** Long enough for an in-flight view transition to finish before the GL context goes. */
+const CONTEXT_LOSS_DELAY_MS = 1000;
 
 export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Promise<BayHandle> {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 'high', powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.8;
+
+  // A software rasteriser cannot afford the high path: transmission, MSAA and bloom all
+  // fall back to the CPU there. Downgrade before anything expensive is built.
+  const gl = renderer.getContext();
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : '';
+  const software = /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name);
+  const quality: Quality = software ? 'low' : opts.quality;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.bayBlack);
@@ -41,7 +51,7 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
   if (done) opts.onSequenceDone?.();
 
   await document.fonts.load('44px Michroma').catch(() => undefined);
-  const hangar = buildHangar(opts.quality);
+  const hangar = buildHangar(quality);
   scene.add(hangar.root);
   const lights = buildLights(scene);
   let sign: Sign | null = null;
@@ -49,7 +59,7 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  if (opts.quality === 'high') composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.5, 0.95));
+  if (quality === 'high') composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.5, 0.95));
   composer.addPass(new OutputPass());
 
   function resize() {
@@ -129,11 +139,21 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
       scene.traverse((o) => {
         if (o instanceof THREE.Mesh) {
           o.geometry.dispose();
-          for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.dispose();
+          for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+            const tex = m as Partial<Record<'map' | 'emissiveMap' | 'roughnessMap', THREE.Texture | null>>;
+            tex.map?.dispose();
+            tex.emissiveMap?.dispose();
+            tex.roughnessMap?.dispose();
+            m.dispose();
+          }
         }
       });
       composer.dispose();
       renderer.dispose();
+      // dispose() does not free the GL context, and browsers cap how many may be live.
+      // Losing it synchronously inside astro:before-swap aborts the view transition
+      // mid-swap, so hand the context back once the transition has finished.
+      setTimeout(() => renderer.forceContextLoss(), CONTEXT_LOSS_DELAY_MS);
     },
   };
 }

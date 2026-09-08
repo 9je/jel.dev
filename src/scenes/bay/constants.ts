@@ -14,6 +14,8 @@ export const HANGAR = { width: 40, height: 12, zFront: 30, zBack: -40, length: 7
 export const CAMERA = { x: 0, y: 1.7, zStart: 26 } as const;
 export const BOOTH = { glassZ: 23, consoleZ: 24.5 } as const;
 export const BANK_Z = [20, 5, -10, -25] as const;
+/** Clean-room cube centre. Off the camera axis so it never masks the gates. */
+export const CUBE = { x: -14.5, z: -3 } as const;
 
 export const COLORS = {
   bayBlack: 0x0e161e,
