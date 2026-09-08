@@ -10,7 +10,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 img, svg, canvas { display: block; max-width: 100%; }
-a { color: var(--wing-light); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a { color: var(--wing-text); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 a:hover { color: var(--text); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.15; }

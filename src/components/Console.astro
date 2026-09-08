@@ -39,6 +39,7 @@ import { WINGS } from '../scenes/bay/constants';
     text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em;
     font-weight: 600; font-size: 0.9rem; font-stretch: 75%;
   }
+  .switch { --wing-text: color-mix(in srgb, var(--wing-light) 78%, white 22%); }
   .toggle {
     width: 14px; height: 26px;
     border-radius: 2px;
@@ -51,7 +52,7 @@ import { WINGS } from '../scenes/bay/constants';
     background: var(--wing-light);
     box-shadow: 0 0 10px var(--wing-light), inset 0 12px 0 rgb(0 0 0 / 0.35);
   }
-  .switch:hover, .switch:focus-visible { color: var(--wing-light); }
+  .switch:hover, .switch:focus-visible { color: var(--wing-text); }
   .file { color: var(--text-dim); font-size: 0.8rem; padding-bottom: 0.2rem; }
   .file:hover, .file:focus-visible { color: var(--text); }
   @media (max-width: 600px) {
