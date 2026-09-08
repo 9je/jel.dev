@@ -30,7 +30,7 @@ test('recreation shows torn.bet as flagship and the rest as plates', async ({ pa
   await expect(page.locator('[data-flagship] .plate')).toHaveText('Operational');
   await expect(page.locator('[data-flagship] [data-content-warning]')).toContainText('Torn City');
   const plates = page.locator('details[data-project]');
-  await expect(plates).toHaveCount(5);
+  await expect(plates).toHaveCount(3);
   await expect(plates.first().locator('summary')).toContainText('faction.tools');
   await plates.first().locator('summary').click();
   await expect(plates.first()).toHaveAttribute('open', '');
