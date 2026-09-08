@@ -23,3 +23,22 @@ test('wing pages ship no three.js', async ({ page }) => {
   await page.goto('/recreation');
   expect(scripts.some((s) => /three|bay|scene/i.test(s))).toBe(false);
 });
+
+test('recreation shows torn.bet as flagship and the rest as plates', async ({ page }) => {
+  await page.goto('/recreation');
+  await expect(page.locator('[data-flagship] h2')).toHaveText('torn.bet');
+  await expect(page.locator('[data-flagship] .plate')).toHaveText('Operational');
+  await expect(page.locator('[data-flagship] [data-content-warning]')).toContainText('Torn City');
+  const plates = page.locator('details[data-project]');
+  await expect(plates).toHaveCount(5);
+  await expect(plates.first().locator('summary')).toContainText('faction.tools');
+  await plates.first().locator('summary').click();
+  await expect(plates.first()).toHaveAttribute('open', '');
+});
+
+test('containment shows the redacted pending bay', async ({ page }) => {
+  await page.goto('/containment');
+  await expect(page.locator('[data-flagship] .plate')).toHaveText('Pending release');
+  await expect(page.locator('[data-flagship] [data-redacted]')).toBeVisible();
+  await expect(page.locator('[data-flagship] [data-unlocks]')).toContainText('disclosure');
+});

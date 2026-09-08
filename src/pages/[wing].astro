@@ -1,12 +1,22 @@
 ---
+import { getCollection } from 'astro:content';
 import Wing from '../layouts/Wing.astro';
+import FlagshipBay from '../components/FlagshipBay.astro';
+import ProjectPlate from '../components/ProjectPlate.astro';
 import { WINGS, type Wing as WingId } from '../content/schema';
 
 export function getStaticPaths() {
   return WINGS.map((wing) => ({ params: { wing } }));
 }
 const wing = Astro.params.wing as WingId;
+const all = (await getCollection('projects', (p) => p.data.wing === wing)).sort((a, b) => a.data.order - b.data.order);
+const flagship = all.find((p) => p.data.flagship);
+const rest = all.filter((p) => p !== flagship);
 ---
 <Wing wing={wing}>
-  <ul data-project-list></ul>
+  {flagship && <FlagshipBay entry={flagship} />}
+  <div data-project-list>
+    {rest.map((entry) => <ProjectPlate entry={entry} />)}
+  </div>
+  <slot name="after" />
 </Wing>

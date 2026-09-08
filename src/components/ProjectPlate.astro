@@ -1,0 +1,49 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { render } from 'astro:content';
+import StatusPlate from './StatusPlate.astro';
+interface Props { entry: CollectionEntry<'projects'> }
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+---
+<details class="row" data-project={entry.id}>
+  <summary class="row-summary">
+    <span class="row-title">{d.title}</span>
+    <StatusPlate status={d.status} />
+    <span class="row-line">{d.summary}</span>
+  </summary>
+  <div class="row-body">
+    <Content />
+    {d.stack.length > 0 && <p class="row-stack">Built with {d.stack.join(', ')}.</p>}
+    {d.links.length > 0 && (
+      <ul class="row-links">{d.links.map((l) => <li><a href={l.href} rel="noopener">{l.label}</a></li>)}</ul>
+    )}
+  </div>
+</details>
+
+<style>
+  .row { border-top: 1px solid var(--surface-edge); }
+  .row:last-of-type { border-bottom: 1px solid var(--surface-edge); }
+  .row-summary {
+    display: grid;
+    grid-template-columns: minmax(10rem, 16rem) auto 1fr;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    padding: 1rem 0.5rem;
+    cursor: pointer;
+    list-style: none;
+  }
+  .row-summary::-webkit-details-marker { display: none; }
+  .row-summary:hover, .row-summary:focus-visible { background: var(--surface); }
+  .row-title { font-weight: 600; font-size: 1.1rem; }
+  .row-line { color: var(--text-dim); }
+  .row[open] .row-summary { background: var(--surface); }
+  .row-body { padding: 0.5rem 0.5rem 1.5rem; max-width: var(--measure); }
+  .row-stack { color: var(--text-dim); font-size: 0.95rem; }
+  .row-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
+  @media (max-width: 700px) {
+    .row-summary { grid-template-columns: 1fr auto; }
+    .row-line { grid-column: 1 / -1; }
+  }
+</style>
