@@ -28,7 +28,7 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 'high', powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 0.9;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.bayBlack);
@@ -36,6 +36,9 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 120);
   camera.position.set(CAMERA.x, CAMERA.y, CAMERA.zStart);
+
+  let done = opts.skipSequence;
+  if (done) opts.onSequenceDone?.();
 
   await document.fonts.load('44px Michroma').catch(() => undefined);
   const hangar = buildHangar(opts.quality);
@@ -46,7 +49,7 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  if (opts.quality === 'high') composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.5, 0.8));
+  if (opts.quality === 'high') composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.5, 0.95));
   composer.addPass(new OutputPass());
 
   function resize() {
@@ -66,20 +69,19 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
   let yaw = 0, pitch = 0, yawT = 0, pitchT = 0;
   let scrollT = 0, scrollNow = 0;
   let elapsed = 0;
-  let done = opts.skipSequence;
   let disposed = false;
   let raf = 0;
   const clock = new THREE.Clock();
-  if (done) opts.onSequenceDone?.();
+  const startMs = performance.now();
 
   function apply(s: LightState, dt: number, now: number) {
     hangar.strips.forEach((bank, i) => {
       const v = s.banks[i] ?? 0;
       for (const m of bank) m.emissiveIntensity = v * 2.2;
-      lights.banks[i]!.intensity = v * 6;
+      lights.banks[i]!.intensity = v * 180;
     });
-    hangar.cubeInterior.emissiveIntensity = s.cube * 0.9;
-    hangar.cubeLight.intensity = s.cube * 8;
+    hangar.cubeInterior.emissiveIntensity = s.cube * 0.18;
+    hangar.cubeLight.intensity = s.cube * 1.5;
     if (sign) sign.edge.emissiveIntensity = s.sign * 3;
     lights.sign.intensity = s.sign * 5;
     for (const g of hangar.gates) {
@@ -97,8 +99,8 @@ export async function mountBay(canvas: HTMLCanvasElement, opts: BayOptions): Pro
     if (disposed) return;
     raf = requestAnimationFrame(frame);
     const dt = Math.min(clock.getDelta(), 0.05);
-    elapsed += dt;
     const now = performance.now();
+    elapsed = (now - startMs) / 1000;
     const s = done ? LIT : lightsOnState(elapsed);
     if (!done && elapsed >= SEQUENCE_DURATION) { done = true; opts.onSequenceDone?.(); }
     apply(s, dt, now);

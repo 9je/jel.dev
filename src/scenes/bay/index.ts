@@ -4,6 +4,7 @@ import type { WingId } from './constants';
 
 let handle: BayHandle | null = null;
 let mounting = false;
+let generation = 0;
 
 function hasWebGL(): boolean {
   try {
@@ -17,6 +18,7 @@ async function init() {
   const canvas = document.querySelector<HTMLCanvasElement>('[data-bay-canvas]');
   const consoleEl = document.querySelector<HTMLElement>('[data-console]');
   if (!stage || !canvas || !consoleEl || handle || mounting) return;
+  const gen = ++generation;
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(pointer: coarse)').matches;
@@ -34,9 +36,11 @@ async function init() {
   const quality = navigator.hardwareConcurrency >= 4 && !coarse ? 'high' : 'low';
 
   mounting = true;
+  let h: BayHandle | null = null;
   try {
     const { mountBay } = await import('./scene');
-    handle = await mountBay(canvas, {
+    if (gen !== generation) return;
+    h = await mountBay(canvas, {
       skipSequence: reduced || seen || still,
       quality,
       onSequenceDone() {
@@ -50,6 +54,9 @@ async function init() {
     consoleEl.dataset.lit = '';
     return;
   } finally { mounting = false; }
+
+  if (gen !== generation) { h?.dispose(); return; }
+  handle = h;
   stage.dataset.mode = 'live';
 
   for (const a of consoleEl.querySelectorAll<HTMLAnchorElement>('a[data-wing]')) {
@@ -81,6 +88,7 @@ function onScroll() {
 }
 
 function teardown() {
+  generation++;
   window.removeEventListener('pointermove', onPointer);
   window.removeEventListener('scroll', onScroll);
   handle?.dispose();
