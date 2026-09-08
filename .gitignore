@@ -14,3 +14,4 @@ playwright-report/
 scripts/*.ttf
 .superpowers/
 docs/superpowers/
+assets/raw/

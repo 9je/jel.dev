@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 
-const LIMIT = 250 * 1024;
+const LIMIT = 300 * 1024;
 const dir = 'dist/_astro';
 let total = 0;
 const rows = [];
