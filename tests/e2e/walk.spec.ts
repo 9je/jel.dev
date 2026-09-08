@@ -46,6 +46,7 @@ test('full path mounts the scene and the dock flies to a stop', async ({ page })
   await expect(page).toHaveURL(/#fabrication$/, { timeout: 15_000 });
   await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
   await expect(page.locator('section[data-stop="booth"]')).not.toHaveAttribute('data-active', '');
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });
 
 test('a hash on load opens at that stop on the full path', async ({ page }) => {

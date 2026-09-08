@@ -4,7 +4,7 @@ import type { Tier } from './quality';
 import type { Stage, StageBuilder, StageContext } from './stages/types';
 import { greybox } from './stages/greybox';
 
-export interface WalkOptions { tier: Tier; stages?: StageBuilder[]; onLoadProgress?(loaded: number, total: number): void }
+export interface WalkOptions { tier: Tier; stages?: StageBuilder[]; onLoadProgress?(loaded: number, total: number): void; initialProgress?: number }
 export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; dispose(): void }
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
@@ -33,10 +33,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   }
   resize(); window.addEventListener('resize', resize);
 
-  let target = 0, current = 0, disposed = false, raf = 0;
+  let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, disposed = false, raf = 0;
   const cam = { position: new THREE.Vector3(), target: new THREE.Vector3() };
   const clock = new THREE.Clock();
-  cameraAt(0, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
+  cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
 
   function frame() {
     if (disposed) return;

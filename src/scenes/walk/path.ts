@@ -18,7 +18,7 @@ export const STOPS: Stop[] = [
   { id: 'fabrication', t: 0.2, hold: [0.17, 0.25], lookAt: [-5, 2, -5], wing: 'fabrication', light: '#E0813A' },
   { id: 'recreation', t: 0.4, hold: [0.37, 0.44], lookAt: [-34, 2, -33.5], wing: 'recreation', light: '#3D7BE0' },
   { id: 'operations', t: 0.56, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
-  { id: 'credentials', t: 0.7, hold: [0.67, 0.74], lookAt: [-83, 2.4, -12], light: '#D9E8EE' },
+  { id: 'credentials', t: 0.7, hold: [0.67, 0.74], lookAt: [-82.4, 2.4, -12], light: '#D9E8EE' },
   { id: 'containment', t: 0.84, hold: [0.81, 0.88], lookAt: [-79, 1.2, 22], wing: 'containment', light: '#D7383A' },
   { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];

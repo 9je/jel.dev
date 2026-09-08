@@ -1,8 +1,10 @@
 import * as THREE from 'three';
-import { STOPS, CONTROL_POINTS } from '../path';
+import { STOPS, CONTROL_POINTS, cameraAt } from '../path';
 import type { Stage, StageContext } from './types';
 
-const WALL = 0x17222c, FLOOR = 0x1a2630;
+const WALL = 0x3a4a58, FLOOR = 0x2c3944;
+/** Floor patches at the corners the spline turns through, so the greybox reads past the corridor width. */
+const CORNERS: [number, number][] = [[-12, -30], [-77.5, -30.5], [-77, 25.5]];
 
 function box(w: number, h: number, d: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.9 }));
@@ -20,6 +22,8 @@ function corridor(a: THREE.Vector3, b: THREE.Vector3, width: number, height: num
   for (let z = -len / 2 + 3; z < len / 2; z += 6) {
     const l = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.4), new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 1.5 }));
     l.position.set(0, height - 0.1, z); g.add(l);
+    const point = new THREE.PointLight(0xd9e8ee, 12, 18, 1.8);
+    point.position.set(0, height - 0.1, z); g.add(point);
   }
 }
 
@@ -35,9 +39,19 @@ export function greybox({ scene }: StageContext): Stage {
   corridor(p[15], p[16].clone().setX(-64), 8, 3.5, root);                    // office
   for (const s of STOPS) {
     const marker = new THREE.Mesh(new THREE.BoxGeometry(1, 2.5, 0.2), new THREE.MeshStandardMaterial({ color: 0x0b1117, emissive: new THREE.Color(s.light), emissiveIntensity: 1.2 }));
-    marker.position.set(s.lookAt[0], 1.25, s.lookAt[2]); root.add(marker);
+    marker.position.set(s.lookAt[0], 1.25, s.lookAt[2]);
+    const cam = cameraAt(s.t);
+    const dir = cam.target.clone().sub(cam.position);
+    marker.rotation.y = Math.atan2(dir.x, dir.z);
+    root.add(marker);
   }
-  const hemi = new THREE.HemisphereLight(0x2a3b4a, 0x0e161e, 0.6); root.add(hemi);
+  const hemi = new THREE.HemisphereLight(0x6d7f8f, 0x1a2530, 2.5); root.add(hemi);
+  for (const [x, z] of CORNERS) {
+    const patch = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: FLOOR, roughness: 0.9 }));
+    patch.rotation.x = -Math.PI / 2;
+    patch.position.set(x, 0, z);
+    root.add(patch);
+  }
   return {
     id: 'greybox', root,
     update() {},

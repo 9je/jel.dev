@@ -1,7 +1,7 @@
 import { chooseTier, readTierInput, type Tier } from './quality';
 import type { WalkHandle } from './scene';
 import type { ScrollController } from './scroll';
-import type { StopId } from './path';
+import { STOPS, tForStop, type StopId } from './path';
 
 export interface WalkElements {
   root: HTMLElement; canvas: HTMLCanvasElement; dock: HTMLElement; preloader: HTMLElement; spacer: HTMLElement; sections: HTMLElement[];
@@ -49,16 +49,20 @@ function markCurrentFromHash(els: WalkElements) {
   }
 }
 
+let hashchangeListener: (() => void) | null = null;
+
 export function startLite(els: WalkElements) {
   els.root.dataset.mode = 'lite';
   els.preloader.dataset.state = 'hidden';
   markCurrentFromHash(els);
-  window.addEventListener('hashchange', () => markCurrentFromHash(els));
+  hashchangeListener = () => markCurrentFromHash(els);
+  window.addEventListener('hashchange', hashchangeListener);
 }
 
 let generation = 0;
 let handle: WalkHandle | null = null;
 let scroll: ScrollController | null = null;
+let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
 
 function setPreloader(els: WalkElements, ratio: number) {
   els.preloader.style.setProperty('--progress', String(Math.min(1, ratio)));
@@ -77,31 +81,43 @@ async function startFull(els: WalkElements, tier: Tier) {
   // onUpdate can fire off a stale scroll position (left over from the browser's own
   // scroll-to-fragment while the page was still in boot layout) and rewrite location.hash via
   // history.replaceState before we get a chance to read it, corrupting which stop we open on.
-  const initial = (location.hash.replace('#', '') || 'booth') as StopId;
+  const raw = location.hash.replace('#', '');
+  const initial: StopId = STOPS.some((s) => s.id === raw) ? (raw as StopId) : 'booth';
   els.root.dataset.mode = 'full';
   els.preloader.dataset.state = 'loading';
   els.preloader.setAttribute('aria-busy', 'true');
   const slow = setTimeout(() => {
-    if (els.preloader.dataset.state === 'loading') { els.preloader.dataset.state = 'slow'; els.preloader.querySelector('[data-preloader-lite]')?.removeAttribute('hidden'); }
+    if (els.preloader.dataset.state === 'loading') {
+      els.preloader.dataset.state = 'slow';
+      const link = els.preloader.querySelector<HTMLAnchorElement>('[data-preloader-lite]');
+      if (link) { link.href = `/?effects=off${location.hash}`; link.removeAttribute('hidden'); }
+    }
   }, 8000);
   const giveUp = setTimeout(() => { if (gen === generation && els.preloader.dataset.state !== 'hidden') { teardown(); startLite(els); } }, 45000);
   try {
     const [{ mountWalk }, { createScroll }] = await Promise.all([import('./scene'), import('./scroll')]);
     if (gen !== generation) return;
-    const h = await mountWalk(els.canvas, { tier, onLoadProgress: (l, t) => setPreloader(els, l / t) });
+    const h = await mountWalk(els.canvas, { tier, initialProgress: tForStop(initial), onLoadProgress: (l, t) => setPreloader(els, l / t) });
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
     scroll = createScroll();
     scroll.onProgress((t) => handle?.setProgress(t));
     scroll.onStop((id) => activate(els, id));
     for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) {
-      a.addEventListener('click', (e) => { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); scroll?.jumpTo(a.dataset.stopLink as StopId); });
+      a.addEventListener('click', (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        const id = a.dataset.stopLink as StopId;
+        scroll?.jumpTo(id);
+        const heading = document.querySelector<HTMLElement>(`section[data-stop="${id}"] .stop-title`);
+        if (heading) { heading.setAttribute('tabindex', '-1'); setTimeout(() => heading.focus({ preventScroll: true }), 1700); }
+      });
     }
     activate(els, initial);
     if (initial !== 'booth') scroll.jumpTo(initial, true);
     els.preloader.dataset.state = 'done';
     els.preloader.setAttribute('aria-busy', 'false');
-    setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 500);
+    hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 500);
   } catch (err) {
     console.warn('walk failed to start, using the lite path', err);
     teardown();
@@ -113,6 +129,8 @@ function teardown() {
   generation++;
   scroll?.dispose(); scroll = null;
   handle?.dispose(); handle = null;
+  if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
+  if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
 }
 
 async function init() {

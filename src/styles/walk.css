@@ -7,6 +7,7 @@
 .stop::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--bg) var(--still) center / cover no-repeat; opacity: 0.55; }
 .stop-inner { position: relative; max-width: 1100px; }
 .stop-title { font-size: clamp(2.5rem, 6vw, 4.5rem); color: var(--panel-white); text-shadow: 0 0 24px color-mix(in srgb, var(--wing-light) 55%, transparent); }
+.stop-title:focus-visible { outline-offset: 6px; }
 .stop-lead { margin: 1rem 0 2rem; color: var(--text-dim); font-size: 1.1rem; max-width: var(--measure); }
 .stop-body { max-width: 1100px; }
 .intro { font-size: 1.15rem; }
@@ -33,7 +34,8 @@
 .tube { width: min(40vw, 480px); height: 2px; margin: 0 auto; background: #1a2530; }
 .tube-fill { height: 100%; width: calc(var(--progress, 0) * 100%); background: var(--panel-white); box-shadow: 0 0 12px var(--glass-cyan); transition: width 120ms linear; }
 .preloader-label { margin-top: 1rem; color: var(--text-dim); font-size: 0.75rem; font-stretch: 75%; letter-spacing: 0.08em; text-transform: uppercase; }
-.preloader-lite { display: block; margin-top: 1.5rem; }
+.preloader-lite { display: none; margin-top: 1.5rem; }
+.preloader[data-state='slow'] .preloader-lite { display: block; }
 .preloader[data-state='done'] .tube-fill { animation: tube-on 320ms steps(1, end) both; }
 @keyframes tube-on { 0% { opacity: 1 } 20% { opacity: 0.2 } 35% { opacity: 1 } 50% { opacity: 0.1 } 60% { opacity: 1 } 100% { opacity: 1 } }
 .preloader[data-state='hidden'] { display: none; }
