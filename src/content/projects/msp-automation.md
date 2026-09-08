@@ -1,12 +1,12 @@
 ---
-title: Compliance automation
+title: Platform development
 wing: operations
 status: restricted
 flagship: true
-summary: Automation that takes recurring compliance evidence collection and reporting off engineers' plates.
-stack: [Python, PowerShell, REST APIs]
+summary: Platform Developer on the team that builds and rolls out what a compliance-focused MSP runs on.
+stack: [PowerShell, Power Automate, Rewst, Pia]
 order: 10
 ---
-Recurring compliance work at an MSP is mostly the same evidence gathered again and again across many client environments. I build the glue that collects it, normalizes it, and produces the reports auditors expect, so the humans review instead of transcribe.
+The team owns new product rollouts, internal and client-facing, plus automation, R&D, product development and acquisition integration. My part is the platform work: the glue between vendor tools, the automations that remove repeat work from engineers, and the internal tooling nobody sells you.
 
 Details stay inside the building. Ask me about it directly.

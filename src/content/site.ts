@@ -5,12 +5,12 @@ export const site = {
   fullName: 'Jordan Eldridge Labs',
   description: 'Jordan Eldridge Labs: automation for MSPs, shipped products, community tooling, and security work, all in one facility.',
   intro:
-    'JEL is where I keep everything I build. I work in compliance for an MSP and automate whatever I can reach. Outside work I ship products, build tools for the communities I play in, and do security research. Pick a wing.',
+    'JEL is where I keep everything I build. I build the platform a compliance MSP runs on and automate whatever I can reach. Outside work I ship products, build tools for the communities I play in, and do security research. Pick a wing.',
   wings: {
     operations: {
       name: 'Operations',
-      tagline: 'Compliance, MSP tooling, and automation at work.',
-      summary: 'The day job: compliance operations for an MSP, and the automation that keeps it running. Work here is described at the level of outcomes. No client names.',
+      tagline: 'Platform development and automation at a compliance MSP.',
+      summary: 'The day job. Platform development at a compliance-focused MSP: rollouts, automation, R&D and the tooling in between. Work here is described at the level of outcomes. No client names.',
     },
     fabrication: {
       name: 'Fabrication',
@@ -29,9 +29,9 @@ export const site = {
     },
   } satisfies Record<Wing, { name: string; tagline: string; summary: string }>,
   about: {
-    line: 'Jordan Eldridge. 23. Self-taught.',
+    line: 'Jordan Eldridge. 23. Self-taught. Platform Developer at a compliance-focused MSP.',
     body: [
-      'I learned by building things people needed and fixing them when they broke. At work that means compliance operations for a managed service provider, where I automate the repetitive parts so the people around me can do the interesting parts.',
+      'I learned by building things people needed and fixing them when they broke. At work I am a Platform Developer at a compliance-focused MSP, on the team that rolls out new products, automates the repeat work, and integrates what the company acquires. PowerShell, Power Automate, Rewst and Pia are the daily tools.',
       'Outside work I run a few things with real users, ship products under JEL, and spend my remaining hours on security research. This site is the one place all of it lives.',
     ],
     timeline: [
