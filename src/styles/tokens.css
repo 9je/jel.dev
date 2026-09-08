@@ -9,6 +9,7 @@
   --warning: #C8322B;
 
   --wing-light: var(--glass-cyan);
+  --wing-text: color-mix(in srgb, var(--wing-light) 78%, white 22%);
 
   --bg: var(--bay-black);
   --surface: #17222C;
