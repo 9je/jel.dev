@@ -7,7 +7,7 @@ interface Props { wing: Wing }
 const { wing } = Astro.props;
 const meta = site.wings[wing];
 ---
-<Base title={`${meta.name} — JEL`} description={meta.tagline} wing={wing}>
+<Base title={`${meta.name} at JEL`} description={meta.tagline} wing={wing}>
   <div class="frame">
     <Rail current={wing} />
     <main class="content">
