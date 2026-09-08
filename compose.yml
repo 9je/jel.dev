@@ -1,0 +1,7 @@
+services:
+  jel:
+    image: ghcr.io/9je/jel.dev:latest
+    container_name: jel-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8005:80"
