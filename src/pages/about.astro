@@ -1,0 +1,52 @@
+---
+import Base from '../layouts/Base.astro';
+import Rail from '../components/Rail.astro';
+import CertWall from '../components/CertWall.astro';
+import { WINGS } from '../content/schema';
+import { site } from '../content/site';
+const a = site.about;
+---
+<Base title="Personnel file — JEL" description={`${a.line} Everything Jordan Eldridge builds, in one place.`}>
+  <div class="frame">
+    <Rail current="about" />
+    <main class="content">
+      <header class="head">
+        <h1 class="display name" data-about>Jordan Eldridge</h1>
+        <p class="line">{a.line}</p>
+      </header>
+      {a.body.map((p) => <p>{p}</p>)}
+
+      <h2 class="h">Wings</h2>
+      <ul class="wings">
+        {WINGS.map((w) => <li><a href={`/${w}`}>{site.wings[w].name}</a> {site.wings[w].tagline}</li>)}
+      </ul>
+
+      <CertWall />
+
+      <h2 class="h">Timeline</h2>
+      <dl class="timeline">
+        {a.timeline.map((t) => <><dt>{t.when}</dt><dd>{t.what}</dd></>)}
+      </dl>
+
+      <h2 class="h">Contact</h2>
+      <ul class="contact">
+        <li><a href={`mailto:${a.email}`}>{a.email}</a></li>
+        <li><a href={a.github} rel="noopener">github.com/9je</a></li>
+      </ul>
+    </main>
+  </div>
+</Base>
+
+<style>
+  .frame { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: 100vh; }
+  .content { padding: 3rem clamp(1.25rem, 4vw, 4rem) 6rem; max-width: 1100px; }
+  .head { margin-bottom: 2rem; }
+  .name { font-size: clamp(1.8rem, 4vw, 3rem); text-shadow: 0 0 18px rgb(110 193 214 / 0.5); }
+  .line { color: var(--text-dim); margin-top: 0.75rem; }
+  .h { font-size: 1.3rem; margin: 2.5rem 0 1rem; }
+  .wings, .contact { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; max-width: var(--measure); }
+  .timeline { display: grid; grid-template-columns: 5rem 1fr; gap: 0.5rem 1rem; margin: 0; max-width: var(--measure); }
+  .timeline dt { color: var(--text-dim); }
+  .timeline dd { margin: 0; }
+  @media (max-width: 899px) { .frame { grid-template-columns: 1fr; } }
+</style>

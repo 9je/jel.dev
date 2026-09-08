@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import Wing from '../layouts/Wing.astro';
 import FlagshipBay from '../components/FlagshipBay.astro';
 import ProjectPlate from '../components/ProjectPlate.astro';
+import CertWall from '../components/CertWall.astro';
 import { WINGS, type Wing as WingId } from '../content/schema';
 
 export function getStaticPaths() {
@@ -18,5 +19,5 @@ const rest = all.filter((p) => p !== flagship);
   <div data-project-list>
     {rest.map((entry) => <ProjectPlate entry={entry} />)}
   </div>
-  <slot name="after" />
+  {wing === 'operations' && <CertWall />}
 </Wing>

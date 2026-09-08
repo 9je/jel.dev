@@ -53,3 +53,18 @@ test('project plates support content warnings', async ({ page }) => {
   const flagshipWarning = page.locator('[data-flagship] [data-content-warning]');
   await expect(flagshipWarning).toContainText('Torn City');
 });
+
+test('operations shows the six certifications', async ({ page }) => {
+  await page.goto('/operations');
+  const badges = page.locator('[data-cert-wall] li');
+  await expect(badges).toHaveCount(6);
+  await expect(badges.filter({ hasText: 'eJPT' }).locator('a')).toHaveAttribute('href', /credential\.net/);
+});
+
+test('/about renders the personnel file', async ({ page }) => {
+  const res = await page.goto('/about');
+  expect(res?.status()).toBe(200);
+  await expect(page.locator('h1[data-about]')).toContainText('Jordan Eldridge');
+  await expect(page.locator('[data-cert-wall] li')).toHaveCount(6);
+  await expect(page.locator('nav[aria-label="Wayfinding"] a[aria-current="page"]')).toHaveText('Personnel file');
+});
