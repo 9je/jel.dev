@@ -33,7 +33,7 @@ import { site } from '../content/site';
   .bay-still { display: none; }
   .bay[data-mode='still'] .bay-still { display: block; }
   .bay[data-mode='still'] .bay-canvas { display: none; }
-  .bay[data-still] [data-console], .bay[data-still] .bay-mark { visibility: hidden; }
+  .bay[data-still] :global([data-console]), .bay[data-still] .bay-mark { visibility: hidden; }
   .bay-mark { position: absolute; top: clamp(1rem, 4vw, 2rem); left: clamp(1rem, 4vw, 3rem); z-index: 2; }
   .bay-mark h1 { font-size: 1.6rem; color: var(--panel-white); text-shadow: 0 0 14px rgb(110 193 214 / 0.6); }
   .bay-mark p { margin: 0.25rem 0 0; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; font-weight: 600; font-stretch: 75%; }

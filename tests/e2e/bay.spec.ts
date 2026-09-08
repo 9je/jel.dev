@@ -31,3 +31,21 @@ test('the below-fold text lists the four wings', async ({ page }) => {
   await expect(page.locator('main.below a[href="/operations"]')).toHaveText('Operations');
   await expect(page.locator('main.below a[href="/containment"]')).toHaveText('Containment');
 });
+
+test('the Bay falls back to the still when WebGL is unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    const orig = HTMLCanvasElement.prototype.getContext;
+    // @ts-expect-error overriding for the test
+    HTMLCanvasElement.prototype.getContext = function (type: string, ...rest: unknown[]) {
+      if (/webgl/i.test(type)) return null;
+      return (orig as unknown as (this: HTMLCanvasElement, t: string, ...r: unknown[]) => unknown).call(this, type, ...rest);
+    };
+  });
+  const missing: string[] = [];
+  page.on('response', (r) => { if (r.status() === 404) missing.push(r.url()); });
+  await page.goto('/');
+  await expect(page.locator('[data-bay]')).toHaveAttribute('data-mode', 'still');
+  await expect(page.locator('[data-console]')).toHaveAttribute('data-lit', '');
+  await expect(page.locator('.bay-still')).toBeVisible();
+  expect(missing.filter((u) => u.includes('bay-still'))).toEqual([]);
+});
