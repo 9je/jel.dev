@@ -1,5 +1,5 @@
 // Screenshots the fully lit Bay from the built site into public/bay-still.jpg. Run after `npm run build`.
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import sharp from 'sharp';
 
@@ -27,5 +27,10 @@ try {
   await sharp(png).jpeg({ quality: 82, mozjpeg: true }).toFile('public/bay-still.jpg');
   console.log('wrote public/bay-still.jpg');
 } finally {
+  // `astro preview` forks a detached background daemon, so the spawned child above
+  // exits on its own almost immediately and server.kill() alone won't stop the daemon
+  // still listening on PORT. Ask astro to stop it properly, then kill() the wrapper
+  // process as a belt-and-braces fallback.
+  try { execSync(`npx astro preview stop --port ${PORT}`, { stdio: 'ignore' }); } catch { /* already stopped */ }
   server.kill();
 }

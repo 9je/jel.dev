@@ -1,5 +1,5 @@
 // Fails if the JavaScript loaded by the Bay exceeds the 250 KB gzipped budget from the spec.
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 
