@@ -7,8 +7,11 @@ const SRC = JSON.parse(readFileSync('scripts/assets/manifest.json', 'utf8'));
 
 export function planTargets(src, tier) {
   const sz = src.sizes[tier];
+  // A texture may cap its own resolution below the tier default (the booth's plates and shutter
+  // do, to keep the first frame inside budget). It is a cap, never a raise: the phone tier must
+  // stay the smaller of the two.
   const textures = Object.fromEntries(Object.entries(src.textures).map(([k, e]) => [k, {
-    ...e, size: sz.texture,
+    ...e, size: Math.min(e.size ?? sz.texture, sz.texture),
     raw: { diffuse: `assets/raw/textures/${k}/diffuse.jpg`, normal: `assets/raw/textures/${k}/normal.jpg`, arm: `assets/raw/textures/${k}/arm.jpg` },
     out: { diffuse: `public/assets/${tier}/textures/${k}/diffuse.webp`, normal: `public/assets/${tier}/textures/${k}/normal.webp`, arm: `public/assets/${tier}/textures/${k}/arm.webp` },
   }]));

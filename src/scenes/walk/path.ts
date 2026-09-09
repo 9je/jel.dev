@@ -23,7 +23,10 @@ export const STOPS: Stop[] = [
   { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];
 
-export const DOOR_RANGE: [number, number] = [0.05, 0.1];
+// The shutter has to be fully up before the camera reaches it. Travel is flat through the booth
+// hold, then covers the 4 m from the camera to the door plane by t 0.0615, so the roll has to
+// finish just inside that. Opening any later walks the camera through a closed door.
+export const DOOR_RANGE: [number, number] = [0.05, 0.061];
 export const SCROLL_LENGTH_VH = 160 * STOPS.length;
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));

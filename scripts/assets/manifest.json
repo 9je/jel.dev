@@ -1,8 +1,8 @@
 {
   "textures": {
-    "metal_plate":    { "id": "metal_plate",              "group": "booth",             "repeat": [2, 2] },
-    "rubber_floor":   { "id": "rubber_tiles",             "group": "booth",             "repeat": [4, 4] },
-    "metal_shutter":  { "id": "painted_metal_shutter",    "group": "booth",             "repeat": [2, 1] },
+    "metal_plate":    { "id": "metal_plate",              "group": "booth",             "repeat": [2, 2], "size": 768 },
+    "rubber_floor":   { "id": "rubber_tiles",             "group": "booth",             "repeat": [4, 4], "size": 768 },
+    "metal_shutter":  { "id": "painted_metal_shutter",    "group": "booth",             "repeat": [2, 1], "size": 768 },
     "concrete_floor": { "id": "concrete_floor_02",        "group": "fabrication",       "repeat": [8, 14] },
     "concrete_wall":  { "id": "concrete_wall_008",        "group": "fabrication",       "repeat": [10, 3] },
     "metal_sheet":    { "id": "box_profile_metal_sheet",  "group": "fabrication",       "repeat": [6, 1] }
