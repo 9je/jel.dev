@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { cameraAt, stopAt, STOPS, type StopId } from './path';
-import type { Tier } from './quality';
+import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
 import type { Stage, StageDef, StageContext } from './stages/types';
@@ -9,7 +9,8 @@ import { greybox } from './stages/greybox';
 import { BOOTH_DEF } from './stages/booth';
 import { FABRICATION_DEF } from './stages/fabrication';
 
-export interface WalkOptions { tier: Tier; stages?: StageDef[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; initialProgress?: number }
+export type FallbackReason = 'context-lost' | 'too-slow';
+export interface WalkOptions { tier: Tier; stages?: StageDef[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number }
 export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; dispose(): void }
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
@@ -106,18 +107,38 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const clock = new THREE.Clock();
   cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
 
-  // Spec §8: sample the first 120 frames; under 24 fps average, drop the post stack and the pixel ratio once.
   let post: Post | null = createPost(renderer, scene, camera, opts.tier);
   // The composer tone maps in its own pass, so the renderer must hand it untouched linear HDR.
   // Without a composer the renderer has to do the mapping itself, or the frame renders raw.
   const applyToneMapping = () => { renderer.toneMapping = post ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping; };
   applyToneMapping();
-  let frames = 0, elapsed = 0, downgraded = false;
-  function sample(dt: number) {
-    if (downgraded || frames >= 120) return;
-    frames++; elapsed += dt;
-    if (frames === 120 && frames / elapsed < 24) { downgraded = true; post?.dispose(); post = null; applyToneMapping(); renderer.setPixelRatio(1); resize(); }
+
+  // Spec §8: a scene tiered above what the GPU can hold is trimmed after two slow seconds, and
+  // handed to the lite path after three more. Time based, so a machine at 6 fps is rescued in
+  // seconds rather than after 120 frames.
+  const governor = new FrameGovernor();
+  function trim() {
+    post?.dispose(); post = null; applyToneMapping();
+    renderer.setPixelRatio(1);
+    if (renderer.shadowMap.enabled) {
+      renderer.shadowMap.enabled = false;
+      scene.traverse((o) => {
+        if ((o as THREE.Light).isLight) (o as THREE.Light).castShadow = false;
+        const m = (o as THREE.Mesh).material;
+        for (const mat of Array.isArray(m) ? m : m ? [m] : []) mat.needsUpdate = true;
+      });
+    }
+    resize();
   }
+  function sample(dt: number) {
+    const verdict = governor.push(dt);
+    if (verdict === 'trim') trim();
+    else if (verdict === 'bail') opts.onFallback?.('too-slow');
+  }
+  // A lost context is what a tab crash looks like from the inside. Stop the loop and let the page
+  // fall to the lite path instead of drawing to a dead canvas.
+  const onContextLost = (e: Event) => { e.preventDefault(); opts.onFallback?.('context-lost'); };
+  canvas.addEventListener('webglcontextlost', onContextLost);
 
   function nearStops(t: number) {
     const i = STOPS.findIndex((s) => s.id === stopAt(t).id);
@@ -151,7 +172,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     setProgress(t) { target = t; stream(t); },
     anchors, camera, store,
     dispose() {
-      disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize);
+      disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);
       for (const s of built.values()) s.dispose(); grey.dispose(); post?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
     },

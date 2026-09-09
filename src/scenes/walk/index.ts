@@ -1,4 +1,4 @@
-import { chooseTier, readTierInput, type Tier } from './quality';
+import { chooseTier, readTierInput, type Tier, type TierInput } from './quality';
 import type { WalkHandle } from './scene';
 import type { ScrollController } from './scroll';
 import { STOPS, tForStop, type StopId } from './path';
@@ -17,14 +17,18 @@ export function queryElements(): WalkElements | null {
   return { root, canvas, dock, preloader, spacer, sections: Array.from(document.querySelectorAll<HTMLElement>('section[data-stop]')) };
 }
 
-export function decideTier(): Tier {
+const FALLBACK_KEY = 'jel:fallback';
+
+export function decideTier(input: TierInput = readTierInput()): Tier {
   const q = new URLSearchParams(location.search);
   const forced = q.get('effects');
   if (forced === 'off') { try { localStorage.setItem('jel:effects', 'off'); } catch { /* ignore */ } return 'lite'; }
   if (forced === 'on') { try { localStorage.setItem('jel:effects', 'on'); } catch { /* ignore */ } }
-  const input = readTierInput();
   const q2 = q.get('quality');
   if (q2 === 'low' || q2 === 'medium' || q2 === 'high') return input.webgl ? q2 : 'lite';
+  // The scene already gave up once in this tab (context lost, or too slow after trimming). Stay on
+  // the lite path for the rest of the session rather than crawling for five seconds on every load.
+  try { if (sessionStorage.getItem(FALLBACK_KEY) && forced !== 'on') return 'lite'; } catch { /* ignore */ }
   return chooseTier(input);
 }
 
@@ -106,6 +110,13 @@ async function startFull(els: WalkElements, tier: Tier) {
       // The dressed room did not arrive and the greybox is standing in. Flag it on the document so
       // it is visible in the DOM rather than only in the console.
       onDegraded: () => els.root.setAttribute('data-degraded', ''),
+      onFallback: (reason) => {
+        if (gen !== generation) return;
+        console.warn(`walk fell back to the lite path: ${reason}`);
+        try { sessionStorage.setItem(FALLBACK_KEY, reason); } catch { /* ignore */ }
+        els.root.setAttribute('data-fallback', reason);
+        teardown(); startLite(els);
+      },
     });
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
@@ -150,7 +161,10 @@ function teardown() {
 async function init() {
   const els = queryElements();
   if (!els) return;
-  const tier = decideTier();
+  const input = readTierInput();
+  const tier = decideTier(input);
+  // Readable from devtools on a machine that runs badly: which tier it got and why.
+  els.root.dataset.tier = tier; els.root.dataset.renderer = input.renderer;
   wireEffectsToggle(els, tier);
   if (tier === 'lite') startLite(els); else await startFull(els, tier);
 }
