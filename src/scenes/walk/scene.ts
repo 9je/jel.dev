@@ -7,6 +7,7 @@ import { createPost, type Post } from './post';
 import type { Stage, StageDef, StageContext } from './stages/types';
 import { greybox } from './stages/greybox';
 import { BOOTH_DEF } from './stages/booth';
+import { FABRICATION_DEF } from './stages/fabrication';
 
 export interface WalkOptions { tier: Tier; stages?: StageDef[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; initialProgress?: number }
 export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; dispose(): void }
@@ -49,7 +50,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const anchors = new Map<string, THREE.Vector3>();
   const ctx: StageContext = { scene, tier: opts.tier, anchors, store };
   const grey = greybox(ctx);
-  const defs = opts.stages ?? [BOOTH_DEF];
+  // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
+  // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
+  // the first frame when the walk opens there.
+  const defs = opts.stages ?? [BOOTH_DEF, FABRICATION_DEF];
   const built = new Map<string, Stage>(); const pending = new Map<string, Promise<void>>();
 
   // Every await here can outlive the handle: a stage that finishes building after dispose() would
@@ -86,7 +90,14 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   }
   opts.onLoadProgress?.(1, 1);
 
-  function resize() { renderer.setSize(window.innerWidth, window.innerHeight, false); post?.setSize(window.innerWidth, window.innerHeight); camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); }
+  function resize() {
+    renderer.setSize(window.innerWidth, window.innerHeight, false); post?.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    // A portrait phone crops a 55 degree horizontal cone down to almost nothing, so a taller frame
+    // than it is wide gets a wider lens and keeps the room in shot.
+    camera.fov = camera.aspect < 1 ? 72 : 55;
+    camera.updateProjectionMatrix();
+  }
 
   let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, raf = 0;
   const cam = { position: new THREE.Vector3(), target: new THREE.Vector3() };

@@ -9,7 +9,7 @@ const { Content } = await render(entry);
 const d = entry.data;
 const sealed = d.status === 'pending-release';
 ---
-<section class="bay" data-flagship={entry.id} data-sealed={sealed || undefined}>
+<section class="bay" data-flagship={entry.id} data-anchor={d.exhibit?.anchor} data-sealed={sealed || undefined}>
   <div class="bay-visual" aria-hidden="true">
     {d.image && !sealed ? <Image src={d.image} alt="" width={960} height={540} loading="eager" /> : <div class="bay-hex"></div>}
   </div>

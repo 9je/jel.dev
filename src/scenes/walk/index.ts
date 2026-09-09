@@ -63,6 +63,7 @@ let generation = 0;
 let handle: WalkHandle | null = null;
 let scroll: ScrollController | null = null;
 let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
+let pinRaf = 0;
 
 function setPreloader(els: WalkElements, ratio: number) {
   els.preloader.style.setProperty('--progress', String(Math.min(1, ratio)));
@@ -95,7 +96,8 @@ async function startFull(els: WalkElements, tier: Tier) {
   }, 8000);
   const giveUp = setTimeout(() => { if (gen === generation && els.preloader.dataset.state !== 'hidden') { teardown(); startLite(els); } }, 45000);
   try {
-    const [{ mountWalk }, { createScroll }] = await Promise.all([import('./scene'), import('./scroll')]);
+    // overlays.ts pulls three in, so it rides with the scene chunk rather than the eager bundle.
+    const [{ mountWalk }, { createScroll }, { pinOverlays }] = await Promise.all([import('./scene'), import('./scroll'), import('./overlays')]);
     if (gen !== generation) return;
     const h = await mountWalk(els.canvas, {
       tier,
@@ -107,6 +109,9 @@ async function startFull(els: WalkElements, tier: Tier) {
     });
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
+    // The camera moves every frame, so the panels pinned to world anchors have to follow it.
+    const pin = () => { if (!handle) return; pinOverlays(els.sections, handle.anchors, handle.camera); pinRaf = requestAnimationFrame(pin); };
+    pin();
     scroll = createScroll();
     scroll.onProgress((t) => handle?.setProgress(t));
     scroll.onStop((id) => activate(els, id));
@@ -137,6 +142,7 @@ function teardown() {
   generation++;
   scroll?.dispose(); scroll = null;
   handle?.dispose(); handle = null;
+  if (pinRaf) { cancelAnimationFrame(pinRaf); pinRaf = 0; }
   if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
   if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
 }

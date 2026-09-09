@@ -24,6 +24,7 @@ export const projectSchema = z.object({
   started: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   order: z.number().int().default(100),
   contentWarning: z.string().optional(),
+  exhibit: z.object({ anchor: z.string().min(1) }).optional(),
   unlocks: z.string().optional(),
 });
 

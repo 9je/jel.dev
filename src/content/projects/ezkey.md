@@ -8,6 +8,8 @@ stack: [TypeScript, Postgres, Docker]
 links:
   - label: ezkey.io
     href: https://ezkey.io
+exhibit:
+  anchor: ezkey
 started: 2025-08
 order: 10
 ---

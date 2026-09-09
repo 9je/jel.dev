@@ -54,3 +54,11 @@ test('a hash on load opens at that stop on the full path', async ({ page }) => {
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
 });
+
+test('the fabrication flagship pins to its exhibit on the full path', async ({ page }) => {
+  await page.goto('/?quality=low#fabrication');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
+  const bay = page.locator('section[data-stop="fabrication"] [data-flagship]');
+  await expect(bay).toHaveAttribute('data-anchor', 'ezkey');
+  await expect.poll(async () => bay.evaluate((el) => getComputedStyle(el).getPropertyValue('--ax').trim() !== ''), { timeout: 30_000 }).toBe(true);
+});

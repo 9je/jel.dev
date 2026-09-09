@@ -71,3 +71,24 @@
 .walk[data-mode='full'] .stop[data-active] { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity 400ms ease, transform 400ms ease, visibility 0s; }
 .walk[data-mode='full'] .stop-inner { max-width: 40ch; }
 .walk[data-mode='full'] .stop-body { max-width: 40ch; max-height: 55vh; overflow: auto; }
+
+/* Panels pinned to a world anchor: a flagship bay hangs beside the exhibit it describes. */
+.walk[data-mode='full'] .stop [data-anchor] { position: fixed; left: clamp(1rem, var(--ax, 50vw), calc(100vw - min(34ch, 38vw) - 4rem)); top: clamp(7rem, var(--ay, 50vh), calc(100svh - 7rem)); transform: translate(2rem, -50%); width: min(34ch, 38vw); max-height: 66vh; overflow: auto; margin: 0; padding: 1rem 1.15rem; gap: 0.75rem; grid-template-columns: 1fr; transition: opacity 200ms; }
+/* The bay is a two column card in the stacked layout. Pinned to an exhibit it is a caption, so the
+   art direction is the room behind it rather than the placeholder art inside it. */
+.walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: none; }
+.walk[data-mode='full'] .stop [data-anchor] .bay-title { font-size: 1.25rem; }
+.walk[data-mode='full'] .stop [data-anchor] .bay-summary { font-size: 1rem; }
+.walk[data-mode='full'] .stop [data-anchor][data-offscreen] { opacity: 0; pointer-events: none; }
+.walk[data-mode='full'] .stop[data-stop='fabrication'] .stop-inner { max-width: 32ch; }
+/* The project rows are a three column table in the stacked layout. Over the walk they live in a
+   column barely 30 characters wide, so the summary line drops under the title rather than being
+   squeezed into a third of it. */
+.walk[data-mode='full'] .stop .row-summary { grid-template-columns: 1fr auto; gap: 0.35rem 0.75rem; padding: 0.7rem 0.4rem; }
+.walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
+/* Too narrow to hang a panel beside anything: the bay drops back into the flow of the stop, with
+   its own two column layout and its artwork restored. */
+@media (max-width: 900px) {
+  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; transform: none; padding: 1.5rem; grid-template-columns: 1fr; }
+  .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
+}
