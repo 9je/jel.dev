@@ -30,10 +30,13 @@
 
 /* Preloader */
 .preloader { position: fixed; inset: 0; z-index: 10; display: none; place-content: center; text-align: center; background: var(--bay-black); }
+/* base.css caps every paragraph at the reading measure, which would leave these two narrower
+   than the tube and their centred text off the bar's centre. */
+.preloader-mark, .preloader-label { max-width: none; justify-self: center; }
 .preloader-mark { font-size: 1.5rem; margin-bottom: 2rem; color: var(--panel-white); opacity: 0.25; }
 .tube { width: min(60vw, 720px); height: 3px; margin: 0 auto; background: #1a2530; }
 .tube-fill { height: 100%; width: calc(var(--progress, 0) * 100%); background: var(--panel-white); box-shadow: 0 0 18px var(--glass-cyan), 0 0 40px rgb(110 193 214 / 0.35); transition: width 120ms linear; }
-.preloader-label { margin-top: 1rem; color: var(--text-dim); font-size: 0.75rem; font-stretch: 75%; letter-spacing: 0.08em; text-transform: uppercase; }
+.preloader-label { margin: 1rem 0 0; color: var(--text-dim); font-size: 0.75rem; font-stretch: 75%; letter-spacing: 0.08em; text-transform: uppercase; }
 .preloader-lite { display: none; margin-top: 1.5rem; }
 .preloader[data-state='slow'] .preloader-lite { display: block; }
 /* The tube strikes like a fluorescent starting: four dips, then it holds. The JEL mark is dark
