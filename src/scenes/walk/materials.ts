@@ -9,7 +9,7 @@ export function pbr(set: TextureSet, opts: { color?: number; roughness?: number;
   });
 }
 
-/** Primitives carry one uv set. aoMap reads uv1, so copy uv into uv1. */
+/** Primitives carry one uv set. aoMap reads uv1 (three r185 samples channel 0 by default), so copy uv into uv1 to make aoMap sampling match uv on primitives. */
 export function prepareAO(geometry: THREE.BufferGeometry): void {
   if (!geometry.getAttribute('uv1') && geometry.getAttribute('uv')) geometry.setAttribute('uv1', geometry.getAttribute('uv'));
 }
@@ -19,7 +19,7 @@ export function surface(set: TextureSet, width: number, height: number, metersPe
   const m = pbr(set);
   const repeatX = width / metersPerTile;
   const repeatY = height / metersPerTile;
-  const tile = (t: THREE.Texture) => { const c = t.clone(); c.repeat.set(repeatX, repeatY); c.needsUpdate = true; return c; };
+  const tile = (t: THREE.Texture) => { const c = t.clone(); c.repeat.set(repeatX, repeatY); c.needsUpdate = true; c.userData.owned = true; return c; };
 
   m.map = tile(set.map);
   m.normalMap = tile(set.normalMap);
@@ -28,4 +28,23 @@ export function surface(set: TextureSet, width: number, height: number, metersPe
   m.roughnessMap = arm;
   m.metalnessMap = arm;
   return m;
+}
+
+const OWNABLE_MAPS = ['map', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap', 'emissiveMap'] as const;
+
+/** Disposes geometry and materials on every mesh/points in the hierarchy. A map is disposed only when
+ *  `userData.owned === true` — clones made for this instance (see `surface()`) — never a texture the
+ *  AssetStore still owns and will dispose itself. */
+export function disposeObject(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.Points)) return;
+    o.geometry.dispose();
+    for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
+      for (const key of OWNABLE_MAPS) {
+        const tex = (mat as THREE.MeshStandardMaterial)[key];
+        if (tex?.userData?.owned === true) tex.dispose();
+      }
+      mat.dispose();
+    }
+  });
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stage, StageContext, StageDef } from './types';
-import { surface, prepareAO } from '../materials';
+import { surface, prepareAO, disposeObject } from '../materials';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
 
@@ -51,7 +51,7 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   return {
     id: 'booth', root,
     update(t) { door.update(doorOpenAmount(t)); },
-    dispose() { door.dispose(); root.traverse((o) => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); } }); scene.remove(root); },
+    dispose() { door.dispose(); disposeObject(root); scene.remove(root); },
   };
 }
 

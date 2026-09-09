@@ -49,21 +49,33 @@ export class AssetStore {
     const report = () => { const p = groupProgress(files); onProgress?.(p.loaded, p.total); };
     const track = <T>(bytes: number, p: Promise<T>) => { const f = { bytes, done: false }; files.push(f); return p.then((v) => { f.done = true; report(); return v; }); };
     const work: Promise<unknown>[] = [];
+    const textureKeys: string[] = [];
+    const modelKeys: string[] = [];
     for (const [key, t] of Object.entries(g.textures)) {
+      textureKeys.push(key);
       work.push(track(t.bytes, Promise.all([
         this.loadTexture(t.diffuse, true, t.repeat), this.loadTexture(t.normal, false, t.repeat), this.loadTexture(t.arm, false, t.repeat),
       ]).then(([map, normalMap, arm]) => { this.textures.set(key, { map, normalMap, arm, repeat: t.repeat }); })));
     }
     for (const [key, m] of Object.entries(g.models)) {
+      modelKeys.push(key);
       work.push(track(m.bytes, this.gltf.loadAsync(m.url).then((res) => { this.models.set(key, res.scene); })));
     }
     report();
-    const p = Promise.all(work).then(() => { this.loaded.add(id); this.pending.delete(id); });
+    const p = Promise.all(work)
+      .then(() => { this.loaded.add(id); })
+      .catch((err) => {
+        for (const key of textureKeys) this.textures.delete(key);
+        for (const key of modelKeys) this.models.delete(key);
+        throw err;
+      })
+      .finally(() => { this.pending.delete(id); });
     this.pending.set(id, p);
     return p;
   }
 
   texture(key: string): TextureSet { const t = this.textures.get(key); if (!t) throw new Error(`texture ${key} not loaded`); return t; }
+  /** Object3D.clone(true) clones the hierarchy but each clone still shares geometry and materials with the template. */
   model(key: string): THREE.Group { const m = this.models.get(key); if (!m) throw new Error(`model ${key} not loaded`); return m.clone(true); }
 
   dispose() {

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { AssetStore } from './assets';
-import { pbr } from './materials';
+import { pbr, disposeObject } from './materials';
 import { hazardTexture, stencilTexture } from './textures';
 
 export interface Door { root: THREE.Group; update(open: number): void; dispose(): void }
@@ -16,7 +16,9 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
 
   const shutter = store.texture('metal_shutter');
   const slatMat = pbr(shutter);
-  slatMat.map = shutter.map.clone(); slatMat.normalMap = shutter.normalMap.clone(); const arm = shutter.arm.clone();
+  slatMat.map = shutter.map.clone(); slatMat.map.userData.owned = true;
+  slatMat.normalMap = shutter.normalMap.clone(); slatMat.normalMap.userData.owned = true;
+  const arm = shutter.arm.clone(); arm.userData.owned = true;
   slatMat.aoMap = slatMat.roughnessMap = slatMat.metalnessMap = arm;
   for (const t of [slatMat.map, slatMat.normalMap, arm]) { t.repeat.set(width / 3, 1); t.needsUpdate = true; }
   const slatGeo = new THREE.PlaneGeometry(width, height); slatGeo.translate(0, -height / 2, 0);  // origin at the top edge
@@ -53,6 +55,6 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
       stencil.position.y = p.stencilY; stencil.visible = p.stencilVisible;
       const g = open > 0.05; (lamp.material as THREE.MeshStandardMaterial).emissive.set(g ? 0x2ecc71 : 0xc8322b); lampLight.color.set(g ? 0x2ecc71 : 0xc8322b);
     },
-    dispose() { root.traverse((o) => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); } }); },
+    dispose() { disposeObject(root); },
   };
 }
