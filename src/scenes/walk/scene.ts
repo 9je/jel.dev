@@ -75,7 +75,9 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
 
   // First frame: everything the stop we are opening at needs, reported to the preloader by bytes.
   const openingAt = stopAt(opts.initialProgress ?? 0).id;
-  const first = defs.find((d) => d.near.includes(openingAt)) ?? defs.find((d) => d.id === BOOTH_DEF.id) ?? defs[0];
+  // The stage named after the stop wins: `near` is a streaming hint and several stages list the
+  // same neighbour, so matching on it first would load the booth for a deep link to the hangar.
+  const first = defs.find((d) => d.id === openingAt) ?? defs.find((d) => d.near.includes(openingAt)) ?? defs[0];
   if (first) {
     try {
       await Promise.all(first.groups.map((g) => store.loadGroup(g, (l, t) => opts.onLoadProgress?.(l, t))));
@@ -117,9 +119,14 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (frames === 120 && frames / elapsed < 24) { downgraded = true; post?.dispose(); post = null; applyToneMapping(); renderer.setPixelRatio(1); resize(); }
   }
 
-  function stream(t: number) {
+  function nearStops(t: number) {
     const i = STOPS.findIndex((s) => s.id === stopAt(t).id);
-    const near = new Set<StopId>([STOPS[i]?.id, STOPS[i - 1]?.id, STOPS[i + 1]?.id].filter(Boolean) as StopId[]);
+    return new Set<StopId>([STOPS[i]?.id, STOPS[i - 1]?.id, STOPS[i + 1]?.id].filter(Boolean) as StopId[]);
+  }
+
+  function stream(t: number) {
+    const near = nearStops(t);
+    grey.setNear(near);
     for (const d of defs) if (d.near.some((n) => near.has(n))) void ensure(d);
   }
 
@@ -134,6 +141,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (post) post.render(dt); else renderer.render(scene, camera);
   }
   resize(); window.addEventListener('resize', resize);
+  // Only the visibility pass runs here. `stream()` would also start building the neighbouring stage,
+  // and that build is heavy enough (it merges every prop's geometry) to stall the first scroll if it
+  // lands on top of it, so the streaming stays where it was: on the first progress update.
+  grey.setNear(nearStops(current));
   frame();
 
   return {

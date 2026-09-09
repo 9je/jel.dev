@@ -12,10 +12,15 @@ export function pinOverlays(sections: HTMLElement[], anchors: Map<string, THREE.
   if (!active) return;
   for (const el of active.querySelectorAll<HTMLElement>('[data-anchor]')) {
     const a = anchors.get(el.dataset.anchor ?? '');
-    if (!a) continue;
+    // The stage that registers this anchor may still be streaming. Park the panel out of sight
+    // rather than at the default 50vw/50vh, which would drop it over the middle of the room.
+    if (!a) { el.toggleAttribute('data-offscreen', true); continue; }
     v.copy(a).project(camera);
     const behind = v.z > 1;
     el.toggleAttribute('data-offscreen', behind || Math.abs(v.x) > 1.2 || Math.abs(v.y) > 1.2);
+    // A panel always hung to the right of its anchor covers whatever the anchor is pointing at once
+    // the anchor is itself in the right of frame. Past a fifth of the way over, it hangs left.
+    el.toggleAttribute('data-flip', v.x > 0.2);
     el.style.setProperty('--ax', `${((v.x + 1) / 2) * window.innerWidth}px`);
     el.style.setProperty('--ay', `${((1 - v.y) / 2) * window.innerHeight}px`);
   }

@@ -8,6 +8,14 @@ const WALL = 0x3a4a58, FLOOR = 0x2c3944;
 const CORNERS: [number, number][] = [[-12, -30], [-77.5, -30.5], [-77, 25.5]];
 /** A dressed stage hides its greybox space, so the greybox marker standing in for that stop goes with it. */
 const MARKER_SPACE: Partial<Record<StopId, GreyboxSpace>> = { booth: 'booth', fabrication: 'hangar' };
+/** Which stop each greybox space stands in for. Three does not cull lights: every visible PointLight
+ *  in the scene is compiled into every material and shaded for every pixel, so a space five stops
+ *  away was costing the fabrication floor its frame rate. Only the spaces around the camera are
+ *  left visible, and an invisible group is skipped whole by `projectObject`, lights included. */
+const SPACE_STOP: Record<GreyboxSpace, StopId> = {
+  booth: 'booth', hangar: 'fabrication', corridor: 'recreation', lab: 'operations',
+  hall: 'credentials', bay: 'containment', office: 'file',
+};
 
 function box(w: number, h: number, d: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.9 }));
@@ -30,7 +38,7 @@ function corridor(a: THREE.Vector3, b: THREE.Vector3, width: number, height: num
   }
 }
 
-export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxSpace): void } {
+export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxSpace): void; setNear(near: Set<StopId>): void } {
   const root = new THREE.Group(); root.name = 'greybox'; scene.add(root);
   const p = CONTROL_POINTS.map((c) => new THREE.Vector3(c[0], 0, c[2]));
 
@@ -66,9 +74,19 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
     patch.position.set(x, 0, z);
     root.add(patch);
   }
+  // A space replaced by a dressed stage is gone for good. A space that is simply far away is only
+  // switched off, and comes back when the camera does.
+  const replaced = new Set<GreyboxSpace>();
+  let near = new Set<StopId>(Object.values(SPACE_STOP));
+  const apply = () => {
+    for (const id of Object.keys(spaces) as GreyboxSpace[]) {
+      spaces[id].visible = !replaced.has(id) && near.has(SPACE_STOP[id]);
+    }
+  };
   return {
     id: 'greybox', root,
-    hide(id) { spaces[id].visible = false; for (const m of markerFor[id] ?? []) m.visible = false; },
+    hide(id) { replaced.add(id); apply(); for (const m of markerFor[id] ?? []) m.visible = false; },
+    setNear(next) { near = next; apply(); },
     update() {},
     dispose() { disposeObject(root); scene.remove(root); },
   };
