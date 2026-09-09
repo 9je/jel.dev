@@ -97,7 +97,14 @@ async function startFull(els: WalkElements, tier: Tier) {
   try {
     const [{ mountWalk }, { createScroll }] = await Promise.all([import('./scene'), import('./scroll')]);
     if (gen !== generation) return;
-    const h = await mountWalk(els.canvas, { tier, initialProgress: tForStop(initial), onLoadProgress: (l, t) => setPreloader(els, l / t) });
+    const h = await mountWalk(els.canvas, {
+      tier,
+      initialProgress: tForStop(initial),
+      onLoadProgress: (l, t) => setPreloader(els, l / t),
+      // The dressed room did not arrive and the greybox is standing in. Flag it on the document so
+      // it is visible in the DOM rather than only in the console.
+      onDegraded: () => els.root.setAttribute('data-degraded', ''),
+    });
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
     scroll = createScroll();
@@ -117,7 +124,8 @@ async function startFull(els: WalkElements, tier: Tier) {
     if (initial !== 'booth') scroll.jumpTo(initial, true);
     els.preloader.dataset.state = 'done';
     els.preloader.setAttribute('aria-busy', 'false');
-    hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 500);
+    // 700 ms of tube flicker, then a 350 ms fade out. Hide once that has finished playing.
+    hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
   } catch (err) {
     console.warn('walk failed to start, using the lite path', err);
     teardown();

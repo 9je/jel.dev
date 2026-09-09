@@ -8,7 +8,9 @@ export function hazardTexture(): THREE.CanvasTexture {
   const [c, ctx] = canvas(256, 64);
   ctx.fillStyle = '#111111'; ctx.fillRect(0, 0, 256, 64); ctx.fillStyle = '#E8B923';
   for (let x = -64; x < 320; x += 64) { ctx.beginPath(); ctx.moveTo(x, 64); ctx.lineTo(x + 32, 64); ctx.lineTo(x + 96, 0); ctx.lineTo(x + 64, 0); ctx.closePath(); ctx.fill(); }
-  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.owned = true;  // built here, so disposeObject() may free it
+  return t;
 }
 
 /** Stencilled lettering with a transparent background, for decals on doors and walls. */
@@ -25,5 +27,7 @@ export function stencilTexture(text: string, opts: { width: number; height: numb
   ctx.globalAlpha = opts.alpha ?? 0.88; ctx.fillText(text, opts.width / 2, opts.height / 2);
   // Punch out flecks so the paint reads worn rather than printed.
   for (let i = 0; i < 400; i++) { ctx.clearRect(Math.random() * opts.width, Math.random() * opts.height, 2, 2); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  t.userData.owned = true;  // built here, so disposeObject() may free it
+  return t;
 }

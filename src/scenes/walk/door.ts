@@ -30,7 +30,9 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
   const lintel = new THREE.Mesh(new THREE.BoxGeometry(width + 0.6, 0.5, 0.5), frameMat); lintel.position.y = height + 0.45; root.add(lintel);
   const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, width, 24), frameMat); drum.rotation.z = Math.PI / 2; drum.position.set(0, height + 0.2, 0.15); root.add(drum);
 
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(width, 0.12, 0.12), new THREE.MeshStandardMaterial({ map: hazardTexture(), roughness: 0.7 })); root.add(rail);
+  // One chevron pair every 0.5 m, or the 256 px band stretches across the whole 6 m rail as a smear.
+  const hazard = hazardTexture(); hazard.repeat.x = width / 0.5; hazard.needsUpdate = true;
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(width, 0.12, 0.12), new THREE.MeshStandardMaterial({ map: hazard, roughness: 0.7 })); root.add(rail);
   // The plane keeps the canvas aspect so the lettering is never stretched.
   const STENCIL_W = 1024, STENCIL_H = 320;
   const stencilWidth = width * 0.42;

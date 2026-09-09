@@ -14,7 +14,7 @@ export const CONTROL_POINTS: [number, number, number][] = [
 ];
 
 export const STOPS: Stop[] = [
-  { id: 'booth', t: 0.0, hold: [0.0, 0.05], lookAt: [0, 2.2, 20], light: '#6EC1D6' },
+  { id: 'booth', t: 0.0, hold: [0.0, 0.09], lookAt: [0, 2.2, 20], light: '#6EC1D6' },
   { id: 'fabrication', t: 0.2, hold: [0.17, 0.25], lookAt: [-5, 2, -5], wing: 'fabrication', light: '#E0813A' },
   { id: 'recreation', t: 0.4, hold: [0.37, 0.44], lookAt: [-34, 2, -33.5], wing: 'recreation', light: '#3D7BE0' },
   { id: 'operations', t: 0.56, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
@@ -23,10 +23,10 @@ export const STOPS: Stop[] = [
   { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];
 
-// The shutter has to be fully up before the camera reaches it. Travel is flat through the booth
-// hold, then covers the 4 m from the camera to the door plane by t 0.0615, so the roll has to
-// finish just inside that. Opening any later walks the camera through a closed door.
-export const DOOR_RANGE: [number, number] = [0.05, 0.061];
+// The shutter rolls up while the camera is still parked in the booth: travel is flat through the
+// booth hold, which now runs to 0.09, and the door finishes at 0.088. The reveal is watched from a
+// standstill and the camera never approaches a closed door.
+export const DOOR_RANGE: [number, number] = [0.05, 0.088];
 export const SCROLL_LENGTH_VH = 160 * STOPS.length;
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));

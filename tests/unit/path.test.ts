@@ -11,12 +11,18 @@ describe('stops', () => {
     for (const s of STOPS) { expect(s.hold[0]).toBeLessThanOrEqual(s.t); expect(s.hold[1]).toBeGreaterThanOrEqual(s.t); }
     for (let i = 1; i < STOPS.length; i++) expect(STOPS[i].hold[0]).toBeGreaterThan(STOPS[i - 1].hold[1]);
   });
-  it('door opens after the booth hold and before the fabrication hold', () => {
-    expect(DOOR_RANGE[0]).toBeGreaterThanOrEqual(STOPS[0].hold[1]);
+  it('door opens before the fabrication hold and is never walked through', () => {
     expect(DOOR_RANGE[1]).toBeLessThanOrEqual(STOPS[1].hold[0]);
     expect(doorOpenAmount(0)).toBe(0);
     expect(doorOpenAmount(DOOR_RANGE[1])).toBe(1);
     expect(doorOpenAmount((DOOR_RANGE[0] + DOOR_RANGE[1]) / 2)).toBeCloseTo(0.5, 5);
+    // The shutter plane sits at z 22. Wherever the camera has come within 0.6 m of it, the door
+    // has to be all the way up, or the walk drives the lens through a closed door.
+    for (let t = 0; t <= 0.3 + 1e-9; t += 0.001) {
+      if (cameraAt(t).position.z <= 22.6) expect(doorOpenAmount(t)).toBe(1);
+    }
+    // And the reveal has to finish while the camera is still parked, so it is watched, not passed.
+    expect(doorOpenAmount(STOPS[0].hold[1])).toBe(1);
   });
 });
 

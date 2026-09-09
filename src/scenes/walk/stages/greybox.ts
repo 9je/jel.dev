@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { STOPS, CONTROL_POINTS, cameraAt, type StopId } from '../path';
+import { disposeObject } from '../materials';
 import type { GreyboxSpace, Stage, StageContext } from './types';
 
 const WALL = 0x3a4a58, FLOOR = 0x2c3944;
@@ -69,6 +70,6 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
     id: 'greybox', root,
     hide(id) { spaces[id].visible = false; for (const m of markerFor[id] ?? []) m.visible = false; },
     update() {},
-    dispose() { root.traverse((o) => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); } }); scene.remove(root); },
+    dispose() { disposeObject(root); scene.remove(root); },
   };
 }

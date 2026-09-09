@@ -30,14 +30,27 @@
 
 /* Preloader */
 .preloader { position: fixed; inset: 0; z-index: 10; display: none; place-content: center; text-align: center; background: var(--bay-black); }
-.preloader-mark { font-size: 1.5rem; margin-bottom: 2rem; color: var(--panel-white); }
-.tube { width: min(40vw, 480px); height: 2px; margin: 0 auto; background: #1a2530; }
-.tube-fill { height: 100%; width: calc(var(--progress, 0) * 100%); background: var(--panel-white); box-shadow: 0 0 12px var(--glass-cyan); transition: width 120ms linear; }
+.preloader-mark { font-size: 1.5rem; margin-bottom: 2rem; color: var(--panel-white); opacity: 0.25; }
+.tube { width: min(60vw, 720px); height: 3px; margin: 0 auto; background: #1a2530; }
+.tube-fill { height: 100%; width: calc(var(--progress, 0) * 100%); background: var(--panel-white); box-shadow: 0 0 18px var(--glass-cyan), 0 0 40px rgb(110 193 214 / 0.35); transition: width 120ms linear; }
 .preloader-label { margin-top: 1rem; color: var(--text-dim); font-size: 0.75rem; font-stretch: 75%; letter-spacing: 0.08em; text-transform: uppercase; }
 .preloader-lite { display: none; margin-top: 1.5rem; }
 .preloader[data-state='slow'] .preloader-lite { display: block; }
-.preloader[data-state='done'] .tube-fill { animation: tube-on 320ms steps(1, end) both; }
-@keyframes tube-on { 0% { opacity: 1 } 20% { opacity: 0.2 } 35% { opacity: 1 } 50% { opacity: 0.1 } 60% { opacity: 1 } 100% { opacity: 1 } }
+/* The tube strikes like a fluorescent starting: four dips, then it holds. The JEL mark is dark
+   until the strike, then it is on with the tube. */
+.preloader[data-state='done'] .tube-fill,
+.preloader[data-state='done'] .preloader-mark { animation: tube-on 700ms steps(1, end) both; }
+@keyframes tube-on {
+  0% { opacity: 1 } 9% { opacity: 0.15 } 17% { opacity: 1 } 27% { opacity: 0.1 }
+  36% { opacity: 1 } 48% { opacity: 0.2 } 57% { opacity: 1 } 69% { opacity: 0.12 }
+  78% { opacity: 1 } 100% { opacity: 1 }
+}
+.preloader[data-state='done'] { animation: preloader-out 350ms 700ms ease both; }
+@keyframes preloader-out { to { opacity: 0 } }
+@media (prefers-reduced-motion: reduce) {
+  .preloader[data-state='done'] .tube-fill,
+  .preloader[data-state='done'] .preloader-mark { animation: none; opacity: 1 }
+}
 .preloader[data-state='hidden'] { display: none; }
 
 /* Ticker (HTML version, lite path) */
