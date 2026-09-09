@@ -70,20 +70,24 @@
 .walk[data-mode='full'] .stop::before { display: none; }
 .walk[data-mode='full'] .stop[data-active] { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity 400ms ease, transform 400ms ease, visibility 0s; }
 .walk[data-mode='full'] .stop-inner { max-width: 40ch; }
+/* The stop name is the one thing that must always read whole. Nothing clips its overflow, and it is
+   sized to fit the copy column the panel placement reserves: at 6vw the widest stop name needs about
+   9.5 times its own font size, which is wider than 40ch, and the panel would then cover its last
+   letter. The cap keeps the whole word inside the column at every viewport width. */
+.walk[data-mode='full'] .stop-title { white-space: nowrap; font-size: clamp(1.8rem, 4.6vw, 2.8rem); }
 .walk[data-mode='full'] .stop-body { max-width: 40ch; max-height: 55vh; overflow: auto; }
 
 /* Panels pinned to a world anchor: a flagship bay hangs beside the exhibit it describes. */
-.walk[data-mode='full'] .stop [data-anchor] { position: fixed; left: clamp(1rem, var(--ax, 50vw), calc(100vw - min(34ch, 38vw) - 4rem)); top: clamp(7rem, var(--ay, 50vh), calc(100svh - 7rem)); transform: translate(2rem, -50%); width: min(34ch, 38vw); max-height: 66vh; overflow: auto; margin: 0; padding: 1rem 1.15rem; gap: 0.75rem; grid-template-columns: 1fr; transition: opacity 200ms; }
-/* Anchor in the right of frame: the panel hangs to its left instead, so it stops covering the thing
-   it is describing. The lower clamp keeps its far edge on screen. */
-.walk[data-mode='full'] .stop [data-anchor][data-flip] { left: clamp(calc(min(34ch, 38vw) + 4rem), var(--ax, 50vw), calc(100vw - 1rem)); transform: translate(calc(-100% - 2rem), -50%); }
+.walk[data-mode='full'] .stop [data-anchor] { position: fixed; left: clamp(calc(6vw + 40ch + 2rem), var(--ax, 50vw), calc(100vw - 30ch - 2rem)); top: clamp(6rem, var(--ay, 50vh), calc(100vh - 6rem)); transform: translate(0, -50%); width: 30ch; max-height: 62vh; overflow: auto; margin: 0; padding: 1rem 1.15rem; gap: 0.75rem; grid-template-columns: 1fr; opacity: 0; pointer-events: none; transition: opacity 250ms ease 0ms; }
 /* The bay is a two column card in the stacked layout. Pinned to an exhibit it is a caption, so the
    art direction is the room behind it rather than the placeholder art inside it. */
 .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: none; }
 .walk[data-mode='full'] .stop [data-anchor] .bay-title { font-size: 1.25rem; }
 .walk[data-mode='full'] .stop [data-anchor] .bay-summary { font-size: 1rem; }
-.walk[data-mode='full'] .stop [data-anchor][data-offscreen] { opacity: 0; pointer-events: none; }
-.walk[data-mode='full'] .stop[data-stop='fabrication'] .stop-inner { max-width: 28ch; }
+/* The panel belongs to a stop the camera has arrived at, not to one it is passing through, so it
+   waits for the hold and then fades in. Leaving is immediate: it must be gone before the travel
+   starts, or it sits over whatever the camera is moving toward. */
+.walk[data-mode='full'] .stop[data-active] [data-anchor][data-settled]:not([data-offscreen]) { opacity: 1; pointer-events: auto; transition: opacity 250ms ease 700ms; }
 /* The project rows are a three column table in the stacked layout. Over the walk they live in a
    column barely 30 characters wide, so the title and its status plate take one line and the summary
    drops underneath at the full width of the panel. The list gets a solid ground of its own: rows
@@ -96,6 +100,7 @@
 /* Too narrow to hang a panel beside anything: the bay drops back into the flow of the stop, with
    its own two column layout and its artwork restored. */
 @media (max-width: 900px) {
-  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; transform: none; padding: 1.5rem; grid-template-columns: 1fr; }
+  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
+  .walk[data-mode='full'] .stop-title { white-space: normal; }
   .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
 }

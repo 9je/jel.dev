@@ -49,9 +49,10 @@ function parts(template: THREE.Object3D): { geometry: THREE.BufferGeometry; mate
   const out: { geometry: THREE.BufferGeometry; material: THREE.Material }[] = [];
   template.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
+    // Merging by material cannot express a mesh whose groups use several materials. None of the
+    // hangar props has one; if that ever changes, fail loudly rather than paint it all with the first.
+    if (Array.isArray(o.material)) throw new Error(`fabrication: ${o.name || 'a mesh'} has ${o.material.length} materials, which parts() cannot merge`);
     const baked = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    // A mesh carrying a material array draws its groups separately anyway, so it is left alone.
-    if (Array.isArray(o.material)) { out.push({ geometry: baked, material: o.material[0] }); return; }
     const list = buckets.get(o.material);
     if (list) list.push(baked); else buckets.set(o.material, [baked]);
   });
@@ -84,7 +85,12 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
   const concreteF = store.texture('concrete_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), surface(concreteF, W, D, 3));
+  // The concrete diffuse averages 120/110/91, which is warm, and the fog only cools it in the
+  // distance: near the camera the bare floor read as a tan wash that the orange pools disappeared
+  // into. Tinting the map toward neutral makes the floor cold concrete again, so a sodium pool on it
+  // reads as an island rather than as the floor colour.
+  const floorMat = surface(concreteF, W, D, 3); floorMat.color.setHex(0x8fa8ba);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), floorMat);
   prepareAO(floor.geometry); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC); floor.receiveShadow = true; root.add(floor);
 
   // The metal_sheet diffuse averages 106/38/23: it is rusted corrugated iron, and it was painting
@@ -161,7 +167,7 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   const lamps: Spot[] = [], cords: Spot[] = [], pools: Spot[] = [];
   for (const [x, z, lamp] of sodium) {
     const y = 6.5;
-    const s = new THREE.SpotLight(0xe0813a, 260, 18, Math.PI / 5, 0.5, 1.8);
+    const s = new THREE.SpotLight(0xe0813a, 180, 18, Math.PI / 6, 0.5, 1.8);
     s.position.set(x, y, z); s.target.position.set(x, 0, z);
     s.castShadow = tier === 'high' && lamp; s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -0.0008;
     root.add(s, s.target);
@@ -172,8 +178,8 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   }
   root.add(repeat(hang, lamps));
   root.add(instances(new THREE.CylinderGeometry(0.02, 0.02, H - 6.5), cordMat, cords));
-  const poolGeo = new THREE.CircleGeometry(2.2, 24); poolGeo.rotateX(-Math.PI / 2);
-  root.add(instances(poolGeo, new THREE.MeshBasicMaterial({ color: 0xe0813a, transparent: true, opacity: 0.08, depthWrite: false }), pools));
+  const poolGeo = new THREE.CircleGeometry(1.6, 24); poolGeo.rotateX(-Math.PI / 2);
+  root.add(instances(poolGeo, new THREE.MeshBasicMaterial({ color: 0xe0813a, transparent: true, opacity: 0.05, depthWrite: false }), pools));
 
   // Dressing. Everything is placed against one of the two frames the walk actually holds: the
   // approach down the hall, and the stop looking back at the clean room.
@@ -222,7 +228,7 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   }
   cube.add(instances(new THREE.BoxGeometry(1.6, 1.0, 1.0), pedestalMat, pedestals));
   cube.add(instances(new THREE.BoxGeometry(1.7, 0.05, 1.1), topMat, tops));
-  cube.add(instances(new THREE.BoxGeometry(2.2, 0.9, 0.04), labelMat, labels));
+  cube.add(instances(new THREE.BoxGeometry(1.9, 0.9, 0.04), labelMat, labels));
   const cubeLight = new THREE.PointLight(0xdff0f6, 3.2, 11, 1.8); cubeLight.position.set(CUBE_X, 3.4, CUBE_Z); root.add(cubeLight);
   anchors.set('fabrication', new THREE.Vector3(0, 2, 6));
 

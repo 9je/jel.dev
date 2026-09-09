@@ -80,12 +80,16 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
   let near = new Set<StopId>(Object.values(SPACE_STOP));
   const apply = () => {
     for (const id of Object.keys(spaces) as GreyboxSpace[]) {
-      spaces[id].visible = !replaced.has(id) && near.has(SPACE_STOP[id]);
+      const on = !replaced.has(id) && near.has(SPACE_STOP[id]);
+      spaces[id].visible = on;
+      // The marker stands in for the stop inside that space, so it goes dark with it: replaced for
+      // good once a stage is dressed, and simply off while the space is out of range.
+      for (const m of markerFor[id] ?? []) m.visible = on;
     }
   };
   return {
     id: 'greybox', root,
-    hide(id) { replaced.add(id); apply(); for (const m of markerFor[id] ?? []) m.visible = false; },
+    hide(id) { replaced.add(id); apply(); },
     setNear(next) { near = next; apply(); },
     update() {},
     dispose() { disposeObject(root); scene.remove(root); },

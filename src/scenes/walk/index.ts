@@ -110,7 +110,7 @@ async function startFull(els: WalkElements, tier: Tier) {
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
     // The camera moves every frame, so the panels pinned to world anchors have to follow it.
-    const pin = () => { if (!handle) return; pinOverlays(els.sections, handle.anchors, handle.camera); pinRaf = requestAnimationFrame(pin); };
+    const pin = () => { if (!handle) return; pinOverlays(els.sections, handle.anchors, handle.camera, scroll?.progress() ?? 0); pinRaf = requestAnimationFrame(pin); };
     pin();
     scroll = createScroll();
     scroll.onProgress((t) => handle?.setProgress(t));
