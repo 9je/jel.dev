@@ -16,7 +16,6 @@
     "crate_wood_2":      { "id": "wooden_crate_02",                "group": "fabrication" },
     "crate_plastic":     { "id": "plastic_crate_01",               "group": "fabrication" },
     "barrel":            { "id": "barrel_03",                      "group": "fabrication" },
-    "airduct":           { "id": "modular_airduct_rectangular_01", "group": "fabrication" },
     "fluorescent":       { "id": "mounted_fluorescent_lights",     "group": "fabrication" },
     "cables":            { "id": "modular_electric_cables",        "group": "fabrication" },
     "military_crate":    { "id": "old_military_crate",             "group": "fabrication-extra" },
@@ -25,7 +24,15 @@
     "metal_rack":        { "id": "worn_metal_rack",                "group": "fabrication-extra" },
     "power_box":         { "id": "power_box_01",                   "group": "fabrication-extra" },
     "hanging_lamp":      { "id": "hanging_industrial_lamp",        "group": "fabrication-extra" },
-    "fire_extinguisher": { "id": "korean_fire_extinguisher_01",    "group": "fabrication-extra" }
+    "fire_extinguisher": { "id": "korean_fire_extinguisher_01",    "group": "fabrication-extra" },
+    "steel_shelves":     { "id": "steel_frame_shelves_01",         "group": "fabrication-dressing" },
+    "welding_cart":      { "id": "portable_welding_cart",          "group": "fabrication-dressing" },
+    "compressor":        { "id": "old_military_compressor",        "group": "fabrication-dressing" },
+    "propane":           { "id": "propane_tank",                   "group": "fabrication-dressing" },
+    "tool_chest":        { "id": "metal_tool_chest",               "group": "fabrication-dressing" },
+    "cardboard_box":     { "id": "cardboard_box_01",               "group": "fabrication-dressing" },
+    "ladder":            { "id": "ladder_sectioned_01",            "group": "fabrication-dressing" },
+    "dock_door":         { "id": "rollershutter_door",             "group": "fabrication-dressing" }
   },
   "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
   "budgets": { "desktop": { "total": 15728640, "firstFrame": 1572864, "group": 3145728 }, "phone": { "total": 4194304 } }

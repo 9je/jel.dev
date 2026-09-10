@@ -18,7 +18,6 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | crate_wood_2 | [wooden_crate_02](https://polyhaven.com/a/wooden_crate_02) | model |
 | crate_plastic | [plastic_crate_01](https://polyhaven.com/a/plastic_crate_01) | model |
 | barrel | [barrel_03](https://polyhaven.com/a/barrel_03) | model |
-| airduct | [modular_airduct_rectangular_01](https://polyhaven.com/a/modular_airduct_rectangular_01) | model |
 | fluorescent | [mounted_fluorescent_lights](https://polyhaven.com/a/mounted_fluorescent_lights) | model |
 | cables | [modular_electric_cables](https://polyhaven.com/a/modular_electric_cables) | model |
 | military_crate | [old_military_crate](https://polyhaven.com/a/old_military_crate) | model |
@@ -28,3 +27,11 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | power_box | [power_box_01](https://polyhaven.com/a/power_box_01) | model |
 | hanging_lamp | [hanging_industrial_lamp](https://polyhaven.com/a/hanging_industrial_lamp) | model |
 | fire_extinguisher | [korean_fire_extinguisher_01](https://polyhaven.com/a/korean_fire_extinguisher_01) | model |
+| steel_shelves | [steel_frame_shelves_01](https://polyhaven.com/a/steel_frame_shelves_01) | model |
+| welding_cart | [portable_welding_cart](https://polyhaven.com/a/portable_welding_cart) | model |
+| compressor | [old_military_compressor](https://polyhaven.com/a/old_military_compressor) | model |
+| propane | [propane_tank](https://polyhaven.com/a/propane_tank) | model |
+| tool_chest | [metal_tool_chest](https://polyhaven.com/a/metal_tool_chest) | model |
+| cardboard_box | [cardboard_box_01](https://polyhaven.com/a/cardboard_box_01) | model |
+| ladder | [ladder_sectioned_01](https://polyhaven.com/a/ladder_sectioned_01) | model |
+| dock_door | [rollershutter_door](https://polyhaven.com/a/rollershutter_door) | model |

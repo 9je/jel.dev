@@ -43,8 +43,10 @@ test('full path mounts the scene and the dock flies to a stop', async ({ page })
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
   await expect(page.locator('section[data-stop="booth"]')).toHaveAttribute('data-active', '');
   await page.locator('a[data-stop-link="fabrication"]').click();
-  await expect(page).toHaveURL(/#fabrication$/, { timeout: 15_000 });
-  await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
+  // SwiftShader draws the dressed hall at about one frame a second, and the dock flight is a
+  // Lenis animation that needs frames to advance. On a GPU the hash changes inside a second.
+  await expect(page).toHaveURL(/#fabrication$/, { timeout: 60_000 });
+  await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
   await expect(page.locator('section[data-stop="booth"]')).not.toHaveAttribute('data-active', '');
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });

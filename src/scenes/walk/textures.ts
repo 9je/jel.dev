@@ -31,3 +31,17 @@ export function stencilTexture(text: string, opts: { width: number; height: numb
   t.userData.owned = true;  // built here, so disposeObject() may free it
   return t;
 }
+
+/** A soft radial falloff, white in the centre and clear at the rim, for light pools and dust motes. */
+export function radialTexture(size = 128, hardness = 0.15): THREE.CanvasTexture {
+  const [c, ctx] = canvas(size, size);
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(hardness, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.55, 'rgba(255,255,255,0.28)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.owned = true;  // built here, so disposeObject() may free it
+  return t;
+}

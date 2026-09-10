@@ -48,7 +48,9 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
   const space = (id: GreyboxSpace) => { const g = new THREE.Group(); g.name = `greybox-${id}`; root.add(g); spaces[id] = g; return g; };
   corridor(p[0].clone().setZ(30), p[1].clone().setZ(22), 8, 4, space('booth'));
   corridor(p[1].clone().setZ(22), p[5].clone().setZ(-30), 40, 12, space('hangar'));
-  corridor(p[6], p[9], 8, 5, space('corridor'));
+  // The corridor starts at the hall's outer wall, not at the spline's turn inside it, so its own
+  // walls never poke into the fabrication floor at the exit gap.
+  corridor(p[6].clone().setX(-20), p[9], 8, 5, space('corridor'));
   corridor(p[9], p[10].clone().setX(-76), 14, 4.5, space('lab'));
   corridor(p[11].clone().setZ(-30), p[13].clone().setZ(6), 8, 7, space('hall'));
   corridor(p[13].clone().setZ(6), p[14].clone().setZ(24), 24, 9, space('bay'));
