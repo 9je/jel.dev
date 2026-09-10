@@ -59,6 +59,25 @@ describe('assignSlots', () => {
     const out = assignSlots([null, null, null], [spot(0), spot(1, true)], size);
     expect(out[0]?.position[0]).toBe(1);
   });
+  it('migrates a caster down into a freed shadow slot even when it already holds a plain slot', () => {
+    // A caster sitting in slot 1 must not stay there once it is the higher-priority item: it belongs
+    // in slot 0, the shadow slot, and the fade hides the hop. Retention is only for non-casters.
+    const plainSize = { spots: 2, points: 0 };
+    const spotA = spot(0), spotCaster = spot(1, true);
+    const out = assignSlots([spotA, spotCaster], [spotCaster, spotA], plainSize);
+    expect(out[0]).toBe(spotCaster);
+    expect(out[1]).toBe(spotA);
+  });
+  it('packs the two highest-priority casters into the lowest slots ahead of a lower-priority one already resident', () => {
+    // Stand-in for the real rig: the booth key spot and sodium-1 hold slots 0 and 1 from an earlier
+    // stop. At the next stop sodium-1 and sodium-2 (both casters, both higher priority than the
+    // booth key now behind the camera) must take the lowest slots, and the booth key drops to slot 2.
+    const threeSpots = { spots: 3, points: 0 };
+    const boothKey = spot(0, true), sodium1 = spot(1, true), sodium2 = spot(2, true);
+    const out = assignSlots([boothKey, sodium1], [sodium1, sodium2, boothKey], threeSpots);
+    expect([out[0], out[1]]).toEqual(expect.arrayContaining([sodium1, sodium2]));
+    expect(out[2]).toBe(boothKey);
+  });
 });
 
 describe('LightRig', () => {

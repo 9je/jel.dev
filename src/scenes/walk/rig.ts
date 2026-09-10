@@ -36,11 +36,15 @@ export function composeSet(rooms: Map<StopId, Placement[]>, stop: StopId): Place
 }
 
 /** Slot array, spots first then points. Priority order is shadow casters first, then `wanted` order;
- *  whatever fits the rig's per-type capacity in that order is selected. A selected placement keeps
- *  the slot it already holds; free slots fill in priority order; the rest is dropped. Retention is
- *  scoped to the selected set, or a room evicted by a higher-priority room would squat on its slot
- *  forever because its placement is still technically `wanted` (composeSet keeps the previous room
- *  around at low priority so a step back still finds it lit). */
+ *  whatever fits the rig's per-type capacity in that order is selected. Selected casters always pack
+ *  into the lowest spot slots, in priority order, bypassing retention: a shadow map must never sit
+ *  idle on a caster far from the camera while a nearer one waits in a plain slot, and the fade (a
+ *  slot's level drops to 0 before it jumps) hides a caster hopping down when priority reorders it.
+ *  A selected non-caster keeps the slot it already holds; free slots fill in priority order; the
+ *  rest is dropped. Retention is scoped to the selected non-casters, or a room evicted by a
+ *  higher-priority room would squat on its slot forever because its placement is still technically
+ *  `wanted` (composeSet keeps the previous room around at low priority so a step back still finds it
+ *  lit). */
 export function assignSlots(previous: (Placement | null)[], wanted: Placement[], size: RigSize): (Placement | null)[] {
   const out: (Placement | null)[] = new Array(size.spots + size.points).fill(null);
   const isSpotSlot = (i: number) => i < size.spots;
@@ -52,8 +56,10 @@ export function assignSlots(previous: (Placement | null)[], wanted: Placement[],
     if (p.kind === 'spot') { if (spotsLeft > 0) { selected.push(p); spotsLeft--; } }
     else if (pointsLeft > 0) { selected.push(p); pointsLeft--; }
   }
-  const selectedSet = new Set(selected);
-  previous.forEach((p, i) => { if (p && selectedSet.has(p) && i < out.length) out[i] = p; });
+  const selectedCasters = selected.filter((p) => p.kind === 'spot' && p.shadow);
+  selectedCasters.forEach((p, i) => { out[i] = p; });
+  const rest = new Set(selected.filter((p) => !(p.kind === 'spot' && p.shadow)));
+  previous.forEach((p, i) => { if (p && rest.has(p) && i < out.length && out[i] === null) out[i] = p; });
   const placed = new Set(out.filter(Boolean) as Placement[]);
   for (const p of selected) {
     if (placed.has(p)) continue;
