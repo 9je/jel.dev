@@ -72,7 +72,10 @@ export function hazardPlate(text = 'HIGH VOLTAGE'): THREE.CanvasTexture {
 export function chainlink(size = 256): THREE.CanvasTexture {
   const [c, ctx] = canvas(size, size);
   ctx.clearRect(0, 0, size, size);
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+  // Line width 4, not the thinner 3: at cage viewing distance the thinner line breaks into a
+  // speckle of sub-pixel dots instead of a clean diamond crossing, which reads as shimmer as the
+  // camera moves.
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
   const cell = size / 4;
   for (let i = -1; i <= 4; i++) {
     ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell + size, size); ctx.stroke();

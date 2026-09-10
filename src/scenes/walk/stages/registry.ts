@@ -10,4 +10,5 @@ export const STAGE_LOADERS: (() => Promise<StageDef>)[] = [
   () => import('./booth').then((m) => m.BOOTH_DEF),
   () => import('./fabrication').then((m) => m.FABRICATION_DEF),
   () => import('./recreation').then((m) => m.RECREATION_DEF),
+  () => import('./operations').then((m) => m.OPERATIONS_DEF),
 ];

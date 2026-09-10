@@ -7,7 +7,7 @@ const src = JSON.parse(readFileSync('scripts/assets/manifest.json', 'utf8'));
 describe('asset source manifest', () => {
   it('names every group later tasks rely on', () => {
     const groups = new Set([...Object.values(src.textures), ...Object.values(src.models)].map((e: any) => e.group));
-    expect([...groups].sort()).toEqual(['booth', 'fabrication', 'fabrication-dressing', 'fabrication-extra', 'labs', 'recreation']);
+    expect([...groups].sort()).toEqual(['booth', 'fabrication', 'fabrication-dressing', 'fabrication-extra', 'labs', 'operations', 'recreation']);
   });
   it('plans desktop and phone outputs for every entry', () => {
     const plan = planTargets(src, 'desktop');
