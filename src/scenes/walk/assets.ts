@@ -80,7 +80,7 @@ export class AssetStore {
 
   dispose() {
     for (const t of this.textures.values()) { t.map.dispose(); t.normalMap.dispose(); t.arm.dispose(); }
-    for (const m of this.models.values()) m.traverse((o) => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); for (const mat of Array.isArray(o.material) ? o.material : [o.material]) { for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'] as const) (mat as THREE.MeshStandardMaterial)[k]?.dispose(); mat.dispose(); } } });
+    for (const m of this.models.values()) m.traverse((o) => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); for (const mat of Array.isArray(o.material) ? o.material : [o.material]) { for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap'] as const) (mat as THREE.MeshStandardMaterial)[k]?.dispose(); mat.dispose(); } } });
     this.textures.clear(); this.models.clear(); this.draco.dispose();
   }
 }

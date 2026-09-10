@@ -6,6 +6,15 @@ import { rackFace, screenFace, paperSheet, tapeStripe, hazardPlate, chainlink, r
 export function rackSlots(levels: number, height: number): number[] { return Array.from({ length: levels }, (_, i) => +(((i + 1) * height) / levels).toFixed(4)); }
 export { gridPitch } from './materials';
 
+/** Evenly spaced post offsets from -len/2 to +len/2 inclusive, near `pitch` apart. Stepping from one
+ *  edge by a fixed pitch drops the far edge's post whenever `len` isn't a multiple of the pitch (a
+ *  10.4 m run at 2 m pitch stops 0.4 m short), which reads as a cage run missing a post on one side.
+ *  Rounding to a whole number of segments keeps both edges posted and the spacing close to pitch. */
+export function cagePosts(len: number, pitch = 2): number[] {
+  const segments = Math.max(1, Math.round(len / pitch));
+  return Array.from({ length: segments + 1 }, (_, i) => -len / 2 + (i * len) / segments);
+}
+
 const dark = () => new THREE.MeshStandardMaterial({ color: 0x0b1117, roughness: 0.6, metalness: 0.4 });
 
 /** A 42U rack: dark box with a lit front. 0.6 wide, 2.1 tall, 1.0 deep, origin at floor centre. */
@@ -122,7 +131,7 @@ export function cableTray(len: number): THREE.Group {
  *  plane. Origin at the centre of the run at floor level. */
 export function cage(len: number, h = 2.6): THREE.Group {
   const g = new THREE.Group(); const steel = labSteel(0x7a2a24);
-  const posts: Spot[] = []; for (let x = -len / 2; x <= len / 2 + 0.01; x += 2) posts.push([x, h / 2, 0]);
+  const posts: Spot[] = cagePosts(len).map((x) => [x, h / 2, 0]);
   g.add(instances(new THREE.BoxGeometry(0.06, h, 0.06), steel, posts));
   const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.05), steel); rail.position.y = h; g.add(rail);
   const mesh = chainlink(); mesh.repeat.set(len / 0.5, h / 0.5);

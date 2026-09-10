@@ -30,7 +30,7 @@ export function surface(set: TextureSet, width: number, height: number, metersPe
   return m;
 }
 
-const OWNABLE_MAPS = ['map', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap', 'emissiveMap'] as const;
+const OWNABLE_MAPS = ['map', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'alphaMap'] as const;
 
 /** Disposes geometry and materials on every mesh/points in the hierarchy. A map is disposed only when
  *  `userData.owned === true` — clones made for this instance (see `surface()`) — never a texture the
