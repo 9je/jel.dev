@@ -28,10 +28,10 @@ export const STOPS: Stop[] = [
   { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];
 
-// The shutter rolls up while the camera is still parked in the booth: travel is flat through the
-// booth hold, which now runs to 0.09, and the door finishes at 0.088. The reveal is watched from a
-// standstill and the camera never approaches a closed door.
-export const DOOR_RANGE: [number, number] = [0.05, 0.088];
+// The shutter starts rolling on the first pixel of scroll and finishes at 0.075, while the camera
+// is still parked in the booth hold, which runs to 0.09. The first gesture has to move something
+// or the page reads as stuck, and the reveal is still watched from a standstill.
+export const DOOR_RANGE: [number, number] = [0, 0.075];
 export const SCROLL_LENGTH_VH = 160 * STOPS.length;
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
