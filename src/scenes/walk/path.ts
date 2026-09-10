@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, Vector3 } from 'three';
+import { CatmullRomCurve3, Matrix4, Quaternion, Vector3 } from 'three';
 import type { Wing } from '../../content/schema';
 
 export type StopId = 'booth' | 'fabrication' | 'recreation' | 'operations' | 'credentials' | 'containment' | 'file';
@@ -14,7 +14,10 @@ export const CONTROL_POINTS: [number, number, number][] = [
 ];
 
 export const STOPS: Stop[] = [
-  { id: 'booth', t: 0.0, hold: [0.0, 0.09], lookAt: [0, 2.2, 20], light: '#6EC1D6' },
+  // The booth looks down the hall through the door it is about to walk through. Its target sits
+  // well past the door on the same sightline, so the camera is never turning toward a point it is
+  // standing on while it pulls away from the hold.
+  { id: 'booth', t: 0.0, hold: [0.0, 0.09], lookAt: [0, 3.2, 8], light: '#6EC1D6' },
   { id: 'fabrication', t: 0.2, hold: [0.17, 0.25], lookAt: [-5, 2, -5], wing: 'fabrication', light: '#E0813A' },
   { id: 'recreation', t: 0.4, hold: [0.37, 0.44], lookAt: [-34, 2, -33.5], wing: 'recreation', light: '#3D7BE0' },
   { id: 'operations', t: 0.56, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
@@ -62,7 +65,8 @@ export function doorOpenAmount(t: number): number {
   return smoothstep((t - DOOR_RANGE[0]) / (DOOR_RANGE[1] - DOOR_RANGE[0]));
 }
 
-/** Scroll progress to spline parameter. Flat through each hold, linear between holds. */
+/** Scroll progress to spline parameter. Flat through each hold, eased between holds so the camera
+ *  slows into a stop and pulls away from it rather than hitting the hold edge at full speed. */
 export function travelParam(t: number): number {
   const u = clamp01(t);
   for (let i = 0; i < STOPS.length; i++) {
@@ -70,11 +74,33 @@ export function travelParam(t: number): number {
     if (u >= s.hold[0] && u <= s.hold[1]) return s.t;
     const next = STOPS[i + 1];
     if (next && u > s.hold[1] && u < next.hold[0]) {
-      const k = (u - s.hold[1]) / (next.hold[0] - s.hold[1]);
+      const k = smoothstep((u - s.hold[1]) / (next.hold[0] - s.hold[1]));
       return s.t + (next.t - s.t) * k;
     }
   }
   return u;
+}
+
+/** How far before a hold the camera starts turning toward the stop, and how far inside it the turn
+ *  completes. Together about 300 px of scroll: three wheel notches, not one. The same window mirrored
+ *  turns the camera back to its heading on the way out. */
+export const TURN_LEAD = 0.035, TURN_SETTLE = 0.015;
+
+/** 0 while travelling, 1 while looking at a stop, eased through the turn windows either side of its
+ *  hold. Distinct from `holdWeight`, which is the "camera has arrived" signal the overlays use. */
+export function lookWeight(t: number): { stop: Stop; weight: number } {
+  const u = clamp01(t);
+  for (const s of STOPS) {
+    const [a, b] = s.hold;
+    if (u >= a && u <= b) {
+      const into = a <= 0 ? 1 : smoothstep((u - (a - TURN_LEAD)) / (TURN_LEAD + TURN_SETTLE));
+      const outOf = b >= 1 ? 1 : 1 - smoothstep((u - (b - TURN_SETTLE)) / (TURN_LEAD + TURN_SETTLE));
+      return { stop: s, weight: Math.min(into, outOf) };
+    }
+    if (u < a && u >= a - TURN_LEAD) return { stop: s, weight: smoothstep((u - (a - TURN_LEAD)) / (TURN_LEAD + TURN_SETTLE)) };
+    if (u > b && u <= b + TURN_LEAD) return { stop: s, weight: 1 - smoothstep((u - (b - TURN_SETTLE)) / (TURN_LEAD + TURN_SETTLE)) };
+  }
+  return { stop: stopAt(u), weight: 0 };
 }
 
 export function localProgress(t: number, id: StopId): number {
@@ -87,7 +113,18 @@ export function localProgress(t: number, id: StopId): number {
 const _ahead = new Vector3();
 const _look = new Vector3();
 const _tangent = new Vector3();
+const _m = new Matrix4();
+const _qAhead = new Quaternion();
+const _qLook = new Quaternion();
+const UP = new Vector3(0, 1, 0);
+const FORWARD = new Vector3(0, 0, -1);
 
+/**
+ * Position on the spline plus the point to look at. The look direction is blended as a rotation
+ * between the travel heading and the stop's line of sight. Blending the two aim points in a straight
+ * line used to send the aim point past the camera's own position at the fabrication hold, where the
+ * stop is behind the direction of travel, and the view whipped through 160 degrees in 70 px.
+ */
 export function cameraAt(t: number, out = { position: new Vector3(), target: new Vector3() }) {
   const u = clamp01(t);
   const p = travelParam(u);
@@ -95,8 +132,11 @@ export function cameraAt(t: number, out = { position: new Vector3(), target: new
   const aheadP = p + 0.02;
   if (aheadP <= 1) curve.getPointAt(aheadP, _ahead);
   else { curve.getPointAt(1, _ahead); curve.getTangentAt(1, _tangent); _ahead.addScaledVector(_tangent, (aheadP - 1) * curve.getLength()); }
-  const s = stopAt(u);
-  _look.set(s.lookAt[0], s.lookAt[1], s.lookAt[2]);
-  out.target.copy(_ahead).lerp(_look, holdWeight(u));
+  const { stop, weight } = lookWeight(u);
+  _look.set(stop.lookAt[0], stop.lookAt[1], stop.lookAt[2]);
+  _qAhead.setFromRotationMatrix(_m.lookAt(out.position, _ahead, UP));
+  _qLook.setFromRotationMatrix(_m.lookAt(out.position, _look, UP));
+  _qAhead.slerp(_qLook, weight);
+  out.target.copy(FORWARD).applyQuaternion(_qAhead).add(out.position);
   return out;
 }

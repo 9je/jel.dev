@@ -41,19 +41,21 @@ describe('camera', () => {
     expect(travelParam((a + b) / 2)).toBeCloseTo((STOPS[0].t + STOPS[1].t) / 2, 6);
     expect(cameraAt(a).position.distanceTo(cameraAt(b).position)).toBeGreaterThan(5);
   });
-  it('moves a roughly constant distance per unit of travel between holds', () => {
+  it('covers the whole distance between holds, fastest in the middle and symmetric', () => {
     const d = [];
     const a = STOPS[0].hold[1], b = STOPS[1].hold[0];
     for (let i = 0; i < 10; i++) { const t0 = a + ((b - a) * i) / 10, t1 = a + ((b - a) * (i + 1)) / 10; d.push(cameraAt(t0).position.distanceTo(cameraAt(t1).position)); }
-    const mean = d.reduce((x, y) => x + y) / d.length;
-    for (const x of d) expect(Math.abs(x - mean) / mean).toBeLessThan(0.35);
+    expect(Math.max(...d)).toBe(Math.max(d[4], d[5]));
+    for (let i = 0; i < 5; i++) expect(d[i]).toBeCloseTo(d[9 - i], 2);
+    expect(cameraAt(a).position.distanceTo(cameraAt(b).position)).toBeGreaterThan(20);
   });
   it('looks at the stop target while held and ahead while walking', () => {
     const fab = STOPS[1];
     expect(holdWeight(fab.t)).toBe(1);
     expect(holdWeight((STOPS[1].hold[1] + STOPS[2].hold[0]) / 2)).toBe(0);
     const held = cameraAt(fab.t);
-    expect(held.target.x).toBeCloseTo(fab.lookAt[0], 3); expect(held.target.z).toBeCloseTo(fab.lookAt[2], 3);
+    const want = held.target.clone().set(fab.lookAt[0], fab.lookAt[1], fab.lookAt[2]).sub(held.position).normalize();
+    expect(held.target.clone().sub(held.position).normalize().dot(want)).toBeGreaterThan(0.9999);
   });
   it('has continuous look-ahead near path end', () => {
     const samples = [0.9490, 0.9495, 0.9500, 0.9505, 0.9510];
@@ -77,5 +79,38 @@ describe('lookup', () => {
     expect(localProgress(STOPS[0].t, 'fabrication')).toBe(0);
     expect(localProgress(STOPS[1].t, 'fabrication')).toBeCloseTo(0.5, 5);
     expect(localProgress(STOPS[2].t, 'fabrication')).toBe(1);
+  });
+});
+
+describe('camera motion', () => {
+  const dirAt = (t: number) => { const c = cameraAt(t); return c.target.clone().sub(c.position).normalize(); };
+  const STEP = 0.0005; // about 5 px of scroll at a 900 px viewport
+  it('never turns more than 3 degrees in one 5 px step of scroll', () => {
+    // A 160 degree turn used to happen inside 70 px at the edge of the fabrication hold: the aim
+    // point was lerped in a straight line that passed beside the camera.
+    let prev = dirAt(0), worst = 0, at = 0;
+    for (let t = STEP; t <= 1 + 1e-9; t += STEP) {
+      const d = dirAt(t);
+      const deg = Math.acos(Math.max(-1, Math.min(1, prev.dot(d)))) * 180 / Math.PI;
+      if (deg > worst) { worst = deg; at = t; }
+      prev = d;
+    }
+    expect(worst, `worst turn ${worst.toFixed(1)} deg at t ${at.toFixed(4)}`).toBeLessThan(3);
+  });
+  it('looks straight at the stop through the middle of every hold', () => {
+    for (const s of STOPS) {
+      const c = cameraAt(s.t);
+      const want = c.target.clone().set(s.lookAt[0], s.lookAt[1], s.lookAt[2]).sub(c.position).normalize();
+      expect(dirAt(s.t).dot(want)).toBeGreaterThan(0.9999);
+    }
+  });
+  it('eases into and out of every hold instead of stopping dead', () => {
+    for (let i = 0; i < STOPS.length - 1; i++) {
+      const a = STOPS[i].hold[1], b = STOPS[i + 1].hold[0];
+      const edge = travelParam(a + STEP) - travelParam(a);
+      const mid = travelParam((a + b) / 2 + STEP) - travelParam((a + b) / 2);
+      expect(edge).toBeLessThan(mid * 0.2);
+      expect(travelParam(b) - travelParam(b - STEP)).toBeLessThan(mid * 0.2);
+    }
   });
 });

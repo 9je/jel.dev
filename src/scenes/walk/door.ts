@@ -40,9 +40,11 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
   // Offset toward the hinge side so the lettering clears the headline copy overlaid on the left.
   stencil.position.set(width * 0.125, 0, 0.02); root.add(stencil);
 
-  // The standby lamp sits beside the lintel, low enough to clear the booth ceiling and stay in frame.
+  // The standby lamp is mounted on the face of the right jamb post at head height. It used to sit at
+  // the top corner of the shutter, inside the drum's footprint, and the drum swallowed it as it
+  // grew with the door open. Down here nothing moves near it and it stays inside the frame.
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a0403, emissive: 0xc8322b, emissiveIntensity: 4 }));
-  lamp.position.set(width / 2 - 0.4, height + 0.15, 0.32); root.add(lamp);
+  lamp.position.set(width / 2 + 0.15, height - 0.55, 0.3); root.add(lamp);
   const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 16, 1, true), frameMat); hood.position.set(lamp.position.x, lamp.position.y + 0.12, lamp.position.z); root.add(hood);
   const lampLight = new THREE.PointLight(0xc8322b, 2.5, 5, 2); lampLight.position.copy(lamp.position); root.add(lampLight);
 
