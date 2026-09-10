@@ -23,7 +23,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(container(0x2b6a6f), R - 2.6, 0, 8, Math.PI / 2));
   await add(repeat(prop('crate_wood_1'), [[R - 0.7, 1.5, -22.4, 0.1, 1.5], [R - 0.7, 3.0, -19.4, 0.2, 1.5], [R - 0.7, 1.5, -16.6, -0.2, 1.5], [R - 0.7, 3.0, -6.4, 0.3, 1.5], [R - 0.7, 0, -8.6, 0.2, 1.5]]));
   await add(repeat(prop('cardboard_box'), [[R - 0.7, 1.5, -18.2, 0.3, 1.4], [R - 0.7, 1.5, -25.2, 1.1, 1.4], [R - 0.7, 0, -12.2, 0.3, 1.4], [R - 0.7, 0.44, -12.2, -0.2, 1.4], [R - 0.7, 3.0, -3.4, 0.9, 1.4]]));
-  await add(repeat(prop('crate_plastic'), [[R - 0.6, 1.5, -13.6, 0.15, 1.6], [R - 0.6, 3.0, -21.2, -0.1, 1.6]]));
+  await add(repeat(prop('crate_plastic'), [[R - 0.6, 1.5, -15.2, 0.15, 1.6], [R - 0.6, 3.0, -21.2, -0.1, 1.6]]));
   await add(repeat(prop('steel_shelves'), [[R - 0.3, 0, 16.4, -Math.PI / 2, 0.1], [R - 0.3, 0, 17.6, -Math.PI / 2, 0.1]]));
   await add(once(store.model('power_box'), R - 0.08, 1.6, -13, -Math.PI / 2));
 
