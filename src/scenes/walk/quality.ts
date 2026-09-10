@@ -72,6 +72,15 @@ export function readTierInput(): TierInput {
   };
 }
 
+/** How many physical pixels per CSS pixel the walk renders. Phones have DPR 3 screens and tile
+ *  based GPUs that shade a 1.5 frame comfortably; an integrated desktop GPU on a 1080p panel does
+ *  not, and stays at one. */
+export function pixelRatioCap(tier: Tier, coarse: boolean): number {
+  if (tier === 'lite') return 1;
+  if (tier === 'low') return coarse ? 1.5 : 1;
+  return 1.5;
+}
+
 export type Verdict = 'keep' | 'trim' | 'bail';
 
 /**

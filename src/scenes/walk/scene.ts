@@ -12,7 +12,7 @@ import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
-export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean }
+export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean; pixelRatioCap: number }
 export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void }
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
@@ -20,7 +20,7 @@ const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) *
 export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): Promise<WalkHandle> {
   // The low tier has no post stack, so it is the only one that needs the driver's own MSAA.
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.tier === 'low', powerPreference: 'high-performance', stencil: false, depth: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.tier === 'low' ? 1 : 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.pixelRatioCap));
   // Exposure is set once here and read by whichever operator is live: three's own ACES when there is
   // no composer, postprocessing's ToneMappingEffect when there is. Both compile
   // `<tonemapping_pars_fragment>`, and the renderer pushes `toneMappingExposure` into every program,

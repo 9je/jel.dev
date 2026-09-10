@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, devices } from '@playwright/test';
 
 const STOPS = ['booth', 'fabrication', 'recreation', 'operations', 'credentials', 'containment', 'file'];
 
@@ -76,4 +76,22 @@ test('every room builds in the background and a far dock jump lands', async ({ p
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 30_000 });
   expect(await page.locator('[data-walk]').getAttribute('data-degraded')).toBeNull();
+});
+
+test.describe('phone', () => {
+  // defaultBrowserType from the device descriptor cannot be set inside a describe block, only at
+  // the top of a file or in the config, and this config already runs a single chromium project, so
+  // it is dropped here rather than changing which browser the rest of the suite runs on.
+  const { defaultBrowserType: _defaultBrowserType, ...pixel7 } = devices['Pixel 7'];
+  test.use({ ...pixel7 });
+  test('the body is a sheet the reader opens, and never a scroll trap', async ({ page }) => {
+    await page.goto('/?quality=low');
+    await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+    const details = page.locator('section[data-stop="booth"] details[data-stop-more]');
+    await expect(details).not.toHaveAttribute('open', '');
+    expect(await page.locator('section[data-stop="booth"] .stop-body').evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
+    await page.locator('section[data-stop="booth"] .stop-more-toggle').tap();
+    await expect(details).toHaveAttribute('open', '');
+    expect(await page.locator('section[data-stop="booth"] .stop-body').evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+  });
 });

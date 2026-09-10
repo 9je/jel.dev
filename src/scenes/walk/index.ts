@@ -1,4 +1,4 @@
-import { chooseTier, readTierInput, type Tier, type TierInput } from './quality';
+import { chooseTier, pixelRatioCap, readTierInput, type Tier, type TierInput } from './quality';
 import type { WalkHandle } from './scene';
 import type { ScrollController } from './scroll';
 import { STOPS, tForStop, type StopId } from './path';
@@ -113,6 +113,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     const h = await mountWalk(els.canvas, {
       tier,
       coarse,
+      pixelRatioCap: pixelRatioCap(tier, coarse),
       gate: initial === 'booth' ? ['booth', 'fabrication'] : ['booth', 'fabrication', initial],
       initialProgress: tForStop(initial),
       onLoadProgress: (l, t) => setPreloader(els, l / t),
@@ -185,6 +186,7 @@ async function init() {
   const els = queryElements();
   if (!els) return;
   const input = readTierInput();
+  if (input.coarse) for (const d of document.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open');
   const tier = decideTier(input);
   // Readable from devtools on a machine that runs badly: which tier it got and why.
   els.root.dataset.tier = tier; els.root.dataset.renderer = input.renderer;

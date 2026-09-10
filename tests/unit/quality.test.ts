@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chooseTier, FrameGovernor } from '../../src/scenes/walk/quality';
+import { chooseTier, FrameGovernor, pixelRatioCap } from '../../src/scenes/walk/quality';
 
 const base = { webgl: true, renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0)', threads: 8, coarse: false, reducedMotion: false, saveData: false, pref: null as null };
 
@@ -37,6 +37,15 @@ describe('chooseTier', () => {
   it('picks low on phones and lite on weak phones', () => {
     expect(chooseTier({ ...base, coarse: true, threads: 8 })).toBe('low');
     expect(chooseTier({ ...base, coarse: true, threads: 2 })).toBe('lite');
+  });
+});
+
+describe('pixelRatioCap', () => {
+  it('lets phones render sharp and keeps integrated desktop GPUs at one', () => {
+    expect(pixelRatioCap('low', true)).toBe(1.5);
+    expect(pixelRatioCap('low', false)).toBe(1);
+    expect(pixelRatioCap('high', false)).toBe(1.5);
+    expect(pixelRatioCap('lite', true)).toBe(1);
   });
 });
 

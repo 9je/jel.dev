@@ -80,6 +80,24 @@
 .walk[data-mode='full'] .stop-title { white-space: nowrap; font-size: clamp(1.8rem, 4.6vw, 2.8rem); }
 .walk[data-mode='full'] .stop-body { max-width: 40ch; max-height: 55vh; overflow: auto; }
 
+/* On fine pointers the disclosure is invisible: the body is simply there, open, as it was. */
+.stop-more > summary { display: none; }
+.stop-more[open] > summary { display: none; }
+@media (pointer: coarse) {
+  /* A swipe anywhere on a phone must walk the camera. The body therefore never scrolls under the
+     thumb: it is closed behind a toggle, and open it is a sheet the reader chose, with its own
+     scrolling that does not chain back into the page. */
+  .stop-more > summary { display: inline-block; list-style: none; margin-top: 0.5rem; padding: 0.55rem 0.9rem; border: 1px solid var(--surface-edge); border-radius: var(--radius); background: var(--surface); font: inherit; cursor: pointer; }
+  .stop-more > summary::-webkit-details-marker { display: none; }
+  .stop-more[open] > summary { position: fixed; left: 0; right: 0; bottom: min(70vh, 32rem); z-index: 3; margin: 0; border-radius: var(--radius) var(--radius) 0 0; text-align: center; }
+  .stop-more[open] > summary::after { content: ' (close)'; color: var(--text-dim); }
+  .stop-more[open] > .stop-body { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; max-width: none; max-height: min(70vh, 32rem); overflow: auto; overscroll-behavior: contain; padding: 1rem 1.25rem 2rem; background: var(--surface); border-top: 1px solid var(--surface-edge); }
+  .walk[data-mode='full'] .stop-body { max-height: none; overflow: visible; }
+  /* Pinned plates never take a touch. */
+  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
+  .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
+}
+
 /* Panels pinned to a world anchor: a flagship bay hangs beside the exhibit it describes. */
 .walk[data-mode='full'] .stop [data-anchor] { position: fixed; left: clamp(calc(6vw + 40ch + 2rem), var(--ax, 50vw), calc(100vw - 30ch - 2rem)); top: clamp(6rem, var(--ay, 50vh), calc(100vh - 6rem)); transform: translate(0, -50%); width: 30ch; max-height: 62vh; overflow: auto; margin: 0; padding: 1rem 1.15rem; gap: 0.75rem; grid-template-columns: 1fr; opacity: 0; pointer-events: none; transition: opacity 250ms ease 0ms; }
 /* The bay is a two column card in the stacked layout. Pinned to an exhibit it is a caption, so the
