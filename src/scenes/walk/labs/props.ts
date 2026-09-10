@@ -126,9 +126,9 @@ export function cage(len: number, h = 2.6): THREE.Group {
   g.add(instances(new THREE.BoxGeometry(0.06, h, 0.06), steel, posts));
   const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.05), steel); rail.position.y = h; g.add(rail);
   const mesh = chainlink(); mesh.repeat.set(len / 0.5, h / 0.5);
-  // alphaTest keeps the mesh out of the transparent sort and lets it write depth, so the racks behind
-  // it read through the diamonds without sorting artefacts.
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ color: 0xb0b8bd, alphaMap: mesh, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 }));
+  // alphaTest without transparency keeps the mesh out of the transparent sort and lets it write
+  // depth, so the racks behind it read through the diamonds without sorting artefacts.
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ color: 0xb0b8bd, alphaMap: mesh, alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 }));
   panel.position.y = h / 2; g.add(panel);
   return g;
 }

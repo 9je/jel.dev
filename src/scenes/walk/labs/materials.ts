@@ -40,10 +40,12 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   const tileMat = store ? surface(store.texture('ceiling_tile'), w, d, tile) : new THREE.MeshStandardMaterial({ roughness: 0.9 });
   tileMat.color.setHex(0xc9d3d8);
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), tileMat); prepareAO(ceil.geometry); ceil.rotation.x = Math.PI / 2; ceil.position.y = y; group.add(ceil);
+  // Whole tiles only, centred, so the leftover is split between both edges.
+  const ox = -cols * tile / 2, oz = -rows * tile / 2;
   const spots: THREE.Matrix4[] = [];
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
     if ((i + j) % litEvery !== 0) continue;
-    spots.push(new THREE.Matrix4().makeTranslation(-w / 2 + (i + 0.5) * tile, y - 0.02, -d / 2 + (j + 0.5) * tile));
+    spots.push(new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.02, oz + (j + 0.5) * tile));
   }
   const panelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: opts.intensity ?? 1.4 });
   const panels = new THREE.InstancedMesh(new THREE.BoxGeometry(tile - 0.1, 0.04, tile * 0.5), panelMat, spots.length);

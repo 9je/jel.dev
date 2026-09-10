@@ -17,8 +17,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // Right wall: two runs of blue racking with stock on the decks, a container parked in front of
   // the near run, boxes at the foot of the far run. Deck heights are 1.5 and 3.0.
-  await add(place(palletRack(4, 3), R - 0.7, 0, -20));
-  await add(place(palletRack(3, 3), R - 0.7, 0, -6));
+  // The racking runs along z, turned a quarter so its bays face the aisle.
+  await add(place(palletRack(4, 3), R - 0.7, 0, -20, Math.PI / 2));
+  await add(place(palletRack(3, 3), R - 0.7, 0, -6, Math.PI / 2));
   await add(place(container(0x2b6a6f), R - 2.6, 0, 8, Math.PI / 2));
   await add(repeat(prop('crate_wood_1'), [[R - 0.7, 1.5, -22.4, 0.1, 1.5], [R - 0.7, 3.0, -19.4, 0.2, 1.5], [R - 0.7, 1.5, -16.6, -0.2, 1.5], [R - 0.7, 3.0, -6.4, 0.3, 1.5], [R - 0.7, 0, -8.6, 0.2, 1.5]]));
   await add(repeat(prop('cardboard_box'), [[R - 0.7, 1.5, -18.2, 0.3, 1.4], [R - 0.7, 1.5, -25.2, 1.1, 1.4], [R - 0.7, 0, -12.2, 0.3, 1.4], [R - 0.7, 0.44, -12.2, -0.2, 1.4], [R - 0.7, 3.0, -3.4, 0.9, 1.4]]));
@@ -41,7 +42,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // Left wall: racking where the old clean room stood, a container by the exit, the tool wall by
   // the door.
-  await add(place(palletRack(3, 3), L + 0.7, 0, -4));
+  await add(place(palletRack(3, 3), L + 0.7, 0, -4, Math.PI / 2));
   await add(place(container(0x8a3a2e), L + 2.6, 0, -22, Math.PI / 2));
   await add(repeat(prop('cardboard_box'), [[L + 0.7, 1.5, -6.2, 0.3, 1.4], [L + 0.7, 3.0, -2.6, -0.4, 1.4], [L + 0.7, 1.5, -1.0, 0.8, 1.4]]));
   await add(once(prop('metal_rack'), L + 0.34, 0, 9.5, Math.PI / 2));

@@ -42,10 +42,19 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacemen
   const steel = labSteel();
   const posts: Spot[] = [[-hx, H / 2, -hz], [hx, H / 2, -hz], [-hx, H / 2, hz], [hx, H / 2, hz]];
   for (const [z, doorX] of doors) posts.push([doorX - doorW / 2, H / 2, z], [doorX + doorW / 2, H / 2, z]);
-  for (let x = -hx + 2.5; x < hx - 0.5; x += 2.5) posts.push([x, H / 2, -hz], [x, H / 2, hz]);
+  // Mullions skip the door span on each face, so nothing stands in a doorway.
+  const inDoor = (x: number, doorX: number) => Math.abs(x - doorX) < doorW / 2 + 0.05;
+  for (let x = -hx + 2.5; x < hx - 0.5; x += 2.5) for (const [z, doorX] of doors) if (!inDoor(x, doorX)) posts.push([x, H / 2, z]);
   for (let z = -hz + 2.6; z < hz - 0.5; z += 2.6) posts.push([-hx, H / 2, z], [hx, H / 2, z]);
   g.add(instances(new THREE.BoxGeometry(0.1, H, 0.1), steel, posts));
-  g.add(instances(new THREE.BoxGeometry(W, 0.1, 0.1), steel, [[0, H, -hz], [0, H, hz], [0, S, -hz], [0, S, hz]]));
+  g.add(instances(new THREE.BoxGeometry(W, 0.1, 0.1), steel, [[0, H, -hz], [0, H, hz]]));
+  // The sill rail on the door faces stops at the openings, like the sill band under it.
+  const rails: THREE.BufferGeometry[] = [];
+  for (const [z, doorX] of doors) {
+    const leftLen = doorX - doorW / 2 + hx, rightLen = hx - (doorX + doorW / 2);
+    for (const [len, x] of [[leftLen, -hx + leftLen / 2], [rightLen, hx - rightLen / 2]] as [number, number][]) { const r = new THREE.BoxGeometry(len, 0.1, 0.1); r.translate(x, S, z); rails.push(r); }
+  }
+  g.add(merged(rails, steel));
   g.add(instances(new THREE.BoxGeometry(0.1, 0.1, D), steel, [[-hx, H, 0], [hx, H, 0], [-hx, S, 0], [hx, S, 0]]));
 
   // Glass: panes above the sill, the door faces split around the opening, a named panel over each
@@ -68,7 +77,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacemen
   // Exhibits along the west glass, 3 m apart, facing the camera at the hold. The flagship sits in
   // the centre so its plate, which pins to the right of its anchor, lands in the gap beside it
   // rather than over a neighbour. Positive z is to the camera's left.
-  const exhibits: [string, string, number][] = [['conch', 'conch.gg', 3.0], ['ezkey', 'ezkey.io', 0], ['gc-bridge', 'gc-bridge', -3.3]];
+  const exhibits: [string, string, number][] = [['conch', 'conch.gg', 3.0], ['ezkey', 'ezkey.io', 0], ['gc-bridge', 'gc-bridge', -3.0]];
   const pedestals: Spot[] = [], tops: Spot[] = [];
   const ex = -hx + 0.9;
   for (const [key, label, dz] of exhibits) {
@@ -76,7 +85,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacemen
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x05080b, emissive: 0xffffff, emissiveIntensity: 1.2, emissiveMap: stencilTexture(label, { width: 512, height: 180, color: '#CFE6EE', font: '600 96px Michroma, system-ui, sans-serif' }) }));
     g.add(place(screen, ex + 0.05, 1.45, dz, Math.PI / 2));
     // The plate hangs to the right of its anchor, so the anchor sits past the screen's right edge.
-    anchors.set(key, new THREE.Vector3(OX + ex + 0.6, 1.7, OZ + dz - 1.1));
+    anchors.set(key, new THREE.Vector3(OX + ex + 0.6, 1.7, OZ + dz - 0.9));
   }
   g.add(instances(new THREE.BoxGeometry(1.0, 1.0, 1.4), new THREE.MeshStandardMaterial({ color: 0x9aacb4, roughness: 0.5 }), pedestals));
   g.add(instances(new THREE.BoxGeometry(1.1, 0.05, 1.5), labSteel(0x46525a), tops));

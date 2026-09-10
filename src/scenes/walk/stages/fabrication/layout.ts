@@ -13,7 +13,7 @@ export const COLUMNS: [number, number][] = [[-14, 8], [10, 8], [-14, -12], [10, 
 
 /** The dispatch office, a glass room straddling the aisle. The camera enters through the front
  *  door, holds inside looking west at the exhibits, and leaves through the back door. Door centres
- *  sit on the walked line at each face (path x is about -1.7 at z -7 and -2.6 at z -15). */
+ *  sit on the walked line at each face (path x is about -1.7 at z -7 and -3.3 at z -15, so the back door clears the walked line by 0.4 m on the left). */
 export const OFFICE = { x: -2.4, z: -11, w: 10, d: 8, h: 3.2, sill: 0.9, frontDoorX: -1.7, backDoorX: -2.6, doorW: 2.2 };
 
 /** The walked line through the hall, from just inside the door to the exit gap. Mirrors the spline's
