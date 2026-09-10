@@ -11,8 +11,10 @@ export const EXIT_X0 = X0, EXIT_X1 = X0 + 8, EXIT_H = 5;
 /** Columns, in two lines either side of the aisle. */
 export const COLUMNS: [number, number][] = [[-14, 8], [10, 8], [-14, -12], [10, -12], [-14, -24], [10, -24]];
 
-/** The clean room, against the left wall, seen from the fabrication hold looking back up the hall. */
-export const CUBE = { x: -12.5, z: -3, w: 10, h: 4, d: 8 };
+/** The dispatch office, a glass room straddling the aisle. The camera enters through the front
+ *  door, holds inside looking west at the exhibits, and leaves through the back door. Door centres
+ *  sit on the walked line at each face (path x is about -1.7 at z -7 and -2.6 at z -15). */
+export const OFFICE = { x: -2.4, z: -11, w: 10, d: 8, h: 3.2, sill: 0.9, frontDoorX: -1.7, backDoorX: -2.6, doorW: 2.2 };
 
 /** The walked line through the hall, from just inside the door to the exit gap. Mirrors the spline's
  *  control points in path.ts so the painted aisle follows the camera. */
@@ -22,5 +24,6 @@ export const AISLE: [number, number][] = [[0, 22], [0, 12], [-1, 0], [-3, -14], 
 export const EXIT_LINE_Z = -29.4;
 export const AISLE_HALF = 3.2;
 
-/** Palette. Cold concrete, dark machinery paint, worn safety yellow, sodium orange. */
-export const PAINT = 0x24333a, SAFETY = 0xe8b923, AISLE_PAINT = 0xc9a227, SODIUM = 0xe0813a, CONCRETE_TINT = 0xa8b6bf, FLOOR_TINT = 0x8fa8ba;
+/** Palette. Cold concrete, the Terragroup blue dado, worn safety yellow, sodium only at the docks.
+ *  The painted floor map is green, so its tint leans magenta to land on grey. */
+export const PAINT = 0x2455a4, SAFETY = 0xe8b923, AISLE_PAINT = 0xc9a227, SODIUM = 0xe0813a, CONCRETE_TINT = 0xb8c4cc, FLOOR_TINT = 0xb090c0;

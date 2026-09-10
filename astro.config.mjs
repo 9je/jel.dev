@@ -27,5 +27,21 @@ export default defineConfig({
   integrations: [sitemap({ filter: (page) => new URL(page).pathname === '/' })],
   trailingSlash: 'never',
   build: { format: 'file', inlineStylesheets: 'auto' },
-  vite: { build: { chunkSizeWarningLimit: 900 }, plugins: [dracoFromPublic] },
+  vite: {
+    build: {
+      chunkSizeWarningLimit: 900,
+      rollupOptions: {
+        output: {
+          // Each dressed room is its own chunk, named so the bundle budget can count the rooms
+          // behind the preloader with the first visit and cap every later room on its own.
+          manualChunks(id) {
+            const stage = /\/src\/scenes\/walk\/stages\/([a-z]+)/.exec(id)?.[1];
+            if (stage && !['greybox', 'types', 'registry'].includes(stage)) return `stage-${stage}`;
+            return undefined;
+          },
+        },
+      },
+    },
+    plugins: [dracoFromPublic],
+  },
 });

@@ -6,8 +6,7 @@ import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
 import type { Stage, StageDef, StageContext } from './stages/types';
 import { greybox } from './stages/greybox';
-import { BOOTH_DEF } from './stages/booth';
-import { FABRICATION_DEF } from './stages/fabrication';
+import { STAGE_LOADERS } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
 
@@ -61,7 +60,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
   // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
   // the first frame when the walk opens there.
-  const defs = opts.stages ?? [BOOTH_DEF, FABRICATION_DEF];
+  const defs = opts.stages ?? await Promise.all(STAGE_LOADERS.map((load) => load()));
   const built = new Map<string, Stage>(); const pending = new Map<string, Promise<void>>();
 
   // Every await here can outlive the handle: a stage that finishes building after dispose() would

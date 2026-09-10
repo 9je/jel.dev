@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { radialTexture } from '../../textures';
 import { createLedTicker } from '../../ticker';
-import { instances, repeat, type Spot } from '../../merge';
+import { instances, repeat, place, type Spot } from '../../merge';
+import { beacon } from '../../labs/props';
 import type { Placement } from '../../rig';
 import { X0, Z0, H, W, D, XC, SODIUM } from './layout';
 
@@ -29,7 +30,8 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   // rather than as a stain on the floor.
   const hang = store.model('hanging_lamp');
   const cordMat = new THREE.MeshStandardMaterial({ color: 0x121a21, roughness: 0.9 });
-  const sodium: [number, number, boolean][] = [[0, 6, true], [6, -16, true], [-13, -12, false]];
+  // Sodium lives at the docks now: one lamp over each shutter. The rest of the bay is cold white.
+  const sodium: [number, number, boolean][] = [[2, -27, true], [9, -27, true]];
   const lamps: Spot[] = [], cords: Spot[] = [], pools: Spot[] = [];
   for (const [x, z, lamp] of sodium) {
     pools.push([x, 0.02, z]);
@@ -52,6 +54,9 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   const board = new THREE.Mesh(new THREE.PlaneGeometry(16, 1), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.6, emissiveMap: led.texture, map: led.texture }));
   board.position.set(4, 8.6, Z0 + 0.12); root.add(board);
   lights.push({ kind: 'point', position: [4, 8.2, Z0 + 1.4], color: 0xf2c230, intensity: 8, distance: 16, decay: 2 });
+
+  // Red beacons on the trunk ducts in the roof void. Emissive only, they bloom on the high tier.
+  for (const z of [14, 2, -10, -22]) root.add(place(beacon(), -9, H - 0.75, z), place(beacon(), 6, H - 0.75, z));
 
   // Drifting dust, so the light has something to sit in. Soft round motes, not squares.
   const dustGeo = new THREE.BufferGeometry(); const n = tier === 'high' ? 500 : 180; const pos = new Float32Array(n * 3);

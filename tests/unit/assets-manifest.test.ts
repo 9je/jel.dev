@@ -7,12 +7,12 @@ const src = JSON.parse(readFileSync('scripts/assets/manifest.json', 'utf8'));
 describe('asset source manifest', () => {
   it('names every group later tasks rely on', () => {
     const groups = new Set([...Object.values(src.textures), ...Object.values(src.models)].map((e: any) => e.group));
-    expect([...groups].sort()).toEqual(['booth', 'fabrication', 'fabrication-dressing', 'fabrication-extra']);
+    expect([...groups].sort()).toEqual(['booth', 'fabrication', 'fabrication-dressing', 'fabrication-extra', 'labs']);
   });
   it('plans desktop and phone outputs for every entry', () => {
     const plan = planTargets(src, 'desktop');
     expect(plan.textures.metal_plate.out.diffuse).toBe('public/assets/desktop/textures/metal_plate/diffuse.webp');
-    expect(plan.textures.concrete_floor.size).toBe(1024);
+    expect(plan.textures.painted_floor.size).toBe(1024);
     expect(plan.textures.metal_plate.size).toBe(768);  // per-texture cap
     expect(planTargets(src, 'phone').textures.metal_plate.size).toBe(512);  // the cap never raises a tier
     expect(plan.models.desk.out).toBe('public/assets/desktop/models/desk.glb');

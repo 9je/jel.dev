@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Stage, StageContext, StageDef } from '../types';
 import { disposeObject } from '../../materials';
 import { buildShell } from './shell';
-import { buildCleanRoom } from './cleanroom';
+import { buildOffice } from './office';
 import { buildDressing } from './dressing';
 import { buildLighting } from './lighting';
 
@@ -14,13 +14,13 @@ async function build(ctx: StageContext): Promise<Stage> {
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
   const shell = buildShell(ctx, root);
   await ctx.pace();
-  const cleanRoomLight = buildCleanRoom(ctx, root);
+  const officeLight = buildOffice(ctx, root);
   await ctx.pace();
   await buildDressing(ctx, root);
   await ctx.pace();
   const lighting = buildLighting(ctx, root);
   await ctx.pace();
-  const lights = [...lighting.lights, cleanRoomLight];
+  const lights = [...lighting.lights, officeLight];
   anchors.set('fabrication', new THREE.Vector3(0, 2, 6));
 
   // Only the props cast. The shell planes are the room the shadows land on, and a floor or a wall

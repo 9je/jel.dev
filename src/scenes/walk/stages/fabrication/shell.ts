@@ -31,7 +31,7 @@ function stripe(points: [number, number][], offset: number, width: number): THRE
 
 /** Floor, ceiling, walls, dado, aisle paint, columns and the exit header. */
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
-  const concreteF = store.texture('concrete_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
+  const concreteF = store.texture('painted_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
 

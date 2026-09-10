@@ -7,7 +7,10 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | metal_plate | [metal_plate](https://polyhaven.com/a/metal_plate) | texture |
 | rubber_floor | [rubber_tiles](https://polyhaven.com/a/rubber_tiles) | texture |
 | metal_shutter | [painted_metal_shutter](https://polyhaven.com/a/painted_metal_shutter) | texture |
-| concrete_floor | [concrete_floor_02](https://polyhaven.com/a/concrete_floor_02) | texture |
+| painted_floor | [painted_concrete](https://polyhaven.com/a/painted_concrete) | texture |
+| lab_tile | [floor_tiles_08](https://polyhaven.com/a/floor_tiles_08) | texture |
+| wall_panel | [plastered_wall_04](https://polyhaven.com/a/plastered_wall_04) | texture |
+| ceiling_tile | [ceiling_interior](https://polyhaven.com/a/ceiling_interior) | texture |
 | concrete_wall | [concrete_wall_008](https://polyhaven.com/a/concrete_wall_008) | texture |
 | metal_sheet | [box_profile_metal_sheet](https://polyhaven.com/a/box_profile_metal_sheet) | texture |
 | desk | [metal_office_desk](https://polyhaven.com/a/metal_office_desk) | model |
