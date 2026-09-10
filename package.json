@@ -16,7 +16,8 @@
     "assets:fetch": "node scripts/assets/fetch.mjs",
     "assets:build": "node scripts/assets/build.mjs",
     "assets:budget": "node scripts/assets/budget.mjs",
-    "stills": "node scripts/render-stills.mjs"
+    "stills": "node scripts/render-stills.mjs",
+    "shots": "node scripts/shots.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",
