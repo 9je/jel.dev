@@ -31,13 +31,14 @@ function stripe(points: [number, number][], offset: number, width: number): THRE
 
 /** Floor, ceiling, walls, dado, aisle paint, columns and the exit header. */
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
-  const concreteF = store.texture('painted_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
+  const concreteF = store.texture('concrete_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
 
   // The concrete diffuse averages 120/110/91, which is warm. Tinting both maps toward neutral makes
   // the shell cold concrete, so a sodium pool on it reads as an island rather than as the floor.
-  const floorMat = surface(concreteF, W, D, 3); floorMat.color.setHex(FLOOR_TINT);
+  // Six metre tiles: at three the stains repeated visibly down a 52 m floor.
+  const floorMat = surface(concreteF, W, D, 6); floorMat.color.setHex(FLOOR_TINT);
   const floor = plane(W, D, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
   const ceil = plane(W, D, steel(sheet, W, D, 2, 0x59636b)); ceil.rotation.x = Math.PI / 2; ceil.position.set(XC, H, ZC);
 

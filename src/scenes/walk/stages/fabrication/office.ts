@@ -19,12 +19,12 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacemen
   const g = new THREE.Group(); g.position.set(OX, 0, OZ); root.add(g);
   const hx = W / 2, hz = D / 2;
 
-  // Floor and ceiling. The bay floor runs under it, so the office floor is the same painted
-  // concrete lifted a centimetre and painted lighter, with a lit grid overhead and a steel lid.
-  const floorMat = surface(store.texture('painted_floor'), W, D, 3); floorMat.color.setHex(0xd4bce0);
+  // Floor and ceiling. The bay floor runs under it, so the office floor is the same concrete
+  // lifted a centimetre and painted lighter, with a lit grid overhead and a steel lid.
+  const floorMat = surface(store.texture('concrete_floor'), W, D, 4); floorMat.color.setHex(0xc9d4dc);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.2, D - 0.2), floorMat); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; g.add(floor);
-  const { group: ceiling } = ceilingGrid(null, W, D, H, { tile: 1.2, litEvery: 2, intensity: 1.3 }); g.add(ceiling);
-  const lid = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.12, D + 0.2), labSteel(0x2b3740)); lid.position.y = H + 0.06; g.add(lid);
+  const { group: ceiling } = ceilingGrid(null, W, D, H, { tile: 1.2, litEvery: 2, intensity: 0.9 }); g.add(ceiling);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.12, D + 0.2), labSteel(0x2b3740)); lid.position.y = H + 0.12; g.add(lid); // clear of the ceiling plane, or the two fight for the pixel
 
   // Sill: a white panel band round the room, split at the doors.
   const sillMat = new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.7 });

@@ -3,7 +3,7 @@
     "metal_plate":    { "id": "metal_plate",              "group": "booth",             "repeat": [2, 2], "size": 768 },
     "rubber_floor":   { "id": "rubber_tiles",             "group": "booth",             "repeat": [4, 4], "size": 768 },
     "metal_shutter":  { "id": "painted_metal_shutter",    "group": "booth",             "repeat": [2, 1], "size": 768 },
-    "painted_floor":  { "id": "painted_concrete",         "group": "fabrication",       "repeat": [8, 14] },
+    "concrete_floor": { "id": "concrete_floor_02",        "group": "fabrication",       "repeat": [8, 14] },
     "lab_tile":       { "id": "floor_tiles_08",           "group": "labs",              "repeat": [6, 6] },
     "wall_panel":     { "id": "plastered_wall_04",        "group": "labs",              "repeat": [4, 2] },
     "ceiling_tile":   { "id": "ceiling_interior",         "group": "labs",              "repeat": [6, 6] },

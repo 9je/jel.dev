@@ -59,7 +59,9 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   // Without a store the tiles are flat paint: the dispatch office sits behind the preloader and the
   // shared labs textures do not, so it gets the grid without the tile map.
   const tileMat = store ? surface(store.texture('ceiling_tile'), w, d, tile) : new THREE.MeshStandardMaterial({ roughness: 0.9 });
-  tileMat.color.setHex(0xc9d3d8);
+  // A ceiling faces down, so the hemisphere gives it only its dark ground colour and the spots never
+  // reach it. A little emissive makes the tiles read as a lit suspended ceiling instead of a void.
+  tileMat.color.setHex(0xc9d3d8); tileMat.emissive.setHex(0xc9d3d8); tileMat.emissiveIntensity = 0.28;
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), tileMat); prepareAO(ceil.geometry); ceil.rotation.x = Math.PI / 2; ceil.position.y = y; group.add(ceil);
   // Whole tiles only, centred, so the leftover is split between both edges.
   const ox = -cols * tile / 2, oz = -rows * tile / 2;

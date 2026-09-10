@@ -24,6 +24,5 @@ export const AISLE: [number, number][] = [[0, 22], [0, 12], [-1, 0], [-3, -14], 
 export const EXIT_LINE_Z = -29.4;
 export const AISLE_HALF = 3.2;
 
-/** Palette. Cold concrete, the Terragroup blue dado, worn safety yellow, sodium only at the docks.
- *  The painted floor map is green, so its tint leans magenta to land on grey. */
-export const PAINT = 0x2455a4, SAFETY = 0xe8b923, AISLE_PAINT = 0xc9a227, SODIUM = 0xe0813a, CONCRETE_TINT = 0xb8c4cc, FLOOR_TINT = 0xb090c0;
+/** Palette. Cold concrete, the Terragroup blue dado, worn safety yellow, sodium only at the docks. */
+export const PAINT = 0x2455a4, SAFETY = 0xe8b923, AISLE_PAINT = 0xc9a227, SODIUM = 0xe0813a, CONCRETE_TINT = 0xc0ccda, FLOOR_TINT = 0x8fa8ba;
