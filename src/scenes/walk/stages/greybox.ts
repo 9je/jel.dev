@@ -8,10 +8,10 @@ const WALL = 0x3a4a58, FLOOR = 0x2c3944;
 const CORNERS: [number, number][] = [[-12, -30], [-77.5, -30.5], [-77, 25.5]];
 /** A dressed stage hides its greybox space, so the greybox marker standing in for that stop goes with it. */
 const MARKER_SPACE: Partial<Record<StopId, GreyboxSpace>> = { booth: 'booth', fabrication: 'hangar' };
-/** Which stop each greybox space stands in for. Three does not cull lights: every visible PointLight
- *  in the scene is compiled into every material and shaded for every pixel, so a space five stops
- *  away was costing the fabrication floor its frame rate. Only the spaces around the camera are
- *  left visible, and an invisible group is skipped whole by `projectObject`, lights included. */
+/** Which stop each greybox space stands in for. Only the spaces around the camera are left visible:
+ *  an invisible group is skipped whole by `projectObject`, which keeps the far corridors out of the
+ *  draw list. Spaces carry geometry only. The scene's light count has to be the same at every stop
+ *  (see `tests/unit/greybox.test.ts`), or every material recompiles at the first stop transition. */
 const SPACE_STOP: Record<GreyboxSpace, StopId> = {
   booth: 'booth', hangar: 'fabrication', corridor: 'recreation', lab: 'operations',
   hall: 'credentials', bay: 'containment', office: 'file',
@@ -30,11 +30,13 @@ function corridor(a: THREE.Vector3, b: THREE.Vector3, width: number, height: num
   box(width, 0.1, len, WALL, 0, height, 0, g);
   box(0.2, height, len, WALL, -width / 2, height / 2, 0, g);
   box(0.2, height, len, WALL, width / 2, height / 2, 0, g);
+  // Emissive strips only, no point lights. A greybox space is switched off when the camera is far
+  // from it, and three rebuilds every lit material's program the moment the count of visible lights
+  // changes, so a light inside a toggled space is a compile storm on the first walk into it. The
+  // hemisphere in greybox() is what lights these placeholders.
   for (let z = -len / 2 + 3; z < len / 2; z += 6) {
     const l = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.4), new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 1.5 }));
     l.position.set(0, height - 0.1, z); g.add(l);
-    const point = new THREE.PointLight(0xd9e8ee, 12, 18, 1.8);
-    point.position.set(0, height - 0.1, z); g.add(point);
   }
 }
 
