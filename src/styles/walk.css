@@ -89,13 +89,16 @@
      scrolling that does not chain back into the page. */
   .stop-more > summary { display: inline-block; list-style: none; margin-top: 0.5rem; padding: 0.55rem 0.9rem; border: 1px solid var(--surface-edge); border-radius: var(--radius); background: var(--surface); font: inherit; cursor: pointer; }
   .stop-more > summary::-webkit-details-marker { display: none; }
-  .stop-more[open] > summary { position: fixed; left: 0; right: 0; bottom: min(70vh, 32rem); z-index: 3; margin: 0; border-radius: var(--radius) var(--radius) 0 0; text-align: center; }
+  /* The unconditional `.stop-more[open] > summary { display: none }` above still applies to this
+     same selector unless overridden per property, so `display` has to be restated here or the
+     close control vanishes the moment the sheet opens on a phone. */
+  .stop-more[open] > summary { display: inline-block; position: fixed; left: 0; right: 0; bottom: min(70vh, 32rem); z-index: 3; margin: 0; border-radius: var(--radius) var(--radius) 0 0; text-align: center; }
   .stop-more[open] > summary::after { content: ' (close)'; color: var(--text-dim); }
   .stop-more[open] > .stop-body { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; max-width: none; max-height: min(70vh, 32rem); overflow: auto; overscroll-behavior: contain; padding: 1rem 1.25rem 2rem; background: var(--surface); border-top: 1px solid var(--surface-edge); }
-  .walk[data-mode='full'] .stop-body { max-height: none; overflow: visible; }
-  /* Pinned plates never take a touch. */
-  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
-  .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
+  /* Scoped to the closed state: at equal specificity this rule and the open sheet rule above are
+     tied, and an unscoped reset here would win by coming later, flattening the open sheet's own
+     scroll bound right back to none/visible. */
+  .walk[data-mode='full'] .stop-more:not([open]) > .stop-body { max-height: none; overflow: visible; }
 }
 
 /* Panels pinned to a world anchor: a flagship bay hangs beside the exhibit it describes. */
@@ -123,5 +126,12 @@
 @media (max-width: 900px) {
   .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
   .walk[data-mode='full'] .stop-title { white-space: normal; }
+  .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
+}
+/* Pinned plates never take a touch, at any viewport width. Placed after the base pinned rule above
+   (and after the max-width block) so it wins the equal-specificity tie by source order rather than
+   being shadowed by it, the way an identical override earlier in the file was. */
+@media (pointer: coarse) {
+  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
   .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
 }

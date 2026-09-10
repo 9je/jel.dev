@@ -88,10 +88,31 @@ test.describe('phone', () => {
     await page.goto('/?quality=low');
     await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
     const details = page.locator('section[data-stop="booth"] details[data-stop-more]');
+    const summary = page.locator('section[data-stop="booth"] .stop-more-toggle');
+    const body = page.locator('section[data-stop="booth"] .stop-body');
     await expect(details).not.toHaveAttribute('open', '');
-    expect(await page.locator('section[data-stop="booth"] .stop-body').evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
-    await page.locator('section[data-stop="booth"] .stop-more-toggle').tap();
+    expect(await body.evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
+    await summary.tap();
     await expect(details).toHaveAttribute('open', '');
-    expect(await page.locator('section[data-stop="booth"] .stop-body').evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    // The behaviour that matters: the toggle stays visible and tappable (a display:none summary
+    // is what the cascade bug looked like), the sheet scrolls on its own, and it sits fixed over
+    // the room rather than in the document flow.
+    expect(await summary.evaluate((el) => getComputedStyle(el).display)).not.toBe('none');
+    expect(await body.evaluate((el) => getComputedStyle(el).overflowY)).toBe('auto');
+    expect(await body.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+  });
+});
+
+test.describe('wide coarse pointer', () => {
+  // Same reasoning as the Pixel 7 block above: defaultBrowserType has to come out for this config's
+  // single chromium project, everything else about the device (viewport, touch) stays.
+  const { defaultBrowserType: _defaultBrowserType, ...ipad } = devices['iPad Pro 11 landscape'];
+  test.use({ ...ipad });
+  test('a pinned plate never takes a touch, even past the 900px breakpoint', async ({ page }) => {
+    await page.goto('/?quality=low#fabrication');
+    await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+    await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
+    const anchor = page.locator('section[data-stop="fabrication"] [data-anchor]');
+    expect(await anchor.evaluate((el) => getComputedStyle(el).position)).toBe('static');
   });
 });
