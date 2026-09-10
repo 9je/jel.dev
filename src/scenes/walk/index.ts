@@ -80,6 +80,13 @@ function activate(els: WalkElements, id: StopId) {
   for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) a.setAttribute('aria-current', a.dataset.stopLink === id ? 'true' : 'false');
 }
 
+// Moves keyboard focus onto the stop's heading once the camera has landed there, so a dock click
+// (with or without a background-build wait first) reads the same to a screen reader either way.
+function focusHeading(id: StopId) {
+  const heading = document.querySelector<HTMLElement>(`section[data-stop="${id}"] .stop-title`);
+  if (heading) { heading.setAttribute('tabindex', '-1'); setTimeout(() => heading.focus({ preventScroll: true }), 1700); }
+}
+
 async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
   const gen = ++generation;
   // Capture the requested stop before the scroll controller exists: ScrollTrigger's first
@@ -134,20 +141,22 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
         e.preventDefault();
         const id = a.dataset.stopLink as StopId;
         if (handle && !handle.ready(id)) {
-          // The room is still building in the background. Show the tube, land when it exists.
+          // The room is still building in the background. Show the tube, land when it exists, or
+          // after 20s regardless so a download that never settles doesn't strand the dock at 90%.
           els.preloader.dataset.state = 'loading'; els.preloader.setAttribute('aria-busy', 'true');
           setPreloader(els, 0.9);
-          void handle.whenReady(id).then(() => {
+          const timeout = new Promise<void>((resolve) => setTimeout(resolve, 20_000));
+          void Promise.race([handle.whenReady(id), timeout]).then(() => {
             if (gen !== generation) return;
             setPreloader(els, 1); els.preloader.dataset.state = 'done'; els.preloader.setAttribute('aria-busy', 'false');
             hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
             scroll?.jumpTo(id);
+            focusHeading(id);
           });
           return;
         }
         scroll?.jumpTo(id);
-        const heading = document.querySelector<HTMLElement>(`section[data-stop="${id}"] .stop-title`);
-        if (heading) { heading.setAttribute('tabindex', '-1'); setTimeout(() => heading.focus({ preventScroll: true }), 1700); }
+        focusHeading(id);
       });
     }
     activate(els, initial);

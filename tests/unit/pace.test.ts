@@ -37,4 +37,19 @@ describe('pacer', () => {
     await Promise.resolve();
     expect(done).toBe(false);
   });
+  it('shares one wait across a burst of over-budget calls, then queues a fresh wait next frame', async () => {
+    const c = fakeClock(); const p = createPacer(4, c.now, c.nextFrame);
+    p.frame(); c.advance(5);
+    const first = p.pace();
+    const second = p.pace();
+    // A burst of pace() calls in the same over-budget frame all key off the same wait.
+    expect(second).toBe(first);
+    expect(c.pending()).toBe(1);
+    c.advance(10); c.tick(); await Promise.resolve(); await Promise.resolve();
+    c.advance(5);
+    const third = p.pace();
+    // Once that frame's wait has resolved, a later over-budget call gets its own new wait.
+    expect(third).not.toBe(first);
+    expect(c.pending()).toBe(1);
+  });
 });

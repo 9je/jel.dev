@@ -193,15 +193,20 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const readiness = new Map<string, { promise: Promise<void>; resolve: () => void }>();
   for (const d of defs) { let resolve!: () => void; const promise = new Promise<void>((r) => { resolve = r; }); readiness.set(d.stop, { promise, resolve }); }
   for (const d of gated) readiness.get(d.stop)!.resolve();
+  // Nothing waiting on a room's readiness should hang forever: a dispose mid-build (tab navigated
+  // away, fallback fired) still has to let a dock click's whenReady() settle.
+  const settleReadiness = () => { for (const r of readiness.values()) r.resolve(); };
   void (async () => {
     for (const d of later) {
-      if (disposed) return;
+      if (disposed) { settleReadiness(); return; }
       try {
         await Promise.all(d.groups.map((g) => store.loadGroup(g)));
         await ensure(d);
         const stage = built.get(d.id);
-        if (stage && !disposed) { stage.root.visible = true; await renderer.compileAsync(stage.root, camera); stream(target); }
-      } catch (err) { console.warn(`background build of ${d.id} failed`, err); }
+        // compileAsync traverses the whole tree regardless of visibility in three 0.185, and it needs
+        // the scene passed through so it can see the rig's lights and cache the right light count.
+        if (stage && !disposed) { await renderer.compileAsync(stage.root, camera, scene); stream(target); }
+      } catch (err) { console.warn(`background build of ${d.id} failed`, err); opts.onDegraded?.(); }
       readiness.get(d.stop)?.resolve();
     }
   })();
@@ -215,6 +220,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);
       for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); post?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
+      settleReadiness();
     },
   };
 }

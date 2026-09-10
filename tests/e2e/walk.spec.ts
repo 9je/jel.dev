@@ -68,8 +68,9 @@ test('the fabrication flagship pins to its exhibit on the full path', async ({ p
 test('every room builds in the background and a far dock jump lands', async ({ page }) => {
   await page.goto('/?quality=low');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
-  // The greybox marker for a room goes dark once the dressed room replaces it. Wait for the last
-  // room this plan dresses, then jump straight to it.
+  // credentials has no room yet, so ready() is true at once and this jump proves the dock click
+  // and preloader states rather than a background-build wait. Once a credentials room lands the
+  // same click starts covering that wait too, with no change to this test.
   await page.locator('a[data-stop-link="credentials"]').click();
   await expect(page).toHaveURL(/#credentials$/, { timeout: 90_000 });
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
