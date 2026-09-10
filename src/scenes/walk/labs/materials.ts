@@ -29,9 +29,30 @@ export function labSteel(color: number = LABS.steel): THREE.MeshStandardMaterial
 
 export function gridPitch(w: number, d: number, tile: number): { cols: number; rows: number } { return { cols: Math.max(1, Math.floor(w / tile)), rows: Math.max(1, Math.floor(d / tile)) }; }
 
+/** Index, within `ceilingGrid`'s own enumeration of lit panels, of the one nearest a local x,z
+ *  position (local to the grid's own centre, before the caller offsets the returned group into the
+ *  room). Pass the result as `opts.flickerIndex` to pull that panel out on its own. */
+export function nearestLitPanel(w: number, d: number, localX: number, localZ: number, opts: { tile?: number; litEvery?: number } = {}): number {
+  const tile = opts.tile ?? 1.2, litEvery = opts.litEvery ?? 3;
+  const { cols, rows } = gridPitch(w, d, tile);
+  const ox = -cols * tile / 2, oz = -rows * tile / 2;
+  let index = 0, best = -1, bestDist = Infinity;
+  for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+    if ((i + j) % litEvery !== 0) continue;
+    const x = ox + (i + 0.5) * tile, z = oz + (j + 0.5) * tile;
+    const dist = Math.hypot(x - localX, z - localZ);
+    if (dist < bestDist) { bestDist = dist; best = index; }
+    index++;
+  }
+  return best;
+}
+
 /** A suspended ceiling: tiles at a pitch with every nth tile a lit panel. One draw call for tiles,
- *  one for panels. The lit panels are emissive geometry, not lights. */
-export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: number, opts: { tile?: number; litEvery?: number; intensity?: number } = {}): { group: THREE.Group; panels: THREE.InstancedMesh } {
+ *  one for panels. The lit panels are emissive geometry, not lights. `opts.flickerIndex` pulls one
+ *  lit panel (see `nearestLitPanel`) out of the shared instanced mesh into its own single-instance
+ *  mesh, returned as `flicker`, so a room can drive one panel's material without dimming the rest of
+ *  the grid along with it. */
+export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: number, opts: { tile?: number; litEvery?: number; intensity?: number; flickerIndex?: number } = {}): { group: THREE.Group; panels: THREE.InstancedMesh; flicker: THREE.InstancedMesh | null } {
   const tile = opts.tile ?? 1.2, litEvery = opts.litEvery ?? 3;
   const { cols, rows } = gridPitch(w, d, tile);
   const group = new THREE.Group();
@@ -43,13 +64,25 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   // Whole tiles only, centred, so the leftover is split between both edges.
   const ox = -cols * tile / 2, oz = -rows * tile / 2;
   const spots: THREE.Matrix4[] = [];
+  let flickerMatrix: THREE.Matrix4 | null = null;
+  let litIndex = 0;
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
     if ((i + j) % litEvery !== 0) continue;
-    spots.push(new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.02, oz + (j + 0.5) * tile));
+    const m = new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.02, oz + (j + 0.5) * tile);
+    if (opts.flickerIndex === litIndex) flickerMatrix = m; else spots.push(m);
+    litIndex++;
   }
+  const panelGeometry = new THREE.BoxGeometry(tile - 0.1, 0.04, tile * 0.5);
   const panelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: opts.intensity ?? 1.4 });
-  const panels = new THREE.InstancedMesh(new THREE.BoxGeometry(tile - 0.1, 0.04, tile * 0.5), panelMat, spots.length);
+  const panels = new THREE.InstancedMesh(panelGeometry, panelMat, spots.length);
   spots.forEach((m, i) => panels.setMatrixAt(i, m)); panels.instanceMatrix.needsUpdate = true; panels.computeBoundingSphere();
   group.add(panels);
-  return { group, panels };
+  let flicker: THREE.InstancedMesh | null = null;
+  if (flickerMatrix) {
+    const flickerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: opts.intensity ?? 1.4 });
+    flicker = new THREE.InstancedMesh(panelGeometry, flickerMat, 1);
+    flicker.setMatrixAt(0, flickerMatrix); flicker.instanceMatrix.needsUpdate = true; flicker.computeBoundingSphere();
+    group.add(flicker);
+  }
+  return { group, panels, flicker };
 }

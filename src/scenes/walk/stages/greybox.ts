@@ -7,7 +7,10 @@ const WALL = 0x3a4a58, FLOOR = 0x2c3944;
 /** Floor patches at the corners the spline turns through, so the greybox reads past the corridor width. */
 const CORNERS: [number, number][] = [[-12, -30], [-77.5, -30.5], [-77, 25.5]];
 /** A dressed stage hides its greybox space, so the greybox marker standing in for that stop goes with it. */
-const MARKER_SPACE: Partial<Record<StopId, GreyboxSpace>> = { booth: 'booth', fabrication: 'hangar' };
+const MARKER_SPACE: Partial<Record<StopId, GreyboxSpace>> = {
+  booth: 'booth', fabrication: 'hangar', recreation: 'corridor', operations: 'lab',
+  credentials: 'hall', containment: 'bay', file: 'office',
+};
 /** Which stop each greybox space stands in for. Only the spaces around the camera are left visible:
  *  an invisible group is skipped whole by `projectObject`, which keeps the far corridors out of the
  *  draw list. Spaces carry geometry only. The scene's light count has to be the same at every stop
@@ -60,6 +63,7 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
   const markerFor = {} as Partial<Record<GreyboxSpace, THREE.Object3D[]>>;
   for (const s of STOPS) {
     const marker = new THREE.Mesh(new THREE.BoxGeometry(1, 2.5, 0.2), new THREE.MeshStandardMaterial({ color: 0x0b1117, emissive: new THREE.Color(s.light), emissiveIntensity: 1.2 }));
+    marker.name = `marker-${s.id}`;
     marker.position.set(s.lookAt[0], 1.25, s.lookAt[2]);
     const cam = cameraAt(s.t);
     const dir = cam.target.clone().sub(cam.position);

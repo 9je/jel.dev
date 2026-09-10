@@ -49,4 +49,19 @@ describe('greybox lighting', () => {
     expect(byName.get('greybox-corridor')).toBe(false);
     expect(byName.get('greybox-office')).toBe(false);
   });
+
+  it('hides the stop marker standing in a space once that space is replaced', () => {
+    // Every dressed stage hides its greybox space, and the marker for the stop inside it has to go
+    // dark too, or the marker stands alone in the middle of the finished room forever.
+    const c = ctx();
+    const g = greybox(c);
+    const markerVisible = (stop: StopId) => {
+      let visible: boolean | undefined;
+      c.scene.traverse((o) => { if (o.name === `marker-${stop}`) visible = o.visible; });
+      return visible;
+    };
+    expect(markerVisible('recreation')).toBe(true);
+    g.hide('corridor');
+    expect(markerVisible('recreation')).toBe(false);
+  });
 });

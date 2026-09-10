@@ -16,7 +16,8 @@ async function build(ctx: StageContext): Promise<Stage> {
     o.castShadow = tier === 'high' && !shell.planes.has(o) && !translucent && !(o.geometry instanceof THREE.PlaneGeometry);
     o.receiveShadow = !translucent;
   });
-  // One ceiling panel flickers: the abandonment layer's moving part. Panel 2 of the grid, by the entrance.
+  // One ceiling panel flickers: the abandonment layer's moving part. buildShell pulled the panel
+  // nearest the entrance into its own instanced mesh, so only it dims, not the whole grid.
   const mat = shell.flicker.material as THREE.MeshStandardMaterial;
   let clock = 0;
   return {

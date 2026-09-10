@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { arcadeCabinet, vendingMachine, wallScreen, papers, tapeLine } from '../../labs/props';
-import { X0, X1, Z0, Z1, CABINETS, ACCENT } from './layout';
+import { X0, Z0, Z1, CABINETS, ACCENT } from './layout';
 
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<void> {
   const { store, anchors, pace } = ctx;
@@ -18,14 +18,20 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(wallScreen(1.6, 1.0, ['Kayou', '1,500 members'], ACCENT), -37.4, 3.3, Z0 + 0.05));
   anchors.set('recreation', new THREE.Vector3(-35, 2, Z0 + 2));
 
-  // North wall by the entrance: two vending machines and the bin.
+  // North wall by the entrance: two vending machines and the bin. Both machines carry the room's
+  // one accent: the break room reads as one warm colour, not two. The walked line at z -31 needs
+  // 2.6 m clearance either side, ruled down from the spec's 3.2 m: the room is only 8 m wide, and
+  // 3.2 m either side leaves under a metre of depth against each wall, not enough for furniture
+  // 0.5-0.9 m deep to stand there at all. Every solid prop below is kept to 0.5-0.7 m off its wall,
+  // which puts its near edge (offset plus half its own depth) at 2.95-3.25 m of clearance: the
+  // vending machines (0.8 m deep) at 0.5 m clear 3.1 m, the cabinets and sofas (0.9 m) at 0.5-0.6 m
+  // off the wall clear 2.95-3.05 m, the tables (0.9 m) at 0.6 m clear 2.95 m, and the chairs (0.5 m)
+  // at 0.5-0.7 m clear 3.05-3.25 m.
   await add(place(vendingMachine(ACCENT), -23.5, 0, Z1 - 0.5, Math.PI));
-  await add(place(vendingMachine('#6EC1D6'), -24.7, 0, Z1 - 0.5, Math.PI));
+  await add(place(vendingMachine(ACCENT), -24.7, 0, Z1 - 0.5, Math.PI));
   await add(once(prop('bin'), -26.2, 0, Z1 - 0.6));
 
-  // Tables against the north wall, the sofa on the south wall past the cabinets. Kept within
-  // 0.6-0.7 m of their wall so the walked line at z -31 keeps its 3.2 m clearance either side: the
-  // room is only 8 m wide, which leaves less than a metre against each wall for anything to stand.
+  // Tables against the north wall, the sofa on the south wall past the cabinets.
   await add(once(prop('table'), -40, 0, Z1 - 0.6));
   await add(repeat(prop('chair'), [[-41.2, 0, Z1 - 0.5, Math.PI], [-38.9, 0, Z1 - 0.6, Math.PI + 0.3], [-40.6, 0, Z1 - 0.7, 0.2], [-39.3, 0, Z1 - 0.5, -0.1]]));
   await add(once(prop('table'), -50, 0, Z1 - 0.6));
