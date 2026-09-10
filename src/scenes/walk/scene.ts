@@ -74,24 +74,32 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     pending.set(def.id, p); return p;
   }
 
-  // First frame: everything the stop we are opening at needs, reported to the preloader by bytes.
+  // Everything behind the preloader: every dressed stage's bytes, then every build, so the first
+  // scroll has nothing left to do. Building on the first scroll used to merge the whole fabrication
+  // floor on the main thread mid-gesture, which read as a freeze and a catch-up. Bytes fill the tube
+  // to 85%. The builds and the shader warm-up below take it to 100%.
   const openingAt = stopAt(opts.initialProgress ?? 0).id;
-  // The stage named after the stop wins: `near` is a streaming hint and several stages list the
-  // same neighbour, so matching on it first would load the booth for a deep link to the hangar.
   const first = defs.find((d) => d.id === openingAt) ?? defs.find((d) => d.near.includes(openingAt)) ?? defs[0];
+  const progress = new Map<string, [number, number]>();
+  const report = () => {
+    let l = 0, t = 0; for (const [a, b] of progress.values()) { l += a; t += b; }
+    if (t > 0) opts.onLoadProgress?.(Math.round(l * 0.85), t);
+  };
+  const groups = Array.from(new Set(defs.flatMap((d) => d.groups)));
+  await Promise.all(groups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
+  if (disposed) throw new Error('disposed during load');
+  // The opening stage builds first and alone: it is the one that must exist, and a failure there
+  // is what the greybox fallback is for. The rest build after it and fail quietly.
   if (first) {
     try {
-      await Promise.all(first.groups.map((g) => store.loadGroup(g, (l, t) => opts.onLoadProgress?.(l, t))));
       await ensure(first);
       if (!disposed && !built.has(first.id)) throw new Error(`stage ${first.id} did not build`);
     } catch (err) {
-      // The greybox still stands in for the space, so the walk stays usable. Say so out loud and
-      // mark the document, rather than hanging the preloader on a room that will never arrive.
       console.warn(`the ${first.id} stage did not build, running on the greybox`, err);
       opts.onDegraded?.();
     }
   }
-  opts.onLoadProgress?.(1, 1);
+  await Promise.all(defs.filter((d) => d !== first).map((d) => ensure(d)));
 
   function resize() {
     renderer.setSize(window.innerWidth, window.innerHeight, false); post?.setSize(window.innerWidth, window.innerHeight);
@@ -162,10 +170,13 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (post) post.render(dt); else renderer.render(scene, camera);
   }
   resize(); window.addEventListener('resize', resize);
-  // Only the visibility pass runs here. `stream()` would also start building the neighbouring stage,
-  // and that build is heavy enough (it merges every prop's geometry) to stall the first scroll if it
-  // lands on top of it, so the streaming stays where it was: on the first progress update.
+  // Warm the GPU before the preloader clears: every program compiles now, in parallel where the
+  // driver allows it, and one frame renders so the first scroll starts on hot shaders. Without this
+  // the first look into the hangar compiled a few dozen programs synchronously mid-gesture.
   grey.setNear(nearStops(current));
+  try { if (!disposed) await renderer.compileAsync(scene, camera); } catch { /* drivers without it still compile on first draw */ }
+  if (!disposed) { if (post) post.render(0); else renderer.render(scene, camera); }
+  opts.onLoadProgress?.(1, 1);
   frame();
 
   return {

@@ -258,14 +258,10 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
     o.receiveShadow = true;
   });
 
-  // The board redraws a 2048 px canvas and re-uploads it, so it runs at its own rate rather than at
-  // the frame rate. A sign that steps 24 times a second still reads as a scrolling sign.
-  let acc = 0;
   return {
     id: 'fabrication', root,
     update(_t, dt) {
-      acc += dt;
-      if (acc >= 1 / 24) { led.update(acc); acc = 0; }
+      led.update(dt);
       const p = dustGeo.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < n; i++) { let y = p.getY(i) - dt * 0.08; if (y < 0) y = H; p.setY(i, y); }
       p.needsUpdate = true;
