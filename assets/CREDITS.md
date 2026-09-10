@@ -38,3 +38,8 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | cardboard_box | [cardboard_box_01](https://polyhaven.com/a/cardboard_box_01) | model |
 | ladder | [ladder_sectioned_01](https://polyhaven.com/a/ladder_sectioned_01) | model |
 | dock_door | [rollershutter_door](https://polyhaven.com/a/rollershutter_door) | model |
+| chair | [plastic_monobloc_chair_01](https://polyhaven.com/a/plastic_monobloc_chair_01) | model |
+| sofa | [sofa_02](https://polyhaven.com/a/sofa_02) | model |
+| table | [dining_table](https://polyhaven.com/a/dining_table) | model |
+| bin | [metal_trash_can](https://polyhaven.com/a/metal_trash_can) | model |
+| trashbag | [trashbag](https://polyhaven.com/a/trashbag) | model |

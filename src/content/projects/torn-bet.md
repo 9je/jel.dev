@@ -8,6 +8,8 @@ stack: [TypeScript, Node, Postgres]
 links:
   - label: torn.bet
     href: https://torn.bet
+exhibit:
+  anchor: torn-bet
 order: 10
 contentWarning: Built for the game Torn City. Some of the game's themes are adult.
 ---

@@ -35,7 +35,12 @@
     "tool_chest":        { "id": "metal_tool_chest",               "group": "fabrication-dressing" },
     "cardboard_box":     { "id": "cardboard_box_01",               "group": "fabrication-dressing" },
     "ladder":            { "id": "ladder_sectioned_01",            "group": "fabrication-dressing" },
-    "dock_door":         { "id": "rollershutter_door",             "group": "fabrication-dressing" }
+    "dock_door":         { "id": "rollershutter_door",             "group": "fabrication-dressing" },
+    "chair":             { "id": "plastic_monobloc_chair_01",      "group": "recreation" },
+    "sofa":              { "id": "sofa_02",                        "group": "recreation" },
+    "table":             { "id": "dining_table",                   "group": "recreation" },
+    "bin":               { "id": "metal_trash_can",                "group": "recreation" },
+    "trashbag":          { "id": "trashbag",                       "group": "recreation" }
   },
   "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
   "budgets": { "desktop": { "total": 15728640, "firstFrame": 5242880, "group": 2621440 }, "phone": { "total": 8388608 } }
