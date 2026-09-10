@@ -16,8 +16,9 @@ for (const tier of ['desktop', 'phone']) {
   const b = src.budgets[tier];
   check(`${tier} total`, total, b.total);
   if (tier === 'desktop') {
-    check('desktop first frame (booth group + JS gz)', (m.groups.booth?.bytes ?? 0) + js, b.firstFrame);
-    for (const [id, g] of Object.entries(m.groups)) if (id !== 'booth') check(`desktop group ${id}`, g.bytes, b.group);
+    const gate = Object.entries(m.groups).filter(([id]) => id === 'booth' || id.startsWith('fabrication')).reduce((a, [, g]) => a + g.bytes, 0);
+    check('desktop first frame (booth + fabrication groups + JS gz)', gate + js, b.firstFrame);
+    for (const [id, g] of Object.entries(m.groups)) if (id !== 'booth' && !id.startsWith('fabrication')) check(`desktop group ${id}`, g.bytes, b.group);
   }
 }
 if (fail) { console.error('asset budget exceeded'); process.exit(1); }

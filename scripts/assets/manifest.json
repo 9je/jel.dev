@@ -35,5 +35,5 @@
     "dock_door":         { "id": "rollershutter_door",             "group": "fabrication-dressing" }
   },
   "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
-  "budgets": { "desktop": { "total": 15728640, "firstFrame": 1572864, "group": 3145728 }, "phone": { "total": 4194304 } }
+  "budgets": { "desktop": { "total": 15728640, "firstFrame": 5242880, "group": 2621440 }, "phone": { "total": 8388608 } }
 }

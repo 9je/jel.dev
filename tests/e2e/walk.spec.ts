@@ -64,3 +64,15 @@ test('the fabrication flagship pins to its exhibit on the full path', async ({ p
   await expect(bay).toHaveAttribute('data-anchor', 'ezkey');
   await expect.poll(async () => bay.evaluate((el) => getComputedStyle(el).getPropertyValue('--ax').trim() !== ''), { timeout: 30_000 }).toBe(true);
 });
+
+test('every room builds in the background and a far dock jump lands', async ({ page }) => {
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+  // The greybox marker for a room goes dark once the dressed room replaces it. Wait for the last
+  // room this plan dresses, then jump straight to it.
+  await page.locator('a[data-stop-link="credentials"]').click();
+  await expect(page).toHaveURL(/#credentials$/, { timeout: 90_000 });
+  await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 30_000 });
+  expect(await page.locator('[data-walk]').getAttribute('data-degraded')).toBeNull();
+});

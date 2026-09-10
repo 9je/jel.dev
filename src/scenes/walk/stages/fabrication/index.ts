@@ -6,13 +6,20 @@ import { buildCleanRoom } from './cleanroom';
 import { buildDressing } from './dressing';
 import { buildLighting } from './lighting';
 
-function build(ctx: StageContext): Stage {
+// Paced against the frame budget: this stage builds in the background while the walk is already
+// live, so it gives the render loop its time back between the heavy steps rather than blocking a
+// frame for the whole floor.
+async function build(ctx: StageContext): Promise<Stage> {
   const { scene, anchors, tier } = ctx;
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
   const shell = buildShell(ctx, root);
+  await ctx.pace();
   const cleanRoomLight = buildCleanRoom(ctx, root);
-  buildDressing(ctx, root);
+  await ctx.pace();
+  await buildDressing(ctx, root);
+  await ctx.pace();
   const lighting = buildLighting(ctx, root);
+  await ctx.pace();
   const lights = [...lighting.lights, cleanRoomLight];
   anchors.set('fabrication', new THREE.Vector3(0, 2, 6));
 
@@ -24,6 +31,7 @@ function build(ctx: StageContext): Stage {
     o.castShadow = tier === 'high' && !shell.planes.has(o) && !translucent && !(o.geometry instanceof THREE.PlaneGeometry);
     o.receiveShadow = !translucent;
   });
+  await ctx.pace();
 
   return {
     id: 'fabrication', root, lights,

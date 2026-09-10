@@ -106,6 +106,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     const h = await mountWalk(els.canvas, {
       tier,
       coarse,
+      gate: initial === 'booth' ? ['booth', 'fabrication'] : ['booth', 'fabrication', initial],
       initialProgress: tForStop(initial),
       onLoadProgress: (l, t) => setPreloader(els, l / t),
       // The dressed room did not arrive and the greybox is standing in. Flag it on the document so
@@ -132,6 +133,18 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
         const id = a.dataset.stopLink as StopId;
+        if (handle && !handle.ready(id)) {
+          // The room is still building in the background. Show the tube, land when it exists.
+          els.preloader.dataset.state = 'loading'; els.preloader.setAttribute('aria-busy', 'true');
+          setPreloader(els, 0.9);
+          void handle.whenReady(id).then(() => {
+            if (gen !== generation) return;
+            setPreloader(els, 1); els.preloader.dataset.state = 'done'; els.preloader.setAttribute('aria-busy', 'false');
+            hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
+            scroll?.jumpTo(id);
+          });
+          return;
+        }
         scroll?.jumpTo(id);
         const heading = document.querySelector<HTMLElement>(`section[data-stop="${id}"] .stop-title`);
         if (heading) { heading.setAttribute('tabindex', '-1'); setTimeout(() => heading.focus({ preventScroll: true }), 1700); }

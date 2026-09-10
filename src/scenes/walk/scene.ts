@@ -9,10 +9,11 @@ import { greybox } from './stages/greybox';
 import { BOOTH_DEF } from './stages/booth';
 import { FABRICATION_DEF } from './stages/fabrication';
 import { LightRig, rigSizeFor } from './rig';
+import { createPacer } from './pace';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
-export interface WalkOptions { tier: Tier; stages?: StageDef[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean }
-export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; dispose(): void }
+export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean }
+export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void }
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 
@@ -54,7 +55,8 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   let disposed = false;
   const store = await AssetStore.open(opts.tier);
   const anchors = new Map<string, THREE.Vector3>();
-  const ctx: StageContext = { scene, tier: opts.tier, anchors, store, pace: async () => {} };
+  const pacer = createPacer(4);
+  const ctx: StageContext = { scene, tier: opts.tier, anchors, store, pace: pacer.pace };
   const grey = greybox(ctx);
   // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
   // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
@@ -80,32 +82,28 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     pending.set(def.id, p); return p;
   }
 
-  // Everything behind the preloader: every dressed stage's bytes, then every build, so the first
-  // scroll has nothing left to do. Building on the first scroll used to merge the whole fabrication
-  // floor on the main thread mid-gesture, which read as a freeze and a catch-up. Bytes fill the tube
-  // to 85%. The builds and the shader warm-up below take it to 100%.
-  const openingAt = stopAt(opts.initialProgress ?? 0).id;
-  const first = defs.find((d) => d.id === openingAt) ?? defs.find((d) => d.near.includes(openingAt)) ?? defs[0];
+  // The preloader gates on the booth, the bay, and the room the page opens in. Their bytes fill the
+  // tube to 85%. Their builds and the shader warm-up take it to 100%. Everything else builds after
+  // the tube clears, in path order, paced against the frame budget.
+  const gated = defs.filter((d) => opts.gate.includes(d.stop));
+  const later = defs.filter((d) => !gated.includes(d));
   const progress = new Map<string, [number, number]>();
   const report = () => {
     let l = 0, t = 0; for (const [a, b] of progress.values()) { l += a; t += b; }
     if (t > 0) opts.onLoadProgress?.(Math.round(l * 0.85), t);
   };
-  const groups = Array.from(new Set(defs.flatMap((d) => d.groups)));
-  await Promise.all(groups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
+  const gatedGroups = Array.from(new Set(gated.flatMap((d) => d.groups)));
+  await Promise.all(gatedGroups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
   if (disposed) throw new Error('disposed during load');
-  // The opening stage builds first and alone: it is the one that must exist, and a failure there
-  // is what the greybox fallback is for. The rest build after it and fail quietly.
-  if (first) {
+  for (const d of gated) {
     try {
-      await ensure(first);
-      if (!disposed && !built.has(first.id)) throw new Error(`stage ${first.id} did not build`);
+      await ensure(d);
+      if (!disposed && !built.has(d.id)) throw new Error(`stage ${d.id} did not build`);
     } catch (err) {
-      console.warn(`the ${first.id} stage did not build, running on the greybox`, err);
+      console.warn(`the ${d.id} stage did not build, running on the greybox`, err);
       opts.onDegraded?.();
     }
   }
-  await Promise.all(defs.filter((d) => d !== first).map((d) => ensure(d)));
 
   function resize() {
     renderer.setSize(window.innerWidth, window.innerHeight, false); post?.setSize(window.innerWidth, window.innerHeight);
@@ -159,15 +157,18 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     return new Set<StopId>([STOPS[i]?.id, STOPS[i - 1]?.id, STOPS[i + 1]?.id].filter(Boolean) as StopId[]);
   }
 
+  // The visibility switch for built rooms as well as greybox spaces. Nothing here triggers a build:
+  // rooms build only in the background loop below, in path order, never because the camera is near.
   function stream(t: number) {
     const near = nearStops(t);
     grey.setNear(near);
-    for (const d of defs) if (d.near.some((n) => near.has(n))) void ensure(d);
+    for (const d of defs) { const s = built.get(d.id); if (s) s.root.visible = d.near.some((n) => near.has(n)); }
   }
 
   function frame() {
     if (disposed) return;
     raf = requestAnimationFrame(frame);
+    pacer.frame();
     const dt = Math.min(clock.getDelta(), 0.05);
     sample(dt);
     current = damp(current, target, 8, dt);
@@ -184,11 +185,32 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   try { if (!disposed) await renderer.compileAsync(scene, camera); } catch { /* drivers without it still compile on first draw */ }
   if (!disposed) { if (post) post.render(0); else renderer.render(scene, camera); }
   opts.onLoadProgress?.(1, 1);
+  stream(target);
   frame();
+
+  // Background build: download, build (paced), compile off the gesture, in path order. Nothing here
+  // is triggered by the camera. A room that fails stays greybox and logs once.
+  const readiness = new Map<string, { promise: Promise<void>; resolve: () => void }>();
+  for (const d of defs) { let resolve!: () => void; const promise = new Promise<void>((r) => { resolve = r; }); readiness.set(d.stop, { promise, resolve }); }
+  for (const d of gated) readiness.get(d.stop)!.resolve();
+  void (async () => {
+    for (const d of later) {
+      if (disposed) return;
+      try {
+        await Promise.all(d.groups.map((g) => store.loadGroup(g)));
+        await ensure(d);
+        const stage = built.get(d.id);
+        if (stage && !disposed) { stage.root.visible = true; await renderer.compileAsync(stage.root, camera); stream(target); }
+      } catch (err) { console.warn(`background build of ${d.id} failed`, err); }
+      readiness.get(d.stop)?.resolve();
+    }
+  })();
 
   return {
     setProgress(t) { target = t; stream(t); },
     anchors, camera, store,
+    ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id); },
+    whenReady: (id) => readiness.get(id)?.promise ?? Promise.resolve(),
     dispose() {
       disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);
       for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); post?.dispose(); store.dispose();
