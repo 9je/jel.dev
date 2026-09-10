@@ -3,6 +3,7 @@ import type { Stage, StageContext, StageDef } from './types';
 import { surface, prepareAO, disposeObject } from '../materials';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
+import type { Placement } from '../rig';
 
 // The booth is the room the walk opens in. The camera stands at z 26 on the path and looks at the
 // shutter at z 22, so only the front half of the room is ever in frame and everything that has to
@@ -38,21 +39,19 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   const box = store.model('utility_box'); box.position.set(3.2, 1.75, Z0 + 0.06); box.rotation.y = Math.PI; root.add(box);
   root.traverse((o) => { if (o instanceof THREE.Mesh) { o.castShadow = tier === 'high'; o.receiveShadow = true; } });
 
-  // Cool ceiling strip washing down the shutter, warm pool at the desk, and a thin ambient fill.
-  const key = new THREE.SpotLight(0x8fd0e0, 16, 12, Math.PI / 4.2, 0.9, 1.7);
-  key.position.set(0, H - 0.3, 25.4); key.target.position.set(0, 0.1, 23.3);
-  key.castShadow = tier === 'high'; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0006; root.add(key, key.target);
+  // Cool ceiling strip washing down the shutter, warm pool at the desk.
   const strip = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.07, 0.3), new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xcfe6ee, emissiveIntensity: 2.2 })); strip.position.set(0, H - 0.05, 25.2); root.add(strip);
-  const deskLight = new THREE.PointLight(0xffc98a, 3.4, 3.2, 2); deskLight.position.set(1.5, 1.24, 23.3); root.add(deskLight);
-  const fill = new THREE.HemisphereLight(0x35505f, 0x0b1219, 0.35); root.add(fill);
 
   anchors.set('booth', new THREE.Vector3(-2.5, 1.6, 23));
 
-  return {
-    id: 'booth', root,
-    update(t) { door.update(doorOpenAmount(t)); },
-    dispose() { door.dispose(); disposeObject(root); scene.remove(root); },
-  };
+  const lights: Placement[] = [
+    // Cool ceiling strip washing down the shutter, warm pool at the desk. The door's standby lamp is
+    // the door's own placement, appended below, so its colour can follow the shutter.
+    { kind: 'spot', position: [0, H - 0.3, 25.4], target: [0, 0.1, 23.3], color: 0x8fd0e0, intensity: 16, distance: 12, angle: Math.PI / 4.2, penumbra: 0.9, decay: 1.7, shadow: true },
+    { kind: 'point', position: [1.5, 1.24, 23.3], color: 0xffc98a, intensity: 3.4, distance: 3.2, decay: 2 },
+    door.lamp,
+  ];
+  return { id: 'booth', root, lights, update(t) { door.update(doorOpenAmount(t)); }, dispose() { door.dispose(); disposeObject(root); scene.remove(root); } };
 }
 
-export const BOOTH_DEF: StageDef = { id: 'booth', groups: ['booth'], near: ['booth', 'fabrication'], replaces: 'booth', build };
+export const BOOTH_DEF: StageDef = { id: 'booth', stop: 'booth', groups: ['booth'], near: ['booth', 'fabrication'], replaces: 'booth', build };

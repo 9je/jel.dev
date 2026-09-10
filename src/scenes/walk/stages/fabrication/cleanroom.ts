@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { stencilTexture } from '../../textures';
 import { instances, place, type Spot } from '../../merge';
+import type { PointPlacement } from '../../rig';
 import { CUBE } from './layout';
 
 /**
@@ -9,7 +10,7 @@ import { CUBE } from './layout';
  * product. It is the one bright thing in a sodium hall and the thing the fabrication hold turns
  * back to look at. Clear tinted glass on every tier: transmission frosted it into a slab.
  */
-export function buildCleanRoom({ anchors }: StageContext, root: THREE.Group): THREE.PointLight {
+export function buildCleanRoom({ anchors }: StageContext, root: THREE.Group): PointPlacement {
   const { x: CX, z: CZ, w: CW, h: CH, d: CD } = CUBE;
   const cube = new THREE.Group(); cube.position.set(CX, 0, CZ); root.add(cube);
 
@@ -55,6 +56,5 @@ export function buildCleanRoom({ anchors }: StageContext, root: THREE.Group): TH
   const pane = new THREE.Mesh(new THREE.BoxGeometry(CW, CH, CD), glass); pane.renderOrder = 2;
   cube.add(place(pane, 0, CH / 2, 0));
 
-  const light = new THREE.PointLight(0xdff0f6, 5, 12, 1.8); light.position.set(CX, 3.4, CZ); root.add(light);
-  return light;
+  return { kind: 'point', position: [CX, 3.4, CZ], color: 0xdff0f6, intensity: 5, distance: 12, decay: 1.8 } as PointPlacement;
 }

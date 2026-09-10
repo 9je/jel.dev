@@ -80,7 +80,7 @@ function activate(els: WalkElements, id: StopId) {
   for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) a.setAttribute('aria-current', a.dataset.stopLink === id ? 'true' : 'false');
 }
 
-async function startFull(els: WalkElements, tier: Tier) {
+async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
   const gen = ++generation;
   // Capture the requested stop before the scroll controller exists: ScrollTrigger's first
   // onUpdate can fire off a stale scroll position (left over from the browser's own
@@ -105,6 +105,7 @@ async function startFull(els: WalkElements, tier: Tier) {
     if (gen !== generation) return;
     const h = await mountWalk(els.canvas, {
       tier,
+      coarse,
       initialProgress: tForStop(initial),
       onLoadProgress: (l, t) => setPreloader(els, l / t),
       // The dressed room did not arrive and the greybox is standing in. Flag it on the document so
@@ -166,7 +167,7 @@ async function init() {
   // Readable from devtools on a machine that runs badly: which tier it got and why.
   els.root.dataset.tier = tier; els.root.dataset.renderer = input.renderer;
   wireEffectsToggle(els, tier);
-  if (tier === 'lite') startLite(els); else await startFull(els, tier);
+  if (tier === 'lite') startLite(els); else await startFull(els, tier, input.coarse);
 }
 
 document.addEventListener('astro:page-load', init);

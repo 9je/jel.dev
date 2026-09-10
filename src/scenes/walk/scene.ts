@@ -8,9 +8,10 @@ import type { Stage, StageDef, StageContext } from './stages/types';
 import { greybox } from './stages/greybox';
 import { BOOTH_DEF } from './stages/booth';
 import { FABRICATION_DEF } from './stages/fabrication';
+import { LightRig, rigSizeFor } from './rig';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
-export interface WalkOptions { tier: Tier; stages?: StageDef[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number }
+export interface WalkOptions { tier: Tier; stages?: StageDef[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean }
 export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; dispose(): void }
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
@@ -46,10 +47,14 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   scene.environmentIntensity = 0.14;
   pmrem.dispose();
 
+  // The scene's fixed set of lights: rooms declare placements into it rather than owning lights of
+  // their own, so the light count never changes at a stop transition and no material recompiles.
+  const rig = new LightRig(scene, rigSizeFor(opts.tier, !!opts.coarse), opts.tier === 'high');
+
   let disposed = false;
   const store = await AssetStore.open(opts.tier);
   const anchors = new Map<string, THREE.Vector3>();
-  const ctx: StageContext = { scene, tier: opts.tier, anchors, store };
+  const ctx: StageContext = { scene, tier: opts.tier, anchors, store, pace: async () => {} };
   const grey = greybox(ctx);
   // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
   // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
@@ -70,6 +75,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       const stage = await def.build(ctx);
       if (disposed) { stage.dispose(); return; }
       built.set(def.id, stage); if (def.replaces) grey.hide(def.replaces);
+      if (stage.lights) rig.register(def.stop, stage.lights);
     })().catch((err) => console.warn(`stage ${def.id} failed`, err)).finally(() => pending.delete(def.id));
     pending.set(def.id, p); return p;
   }
@@ -166,6 +172,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     sample(dt);
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
+    rig.update(current, dt);
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
     if (post) post.render(dt); else renderer.render(scene, camera);
   }
@@ -184,7 +191,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     anchors, camera, store,
     dispose() {
       disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);
-      for (const s of built.values()) s.dispose(); grey.dispose(); post?.dispose(); store.dispose();
+      for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); post?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
     },
   };

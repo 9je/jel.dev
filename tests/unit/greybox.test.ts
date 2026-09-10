@@ -5,7 +5,7 @@ import { STOPS, type StopId } from '../../src/scenes/walk/path';
 import type { StageContext } from '../../src/scenes/walk/stages/types';
 
 function ctx(): StageContext {
-  return { scene: new Scene(), tier: 'low', anchors: new Map<string, Vector3>(), store: null as unknown as StageContext['store'] };
+  return { scene: new Scene(), tier: 'low', anchors: new Map<string, Vector3>(), store: null as unknown as StageContext['store'], pace: async () => {} };
 }
 
 /** Lights the renderer would see: three skips an invisible group whole, lights included. */
@@ -27,13 +27,14 @@ function nearOf(i: number): Set<StopId> {
 describe('greybox lighting', () => {
   it('keeps the visible light count constant across every stop, so no material ever recompiles mid-walk', () => {
     // three rebuilds every lit material's program whenever the count of visible lights changes.
-    // Switching a greybox space on or off must therefore never add or remove a light.
+    // Switching a greybox space on or off must therefore never add or remove a light. The greybox
+    // itself owns none any more: the scene's rig is the only light source now.
     const c = ctx();
     const g = greybox(c);
     g.hide('booth'); g.hide('hangar');
     const counts = STOPS.map((_, i) => { g.setNear(nearOf(i)); return visibleLights(c.scene); });
     expect(new Set(counts).size).toBe(1);
-    expect(counts[0]).toBeGreaterThan(0);
+    expect(counts[0]).toBe(0);
   });
 
   it('still hides far spaces and replaced ones', () => {

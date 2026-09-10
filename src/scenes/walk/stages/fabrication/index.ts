@@ -10,9 +10,10 @@ function build(ctx: StageContext): Stage {
   const { scene, anchors, tier } = ctx;
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
   const shell = buildShell(ctx, root);
-  buildCleanRoom(ctx, root);
+  const cleanRoomLight = buildCleanRoom(ctx, root);
   buildDressing(ctx, root);
   const lighting = buildLighting(ctx, root);
+  const lights = [...lighting.lights, cleanRoomLight];
   anchors.set('fabrication', new THREE.Vector3(0, 2, 6));
 
   // Only the props cast. The shell planes are the room the shadows land on, and a floor or a wall
@@ -25,7 +26,7 @@ function build(ctx: StageContext): Stage {
   });
 
   return {
-    id: 'fabrication', root,
+    id: 'fabrication', root, lights,
     update(_t, dt) { lighting.update(dt); },
     dispose() {
       lighting.dispose();
@@ -35,4 +36,4 @@ function build(ctx: StageContext): Stage {
   };
 }
 
-export const FABRICATION_DEF: StageDef = { id: 'fabrication', groups: ['fabrication', 'fabrication-extra', 'fabrication-dressing'], near: ['booth', 'fabrication', 'recreation'], replaces: 'hangar', build };
+export const FABRICATION_DEF: StageDef = { id: 'fabrication', stop: 'fabrication', groups: ['fabrication', 'fabrication-extra', 'fabrication-dressing'], near: ['booth', 'fabrication', 'recreation'], replaces: 'hangar', build };

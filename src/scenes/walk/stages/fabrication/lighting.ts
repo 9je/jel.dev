@@ -3,9 +3,10 @@ import type { StageContext } from '../types';
 import { radialTexture } from '../../textures';
 import { createLedTicker } from '../../ticker';
 import { instances, repeat, type Spot } from '../../merge';
+import type { Placement } from '../../rig';
 import { X0, Z0, H, W, D, XC, SODIUM } from './layout';
 
-export interface Lighting { update(dt: number): void; dispose(): void }
+export interface Lighting { lights: Placement[]; update(dt: number): void; dispose(): void }
 
 /** Fixtures, the working spots, the sodium lamps and their pools, the LED board, the dust. */
 export function buildLighting({ store, tier }: StageContext, root: THREE.Group): Lighting {
@@ -15,12 +16,13 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   for (const z of [16, 4, -8, -20]) for (const x of [-7, 1]) { fixtures.push([x, H - 0.4, z, 0, 2.6]); strips.push([x, H - 0.52, z]); }
   root.add(repeat(store.model('fluorescent'), fixtures));
   root.add(instances(new THREE.BoxGeometry(2.2, 0.06, 0.16), stripMat, strips));
-  // Three spots do the actual work. Every light costs every pixel in the room, and the walls here
-  // are 34 m wide, so the fixture count and the light count are deliberately not the same number.
-  for (const z of [12, -4, -20]) {
-    const l = new THREE.SpotLight(0xd9e8ee, 170, 46, Math.PI / 3, 0.8, 1.7);
-    l.position.set(XC, H - 0.6, z); l.target.position.set(XC, 0, z); root.add(l, l.target);
-  }
+  // Two working spots, not three: the room budget is four spots and two points, and the sodium
+  // lamps below need two of the four. The hall reads the same except the middle sodium pool, which
+  // never had a lamp above it, is now a pool with nothing casting it.
+  const lights: Placement[] = [
+    { kind: 'spot', position: [XC, H - 0.6, 6], target: [XC, 0, 6], color: 0xd9e8ee, intensity: 190, distance: 50, angle: Math.PI / 2.7, penumbra: 0.8, decay: 1.7 },
+    { kind: 'spot', position: [XC, H - 0.6, -16], target: [XC, 0, -16], color: 0xd9e8ee, intensity: 190, distance: 50, angle: Math.PI / 2.7, penumbra: 0.8, decay: 1.7 },
+  ];
 
   // Sodium work lights, orange, the fabrication wing colour. A tight cone from 6.5 m throws a pool
   // the eye can find. The pool on the concrete is a soft sprite, additive, so it reads as light
@@ -30,15 +32,10 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   const sodium: [number, number, boolean][] = [[0, 6, true], [6, -16, true], [-13, -12, false]];
   const lamps: Spot[] = [], cords: Spot[] = [], pools: Spot[] = [];
   for (const [x, z, lamp] of sodium) {
-    const y = 6.5;
-    const s = new THREE.SpotLight(SODIUM, 180, 18, Math.PI / 6, 0.5, 1.8);
-    s.position.set(x, y, z); s.target.position.set(x, 0, z);
-    s.castShadow = tier === 'high' && lamp; s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -0.0008;
-    root.add(s, s.target);
     pools.push([x, 0.02, z]);
     if (!lamp) continue;
-    lamps.push([x, y, z]);
-    cords.push([x, y + (H - y) / 2, z]);
+    lights.push({ kind: 'spot', position: [x, 6.5, z], target: [x, 0, z], color: SODIUM, intensity: 180, distance: 18, angle: Math.PI / 6, penumbra: 0.5, decay: 1.8, shadow: true });
+    lamps.push([x, 6.5, z]); cords.push([x, 6.5 + (H - 6.5) / 2, z]);
   }
   root.add(repeat(hang, lamps));
   root.add(instances(new THREE.CylinderGeometry(0.02, 0.02, H - 6.5), cordMat, cords));
@@ -54,7 +51,7 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   const led = createLedTicker(lines.length ? lines : ['jel labs'], { width: 2048, height: 128 });
   const board = new THREE.Mesh(new THREE.PlaneGeometry(16, 1), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.6, emissiveMap: led.texture, map: led.texture }));
   board.position.set(4, 8.6, Z0 + 0.12); root.add(board);
-  const ledGlow = new THREE.PointLight(0xf2c230, 8, 16, 2); ledGlow.position.set(4, 8.2, Z0 + 1.4); root.add(ledGlow);
+  lights.push({ kind: 'point', position: [4, 8.2, Z0 + 1.4], color: 0xf2c230, intensity: 8, distance: 16, decay: 2 });
 
   // Drifting dust, so the light has something to sit in. Soft round motes, not squares.
   const dustGeo = new THREE.BufferGeometry(); const n = tier === 'high' ? 500 : 180; const pos = new Float32Array(n * 3);
@@ -64,6 +61,7 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   root.add(new THREE.Points(dustGeo, dustMat));
 
   return {
+    lights,
     update(dt) {
       led.update(dt);
       const p = dustGeo.attributes.position as THREE.BufferAttribute;

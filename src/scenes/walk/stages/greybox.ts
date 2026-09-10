@@ -33,7 +33,7 @@ function corridor(a: THREE.Vector3, b: THREE.Vector3, width: number, height: num
   // Emissive strips only, no point lights. A greybox space is switched off when the camera is far
   // from it, and three rebuilds every lit material's program the moment the count of visible lights
   // changes, so a light inside a toggled space is a compile storm on the first walk into it. The
-  // hemisphere in greybox() is what lights these placeholders.
+  // rig's ambient fill is what lights these placeholders.
   for (let z = -len / 2 + 3; z < len / 2; z += 6) {
     const l = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.4), new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 1.5 }));
     l.position.set(0, height - 0.1, z); g.add(l);
@@ -69,9 +69,8 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
     if (owner) (markerFor[owner] ??= []).push(marker);
   }
 
-  // Ambient fill for the undressed spaces. It is scene-wide and unshadowed, so it stays low
-  // enough that a dressed stage next door still reads as its own lit room.
-  const hemi = new THREE.HemisphereLight(0x6d7f8f, 0x1a2530, 1.3); root.add(hemi);
+  // The scene's rig owns the ambient fill now: a fixed light count is what keeps every material's
+  // program compiled once, and a hemisphere here would move the count when the greybox is disposed.
   for (const [x, z] of CORNERS) {
     const patch = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: FLOOR, roughness: 0.9 }));
     patch.rotation.x = -Math.PI / 2;

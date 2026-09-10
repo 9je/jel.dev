@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import type { AssetStore } from './assets';
 import { pbr, disposeObject } from './materials';
 import { hazardTexture, stencilTexture } from './textures';
+import type { PointPlacement } from './rig';
 
-export interface Door { root: THREE.Group; update(open: number): void; dispose(): void }
+export interface Door { root: THREE.Group; lamp: PointPlacement; update(open: number): void; dispose(): void }
 
 export function doorPose(open: number, height: number) {
   const o = Math.min(1, Math.max(0, open));
@@ -43,13 +44,15 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
   // The standby lamp is mounted on the face of the right jamb post at head height. It used to sit at
   // the top corner of the shutter, inside the drum's footprint, and the drum swallowed it as it
   // grew with the door open. Down here nothing moves near it and it stays inside the frame.
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a0403, emissive: 0xc8322b, emissiveIntensity: 4 }));
-  lamp.position.set(width / 2 + 0.15, height - 0.55, 0.3); root.add(lamp);
-  const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 16, 1, true), frameMat); hood.position.set(lamp.position.x, lamp.position.y + 0.12, lamp.position.z); root.add(hood);
-  const lampLight = new THREE.PointLight(0xc8322b, 2.5, 5, 2); lampLight.position.copy(lamp.position); root.add(lampLight);
+  const lampMesh = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a0403, emissive: 0xc8322b, emissiveIntensity: 4 }));
+  lampMesh.position.set(width / 2 + 0.15, height - 0.55, 0.3); root.add(lampMesh);
+  const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 16, 1, true), frameMat); hood.position.set(lampMesh.position.x, lampMesh.position.y + 0.12, lampMesh.position.z); root.add(hood);
+  // The rig owns the light now, but the placement has to sit in world space: the door's own root is
+  // parented at opts.position, and a Placement carries no parent transform to inherit that from.
+  const lamp: PointPlacement = { kind: 'point', position: [width / 2 + 0.15 + opts.position[0], height - 0.55 + opts.position[1], 0.3 + opts.position[2]], color: 0xc8322b, intensity: 2.5, distance: 5, decay: 2 };
 
   return {
-    root,
+    root, lamp,
     update(open) {
       const p = doorPose(open, height);
       slats.scale.y = Math.max(0.001, p.slatScaleY);
@@ -57,7 +60,7 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
       rail.position.y = p.bottomY + 0.06;
       drum.scale.set(p.drumRadius / 0.22, 1, p.drumRadius / 0.22);
       stencil.position.y = p.stencilY; stencil.visible = p.stencilVisible;
-      const g = open > 0.05; (lamp.material as THREE.MeshStandardMaterial).emissive.set(g ? 0x2ecc71 : 0xc8322b); lampLight.color.set(g ? 0x2ecc71 : 0xc8322b);
+      const g = open > 0.05; (lampMesh.material as THREE.MeshStandardMaterial).emissive.set(g ? 0x2ecc71 : 0xc8322b); lamp.color = g ? 0x2ecc71 : 0xc8322b;
     },
     dispose() { disposeObject(root); },
   };
