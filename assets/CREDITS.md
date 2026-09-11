@@ -69,5 +69,3 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | stationery | [stationery_supplies](https://polyhaven.com/a/stationery_supplies) | model |
 | notepads | [office_notepads](https://polyhaven.com/a/office_notepads) | model |
 | radio | [vintage_radio_transceiver](https://polyhaven.com/a/vintage_radio_transceiver) | model |
-| hand_truck | [hand_truck](https://polyhaven.com/a/hand_truck) | model |
-| crate_plastic_2 | [plastic_crate_02](https://polyhaven.com/a/plastic_crate_02) | model |

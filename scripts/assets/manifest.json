@@ -66,9 +66,7 @@
     "clipboard":         { "id": "clipboard",                      "group": "file" },
     "stationery":        { "id": "stationery_supplies",            "group": "file" },
     "notepads":          { "id": "office_notepads",                "group": "file" },
-    "radio":             { "id": "vintage_radio_transceiver",      "group": "file" },
-    "hand_truck":        { "id": "hand_truck",                     "group": "fabrication-dressing" },
-    "crate_plastic_2":   { "id": "plastic_crate_02",                "group": "fabrication-dressing" }
+    "radio":             { "id": "vintage_radio_transceiver",      "group": "file" }
   },
   "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
   "budgets": { "desktop": { "total": 15728640, "firstFrame": 5242880, "group": 2621440 }, "phone": { "total": 8388608 } }
