@@ -23,6 +23,9 @@ export function instances(geometry: THREE.BufferGeometry, material: THREE.Materi
   spots.forEach((spot, i) => inst.setMatrixAt(i, matrixFor(spot)));
   inst.instanceMatrix.needsUpdate = true;
   inst.computeBoundingSphere();
+  // And the box: Box3.setFromObject reads an InstancedMesh's own box when it has one and otherwise
+  // falls back to the single geometry at the group origin, which measures a batch as one instance.
+  inst.computeBoundingBox();
   return inst;
 }
 

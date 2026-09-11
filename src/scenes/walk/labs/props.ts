@@ -58,27 +58,6 @@ export function wallScreen(w: number, h: number, lines: string[], accent = '#6EC
   return g;
 }
 
-/** An arcade cabinet: 0.8 wide, 1.9 tall, 0.9 deep, screen tilted back, marquee lit. Origin at floor centre, faces +z. */
-export function arcadeCabinet(title: string, accent = '#3D7BE0'): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.9, 0.9), new THREE.MeshStandardMaterial({ color: 0x141c24, roughness: 0.5 })); body.position.y = 0.95; g.add(body);
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.48), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.3, emissiveMap: screenFace([title, 'insert coin'], accent, 512, 400) }));
-  screen.position.set(0, 1.25, 0.46); screen.rotation.x = -0.25; g.add(screen);
-  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.2), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color(accent), emissiveIntensity: 1.6 }));
-  marquee.position.set(0, 1.78, 0.451); g.add(marquee);
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.06, 0.32), dark()); deck.position.set(0, 0.98, 0.35); g.add(deck);
-  return g;
-}
-
-/** A vending machine: 1.0 wide, 1.9 tall, 0.8 deep, lit front. Origin at floor centre, faces +z. */
-export function vendingMachine(accent = '#3D7BE0'): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.9, 0.8), new THREE.MeshStandardMaterial({ color: 0x1a2530, roughness: 0.45, metalness: 0.3 })); body.position.y = 0.95; g.add(body);
-  const front = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.3), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 0.9, emissiveMap: screenFace(['', 'cold drinks', '', 'out of order'], accent, 512, 900) }));
-  front.position.set(-0.08, 1.05, 0.401); g.add(front);
-  return g;
-}
-
 export const RACK_BAY = 2.7, RACK_HEIGHT = 4.5, RACK_DEPTH = 1.1;
 
 /** Centres of a run's bays, measured from the centre of the run. */

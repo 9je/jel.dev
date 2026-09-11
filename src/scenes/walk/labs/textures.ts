@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 
-function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
+/** A 2d canvas of a size, with its context. Exported for `furniture.ts`, whose canvases belong to
+ *  one room and would otherwise sit in the first visit bundle for the sake of one later chunk. */
+export function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')!];
 }
-function own(c: HTMLCanvasElement, srgb = true): THREE.CanvasTexture {
+/** Wraps a canvas as a texture this scene owns, so `disposeObject` may free it. */
+export function own(c: HTMLCanvasElement, srgb = true): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.userData.owned = true; return t;
 }
 /** Deterministic noise so a room looks the same on every load and every screenshot. */
