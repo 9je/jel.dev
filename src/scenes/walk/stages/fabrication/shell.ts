@@ -74,13 +74,21 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     for (const y of GIRTS) if (y >= base && y <= top) girts.push([len, x + nx, y, z + nz, ry]);
   };
   run(D, X0, ZC, Math.PI / 2); run(D, X1, ZC, -Math.PI / 2);
-  // The far wall stops short of the left corner: that gap is the exit the spline turns through.
+  // The far wall stops short of the exit: that gap is the opening the spline turns through, into the
+  // break room's landing on the other side.
   run(X1 - EXIT_X1, (EXIT_X1 + X1) / 2, Z0, 0);
-  // Above the corridor opening the wall closes again, so the exit reads as a doorway into the next
-  // wing rather than as the hall ending in the dark.
+  // The corner return. Without it the gap ran all the way into the left wall and the hall read as
+  // ending in the dark, which is the black box Jordan saw: now the opening has a jamb on both sides.
+  run(EXIT_X0 - X0, (X0 + EXIT_X0) / 2, Z0, 0);
+  // Above the opening the wall closes again, so the exit reads as a doorway into the next wing.
   run(EXIT_X1 - EXIT_X0, (EXIT_X0 + EXIT_X1) / 2, Z0, 0, EXIT_H);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 1.4), new THREE.MeshBasicMaterial({ map: stencilTexture('RECREATION', { width: 1024, height: 256, color: '#C3D6DE', font: '400 150px Michroma, system-ui, sans-serif', alpha: 0.5 }), transparent: true, depthWrite: false }));
-  sign.position.set((EXIT_X0 + EXIT_X1) / 2, EXIT_H + 1.3, Z0 + 0.03); root.add(sign);
+  // The opening's own steel frame, standing proud of the wall into the bay. The RECREATION stencil
+  // that used to float on the blockwork above it is gone: the lit sign now hangs on the doorway
+  // itself, two rooms' worth of wall further on, where the walk actually turns through it.
+  const section = 0.25, frameGeoms: THREE.BufferGeometry[] = [];
+  for (const x of [EXIT_X0, EXIT_X1]) { const post = new THREE.BoxGeometry(section, EXIT_H + section, section); post.translate(x, (EXIT_H + section) / 2, Z0 + section / 2); frameGeoms.push(post); }
+  const lintel = new THREE.BoxGeometry(EXIT_X1 - EXIT_X0 + section * 2, section, section); lintel.translate((EXIT_X0 + EXIT_X1) / 2, EXIT_H + section / 2, Z0 + section / 2); frameGeoms.push(lintel);
+  root.add(merged(frameGeoms, new THREE.MeshStandardMaterial({ color: GIRT_TINT, roughness: 0.5, metalness: 0.6 })));
   // Front wall either side of the booth door and the header above it. The door is the booth's.
   for (const [x, w] of [[(X0 - 4) / 2, -4 - X0], [(X1 + 4) / 2, X1 - 4]] as [number, number][]) run(w, x, Z1 - 0.01, Math.PI);
   run(8, 0, Z1 - 0.01, Math.PI, 4);
@@ -95,6 +103,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   };
   band(D, X0 + 0.02, ZC, Math.PI / 2); band(D, X1 - 0.02, ZC, -Math.PI / 2);
   band(X1 - EXIT_X1, (EXIT_X1 + X1) / 2, Z0 + 0.02, 0);
+  band(EXIT_X0 - X0, (X0 + EXIT_X0) / 2, Z0 + 0.02, 0);
   band(-4 - X0, (X0 - 4) / 2, Z1 - 0.03, 0); band(X1 - 4, (X1 + 4) / 2, Z1 - 0.03, 0);
   root.add(merged(dado, new THREE.MeshStandardMaterial({ color: PAINT, roughness: 0.85 })));
   root.add(merged(line, new THREE.MeshStandardMaterial({ color: SAFETY, roughness: 0.6 })));

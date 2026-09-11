@@ -5,8 +5,12 @@
 export const X0 = -20, X1 = 14, Z0 = -30, Z1 = 22, H = 12;
 export const W = X1 - X0, D = Z1 - Z0, XC = (X0 + X1) / 2, ZC = (Z0 + Z1) / 2;
 
-/** The exit to the recreation corridor: the far wall stops short of the left corner. */
-export const EXIT_X0 = X0, EXIT_X1 = X0 + 8, EXIT_H = 5;
+/** The exit to the break room. The far wall stops short of the left corner and the break room's own
+ *  landing picks up behind it (recreation/layout LANDING). EXIT_X0 is the landing-side face of the
+ *  RECREATION doorway's vestibule, so the two shells meet on the same plane with no gap: move one
+ *  and move the other. The corner between EXIT_X0 and X0 is walled, which is what turns the old 8 m
+ *  hole into a doorway. EXIT_H is the landing's ceiling height. */
+export const EXIT_X0 = -17.6, EXIT_X1 = X0 + 8, EXIT_H = 5;
 
 /** Columns, in two lines either side of the aisle. */
 export const COLUMNS: [number, number][] = [[-14, 8], [10, 8], [-14, -12], [10, -12], [-14, -24], [10, -24]];

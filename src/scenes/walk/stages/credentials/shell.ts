@@ -12,8 +12,10 @@ export interface Shell { planes: Set<THREE.Object3D> }
 const FIXTURE_Z = [-12, -6, 0, 4];
 
 /** The only break in the long walls: the east wall opens from the hall's south end to here, where
- *  the walk arrives from the server hall (the path crosses x -75 at z about -29.3). */
-const GATE_Z1 = -27;
+ *  the walk arrives from the server hall (the path crosses x -75 at z about -29.2). The server hall
+ *  owns the doorway that fills this gate and the vestibule behind it; this room closes the gate's
+ *  head and its own south end so no frame in the transition shows an unbuilt edge. */
+const GATE_Z1 = -27, GATE_H = 3.2;
 
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const planes = new Set<THREE.Object3D>();
@@ -33,6 +35,12 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   wallSegment(X0, Math.PI / 2, Z0, Z1);
   wallSegment(X1, -Math.PI / 2, GATE_Z1, Z1);
   root.add(merged(bandGeoms, dadoMaterial()), merged(lineGeoms, dadoLineMaterial()));
+
+  // The south end, closed. It was open, which is the black wall beside the desk in Jordan's shot of
+  // the server hall's far end: the gate is a doorway, and the rest of this end is wall.
+  const south = plane(W, H, labWall(store, W, H)); south.position.set(XC, H / 2, Z0);
+  const head = plane(GATE_Z1 - Z0, H - GATE_H, labWall(store, GATE_Z1 - Z0, H - GATE_H));
+  head.rotation.y = -Math.PI / 2; head.position.set(X1, (H + GATE_H) / 2, (Z0 + GATE_Z1) / 2);
 
   // A dark steel ceiling the room's full length, four fixtures over the corridor outside the lab.
   const ceiling = plane(W, D, labSteel(0x1a222a)); ceiling.rotation.x = Math.PI / 2; ceiling.position.set(XC, H, ZC);

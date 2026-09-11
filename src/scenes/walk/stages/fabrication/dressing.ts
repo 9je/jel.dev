@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import type { StageContext } from '../types';
 import { grounded, once, repeat, place, type Spot } from '../../merge';
-import { palletRack, wrappedPallet, rackBays, rackSlots, container, tapeLine, papers, RACK_BAY, RACK_HEIGHT } from '../../labs/props';
+import { palletRack, wrappedPallet, rackBays, rackSlots, container, papers, RACK_BAY, RACK_HEIGHT } from '../../labs/props';
 import { rng } from '../../labs/textures';
 import { X0, X1, Z0, COLUMNS } from './layout';
 
@@ -86,7 +86,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('storage_cart'), L + 0.6, 0, 12.9, Math.PI / 2 + 0.25));
   const ladder = once(prop('ladder'), L + 0.6, 0, 16.5, Math.PI / 2); ladder.rotation.z = 0.25; await add(ladder);
 
-  // The abandonment layer: tape across the left side of the exit, papers by the office door.
-  await add(tapeLine([-6, -27.5], [-11.5, -29.0], 1.0));
+  // The abandonment layer: papers by the office door. The tape that used to hang across the exit is
+  // gone. It ran at an angle into the far wall, read as clipping through it, and the tape that marks
+  // this exit now hangs off the RECREATION doorway itself (recreation/shell.ts), where the walk
+  // turns through it rather than past it.
   await add(papers([[-0.4, 0, -5.6, 0.3], [0.5, 0, -6.4, 1.4], [-4.1, 0, -16.2, 2.0]]));
 }

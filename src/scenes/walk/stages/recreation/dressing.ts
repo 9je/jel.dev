@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
-import { arcadeCabinet, vendingMachine, wallScreen, papers, tapeLine } from '../../labs/props';
-import { X0, Z0, Z1, CABINETS, ACCENT } from './layout';
+import { arcadeCabinet, vendingMachine, wallScreen, papers } from '../../labs/props';
+import { Z0, Z1, CABINETS, ACCENT } from './layout';
 
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Hotspot[]> {
   const { store, anchors, pace } = ctx;
@@ -44,11 +44,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('sofa'), -44, 0, Z0 + 0.6));
   await add(once(prop('sofa'), -52, 0, Z0 + 0.6, 0.1));
 
-  // Abandonment: a chair on its side by the far table, a trash bag, papers, tape across the exit.
+  // Abandonment: a chair on its side by the far table, a trash bag, papers. The tape that used to
+  // run down the west end is gone: it hung on the walked line, so the camera drove through its
+  // lettering. The tape at each end now hangs beside its doorway (shell.ts).
   const fallen = once(prop('chair'), -52.4, 0.42, Z1 - 0.5, 1.1); fallen.rotation.z = Math.PI / 2; await add(fallen);
   await add(once(prop('trashbag'), -27.4, 0, Z1 - 0.7, 0.6));
   await add(papers([[-30, 0, -29.5, 0.3], [-31.2, 0, -29.9, 1.6], [-47, 0, -30.2, 2.1], [-55, 0, -32.4, 0.9]]));
-  await add(tapeLine([X0 + 0.5, Z0 + 0.6], [X0 + 0.5, Z1 - 3.2], 1.0));
 
   return hotspots;
 }

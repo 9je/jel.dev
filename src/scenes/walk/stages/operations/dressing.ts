@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { grounded, once, place } from '../../merge';
-import { serverRack, cage, papers, tapeLine } from '../../labs/props';
+import { serverRack, cage, papers } from '../../labs/props';
+import { tapeStrip } from '../../labs/signage';
 import { X0, W, XC, RACK_Z, CAGE_Z, RACK_XS, GATE_X } from './layout';
 
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<void> {
@@ -30,5 +31,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('laptop'), X0 + 1.1, 0.76, -30.6, 1.3));
   const chair = once(prop('office_chair'), X0 + 2.6, 0.45, -29.6, 0.4); chair.rotation.z = -Math.PI / 2; await add(chair);
   await add(papers([[X0 + 3, 0, -30.4, 0.2], [X0 + 3.8, 0, -31.6, 1.1], [-66, 0, -30.2, 2.4], [-61, 0, -31.8, 0.7]]));
-  await add(tapeLine([X0 + 0.4, -34.6], [X0 + 0.4, -27.4], 1.0));
+
+  // The tape across the far end. It used to run at x -75.6, where it cut through the desk and the
+  // laptop standing on it. It is strung between the two cage runs' west end posts instead, which is
+  // furniture it can actually be tied to, and it crosses the aisle a metre in front of the desk: the
+  // hold at the east end looks down the hall, through the tape, at the desk beyond it. At 1.05 m it
+  // passes under the camera rather than through it.
+  const cageEnd = XC - (W - 4) / 2;
+  await add(tapeStrip([cageEnd, 1.05, CAGE_Z.south], [cageEnd, 1.05, CAGE_Z.north], 0.09));
 }
