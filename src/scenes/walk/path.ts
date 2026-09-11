@@ -122,13 +122,34 @@ export function localProgress(t: number, id: StopId): number {
 }
 
 const _ahead = new Vector3();
-const _look = new Vector3();
 const _tangent = new Vector3();
 const _m = new Matrix4();
 const _qAhead = new Quaternion();
-const _qLook = new Quaternion();
 const UP = new Vector3(0, 1, 0);
 const FORWARD = new Vector3(0, 0, -1);
+
+/**
+ * A stop's line of sight, measured from where the camera parks for that stop rather than from
+ * wherever it currently stands, so it is a constant for the whole turn in and out of the hold.
+ *
+ * Measured live it is not. The walk leaves the credentials lab straight through its own aim point:
+ * at t 0.771 the camera stands 0.21 m from it, and a point the camera passes through swings its
+ * bearing 180 degrees inside one step. Even at the 2 percent look weight left in the release that
+ * threw a 1.2 degree jolt into a frame turning at 0.5, which is the unnatural movement leaving the
+ * credentials room. Every other stop parks its aim within a few metres of the path and had a
+ * smaller version of the same kick on the way past. From the parked position the turn out of a
+ * hold is a plain blend between two fixed headings.
+ */
+const _stopQuats = new Map<StopId, Quaternion>();
+function lookQuat(stop: Stop): Quaternion {
+  let q = _stopQuats.get(stop.id);
+  if (!q) {
+    const parked = curve.getPointAt(stop.t, new Vector3());
+    q = new Quaternion().setFromRotationMatrix(new Matrix4().lookAt(parked, new Vector3(stop.lookAt[0], stop.lookAt[1], stop.lookAt[2]), UP));
+    _stopQuats.set(stop.id, q);
+  }
+  return q;
+}
 
 /**
  * Position on the spline plus the point to look at. The look direction is blended as a rotation
@@ -144,10 +165,8 @@ export function cameraAt(t: number, out = { position: new Vector3(), target: new
   if (aheadP <= 1) curve.getPointAt(aheadP, _ahead);
   else { curve.getPointAt(1, _ahead); curve.getTangentAt(1, _tangent); _ahead.addScaledVector(_tangent, (aheadP - 1) * curve.getLength()); }
   const { stop, weight } = lookWeight(u);
-  _look.set(stop.lookAt[0], stop.lookAt[1], stop.lookAt[2]);
   _qAhead.setFromRotationMatrix(_m.lookAt(out.position, _ahead, UP));
-  _qLook.setFromRotationMatrix(_m.lookAt(out.position, _look, UP));
-  _qAhead.slerp(_qLook, weight);
+  _qAhead.slerp(lookQuat(stop), weight);
   out.target.copy(FORWARD).applyQuaternion(_qAhead).add(out.position);
   return out;
 }

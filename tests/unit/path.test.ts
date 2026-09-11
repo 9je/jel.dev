@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { STOPS, cameraAt, stopAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, travelParam, EYE } from '../../src/scenes/walk/path';
+import { Vector3 } from 'three';
+import { STOPS, cameraAt, stopAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, EYE, TURN_LEAD } from '../../src/scenes/walk/path';
 
 describe('stops', () => {
   it('are seven, in increasing t, from 0 to 1', () => {
@@ -96,6 +97,61 @@ describe('camera motion', () => {
       prev = d;
     }
     expect(worst, `worst turn ${worst.toFixed(1)} deg at t ${at.toFixed(4)}`).toBeLessThan(3);
+  });
+  it('never jolts: no step changes the turn rate by more than a third of the turn it is part of', () => {
+    // The defect this pins: leaving the credentials lab the camera walked within 0.21 m of that
+    // stop's own aim point, and a point the camera passes through swings its bearing 180 degrees
+    // inside one step. At the 2 percent look weight left in the release it still threw a 1.18
+    // degree step into a frame turning at 0.5, an acceleration of 0.95 degrees per step against a
+    // path median of 0.003. A corner the spline actually turns through accelerates smoothly: the
+    // whole path now peaks at 0.16 against a 2.36 degree top rate.
+    const sweep = (from: number, to: number) => {
+      const rate: number[] = [];
+      let prev = dirAt(from);
+      for (let t = from + STEP; t <= to + 1e-9; t += STEP) {
+        const d = dirAt(t);
+        rate.push(Math.acos(Math.max(-1, Math.min(1, prev.dot(d)))) * 180 / Math.PI);
+        prev = d;
+      }
+      const accel = rate.map((v, i) => (i === 0 ? 0 : Math.abs(v - rate[i - 1])));
+      return { top: Math.max(...rate), jolt: Math.max(...accel), at: from + STEP * accel.indexOf(Math.max(...accel)) };
+    };
+    const whole = sweep(0, 1);
+    expect(whole.jolt, `worst jolt ${whole.jolt.toFixed(3)} deg at t ${whole.at.toFixed(4)}, top rate ${whole.top.toFixed(3)}`).toBeLessThan(whole.top * 0.3);
+    // And the same rule inside a window around every hold edge, so a jolt at one stop cannot hide
+    // under the fastest corner on the path.
+    for (const s of STOPS) {
+      for (const edge of s.hold) {
+        const w = sweep(Math.max(0, edge - 0.05), Math.min(1, edge + 0.05));
+        // A window the camera sits parked through turns at zero and cannot jolt, so the floor.
+        expect(w.jolt, `jolt ${w.jolt.toFixed(3)} deg at t ${w.at.toFixed(4)}, near the ${s.id} hold edge ${edge}`).toBeLessThan(Math.max(w.top * 0.3, 0.01));
+      }
+    }
+  });
+  it('aims every hold from where it parks, so walking through an aim point costs nothing', () => {
+    // The orientation a stop contributes is a constant: the same heading whether the camera is
+    // still approaching, parked, or already past. Measured from the live position instead, it
+    // hinges on the camera's distance to the aim point, which is what spiked leaving credentials.
+    for (const s of STOPS) {
+      const held = dirAt(s.t);
+      const parked = cameraAt(s.t).position;
+      const want = new Vector3(s.lookAt[0], s.lookAt[1], s.lookAt[2]).sub(parked).normalize();
+      expect(held.dot(want)).toBeGreaterThan(0.9999);
+    }
+    // The credentials aim sits 0.21 m off the path at t 0.771: the camera walks straight through it
+    // on the way to containment, while the release still has weight left.
+    const c = STOPS.find((s) => s.id === 'credentials')!;
+    const aim = new Vector3(c.lookAt[0], c.lookAt[1], c.lookAt[2]);
+    let closest = Infinity, at = 0;
+    for (let t = c.hold[1]; t <= c.hold[1] + TURN_LEAD + 1e-9; t += STEP) {
+      const d = aim.distanceTo(cameraAt(t).position);
+      if (d < closest) { closest = d; at = t; }
+    }
+    expect(closest).toBeLessThan(1);
+    expect(lookWeight(at).weight).toBeGreaterThan(0);
+    const turn = (a: number, b: number) => Math.acos(Math.max(-1, Math.min(1, dirAt(a).dot(dirAt(b))))) * 180 / Math.PI;
+    expect(turn(at - STEP, at), `turn into the pass at t ${at.toFixed(4)}`).toBeLessThan(0.6);
+    expect(turn(at, at + STEP), `turn out of the pass at t ${at.toFixed(4)}`).toBeLessThan(0.6);
   });
   it('looks straight at the stop through the middle of every hold', () => {
     for (const s of STOPS) {
