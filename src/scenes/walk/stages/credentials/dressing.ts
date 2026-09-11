@@ -4,6 +4,7 @@ import { grounded, place } from '../../merge';
 import { papers } from '../../labs/props';
 import { gurney, tripodCamera, hardCase, cableCoil, tarpWall } from '../../labs/furniture';
 import { labSteel } from '../../labs/materials';
+import { surface } from '../../materials';
 import { stencilTexture } from '../../textures';
 import { X0, X1, H, PLATE_X, PLATE_Z, PLATE_TURN } from './layout';
 import certs from '../../../../content/certs.json';
@@ -73,7 +74,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // sits at x -81.4 rather than on the lab's centre line, where `cameraAt` puts the walk within
   // 0.1 m of it. From -81.4 the camera clears it by 1.7 m to the trolley's centre, and standing it
   // under the near plates rather than beside the hold keeps it a prop instead of the subject.
-  await add(place(gurney(), -81.4, 0, -18.6, Math.PI + 0.15));
+  //
+  // It stands a metre further south than it did. At -18.6 the trolley's head end sat 4.8 m out, which
+  // is far enough back that its sheet rose above the bottom edge of the near CCNA plate and cut the
+  // plate's frame off. A metre closer drops the whole trolley below the plate and takes nothing out
+  // of the frame, because its foot was already past the bottom right corner.
+  await add(place(gurney(), -81.4, 0, -19.6, Math.PI + 0.15));
   await add(place(tripodCamera(), -77.4, 0, -21, -2.5));
   // The stacked pair stands off the east glass rather than against it: from the hold the wall line
   // is behind the page's own certification card, and a case parked there is a case nobody sees.
@@ -87,20 +93,14 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(tarpWall(8, 3.2), X1 - 0.1, 1.9, -8, -Math.PI / 2));
 
   // A bench along the east wall, with the lab's own instruments on it. The first pass forced every
-  // material to LABS.panel, which is a hair off white: that washed the model's own map out and left
-  // the second brightest object in the brightest room on the walk reading as a greybox slab. A
-  // cooler, darker tint keeps the map and puts the bench back under the plates it stands beneath.
+  // material to LABS.panel, a hair off white with nothing on it, so in the brightest room on the
+  // walk the bench was the second brightest thing in the frame and read as a greybox slab. It gets
+  // the lab's own tile at a fine pitch instead: a real map, normal and AO, in a mid grey that sits
+  // under the plates it stands beneath rather than beside them.
   const bench = store.model('desk');
-  const BENCH = 0xb9c8d0;
-  bench.traverse((o) => {
-    if (!(o instanceof THREE.Mesh)) return;
-    const tint = (m: THREE.Material) => {
-      const c = m.clone() as THREE.MeshStandardMaterial;
-      if ('color' in c) { c.color.setHex(BENCH); c.roughness = 0.55; c.metalness = 0.1; }
-      return c;
-    };
-    o.material = Array.isArray(o.material) ? o.material.map(tint) : tint(o.material);
-  });
+  const benchMat = surface(store.texture('lab_tile'), 2.2, 0.9, 0.5);
+  benchMat.color.setHex(0x93a3ac); benchMat.roughness = 0.45; benchMat.metalness = 0.15;
+  bench.traverse((o) => { if (o instanceof THREE.Mesh) o.material = benchMat; });
   bench.position.set(X1 - 1.2, 0, BENCH_Z); bench.rotation.y = Math.PI / 2;
   await add(bench);
 

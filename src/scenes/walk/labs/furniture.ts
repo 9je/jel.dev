@@ -378,7 +378,9 @@ export function gurney(): THREE.Group {
   const deck = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 1.9), steel); deck.position.y = 0.64; g.add(deck);
   // The sheet is a slab rather than cloth, and the one thing that sells it as cloth is the piece
   // hanging off the foot: a flat white box on a trolley reads as a box, a box with a fall does not.
-  const linen = new THREE.MeshStandardMaterial({ color: 0xeef2f4, roughness: 0.9, side: THREE.DoubleSide });
+  // Off white rather than near white: at 0xeef2f4 under the credentials lab's own lights the sheet
+  // clipped to paper and the trolley read as one untextured slab with no form in it at all.
+  const linen = new THREE.MeshStandardMaterial({ color: 0xc9d3d9, roughness: 0.95, side: THREE.DoubleSide });
   g.add(merged([
     new THREE.BoxGeometry(0.8, 0.25, 2.0).translate(0, 0.805, 0),
     new THREE.PlaneGeometry(0.8, 0.5).translate(0, 0.43, 1.0),
