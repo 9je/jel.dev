@@ -35,6 +35,6 @@ export const CLAD_Y = 4;
 export const GIRTS = [4.0, 7.0, 10.0];
 
 /** Palette. Cold concrete, the Terragroup blue dado, worn safety yellow, sodium only at the docks. */
-export const PAINT = 0x2455a4, SAFETY = 0xe8b923, AISLE_PAINT = 0xc9a227, SODIUM = 0xe0813a, FLOOR_TINT = 0x8fa8ba;
+export const PAINT = 0x2455a4, SAFETY = 0xe8b923, AISLE_PAINT = 0xc9a227, SODIUM = 0xe0813a, FLOOR_TINT = 0xb4bcc2;
 /** The shell's two courses and the steel that ties them: block, cladding, girt. */
 export const BLOCK_TINT = 0xb4c2d0, CLAD_TINT = 0x8a949c, GIRT_TINT = 0x2b3740;

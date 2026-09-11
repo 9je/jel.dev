@@ -51,6 +51,9 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // the shell cold concrete, so a sodium pool on it reads as an island rather than as the floor.
   // Six metre tiles: at three the stains repeated visibly down a 52 m floor.
   const floorMat = surface(concreteF, W, D, 6); floorMat.color.setHex(FLOOR_TINT);
+  // Sealed concrete, not raw: a touch of sheen so the cold spots read on it. Left at the default
+  // roughness the floor swallowed every one of them and the bay read murky green black.
+  floorMat.roughness = 0.75; floorMat.metalness = 0;
   const floor = plane(W, D, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
   const ceil = plane(W, D, steel(sheet, W, D, 2, 0x59636b)); ceil.rotation.x = Math.PI / 2; ceil.position.set(XC, H, ZC);
 
