@@ -63,8 +63,12 @@ export function signLetters(font: Font | null, text: string, opts: { size: numbe
 export function signBox(text: string, opts: { w: number; h: number; accent?: number; on?: boolean }): THREE.Group {
   const { w, h } = opts;
   const g = new THREE.Group();
+  // The carcass stops a centimetre short of the face rather than flush with it. Flush, the box's
+  // front and the face plane are coplanar, and at hall distance the depth buffer cannot separate
+  // them: the lit face breaks into vertical bands of carcass across whichever half of the sign the
+  // camera is off axis from.
   const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.09, h + 0.09, 0.09), labSteel(LABS.steel));
-  frame.position.z = -0.045; frame.name = 'frame'; g.add(frame);
+  frame.position.z = -0.055; frame.name = 'frame'; g.add(frame);
   const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({
     color: 0xffffff, roughness: 0.5, emissive: 0xffffff, emissiveIntensity: opts.on ? 0.6 : 0,
   }));

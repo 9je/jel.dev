@@ -1,8 +1,47 @@
 import type * as THREE from 'three';
 import type { StageContext } from '../types';
-import { grounded, once, repeat, place } from '../../merge';
-import { palletRack, container, tapeLine, papers } from '../../labs/props';
+import { grounded, once, repeat, place, type Spot } from '../../merge';
+import { palletRack, wrappedPallet, rackBays, rackSlots, container, tapeLine, papers, RACK_BAY, RACK_HEIGHT } from '../../labs/props';
+import { rng } from '../../labs/textures';
 import { X0, X1, Z0, COLUMNS } from './layout';
+
+/** The three racking runs, all turned a quarter so their bays face the aisle. */
+const RACKS: { bays: number; x: number; z: number }[] = [
+  { bays: 4, x: X1 - 0.7, z: -20 },
+  { bays: 3, x: X1 - 0.7, z: -6 },
+  { bays: 3, x: X0 + 0.7, z: -4 },
+];
+const LEVELS = 3;
+
+/**
+ * What is on the racks. Every deck below the top beam carries something: six in ten a shrink
+ * wrapped pallet, the rest a crate, drawn from a seed so the bay looks the same in every
+ * screenshot. The top level stays empty, which leaves its wire decking on show and keeps the
+ * stock clear of the cable tray running the wall at 5.2.
+ *
+ * The stock is batched across all three runs rather than per rack, which is why it is built here
+ * from the runs' own geometry instead of inside `palletRack`: two pallet variants and three crates
+ * over the whole bay is nine draw calls, where a pallet built per deck would be fifty.
+ */
+function rackStock(prop: (key: string) => THREE.Object3D): THREE.Object3D[] {
+  const r = rng(11);
+  const pallets: Spot[][] = [[], []];
+  const crates: Spot[][] = [[], [], []];
+  let n = 0;
+  for (const rack of RACKS) {
+    for (const y of rackSlots(LEVELS, RACK_HEIGHT).slice(0, -1)) for (const bay of rackBays(rack.bays, RACK_BAY)) {
+      // The run is turned a quarter, so a bay offset along the run lands on world z.
+      const spot: Spot = [rack.x, y, rack.z - bay, Math.PI / 2];
+      if (r() < 0.6) pallets[n % pallets.length].push(spot);
+      else crates[n % crates.length].push([spot[0], spot[1], spot[2], r() * 0.4 - 0.2, 1.4]);
+      n++;
+    }
+  }
+  const out: THREE.Object3D[] = [];
+  pallets.forEach((spots, i) => { if (spots.length) out.push(repeat(wrappedPallet(i + 1), spots)); });
+  ['crate_wood_1', 'cardboard_box', 'crate_plastic'].forEach((key, i) => { if (crates[i].length) out.push(repeat(prop(key), crates[i])); });
+  return out;
+}
 
 /**
  * Props, by bay. Every one of them touches a wall, a column, or another prop: nothing stands in the
@@ -15,15 +54,13 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const R = X1, L = X0, F = Z0;
   const add = async (o: THREE.Object3D) => { root.add(o); await pace(); };
 
-  // Right wall: two runs of blue racking with stock on the decks, a container parked in front of
-  // the near run, boxes at the foot of the far run. Deck heights are 1.5 and 3.0.
-  // The racking runs along z, turned a quarter so its bays face the aisle.
-  await add(place(palletRack(4, 3), R - 0.7, 0, -20, Math.PI / 2));
-  await add(place(palletRack(3, 3), R - 0.7, 0, -6, Math.PI / 2));
+  // Racking down both long walls, loaded. A container parked in front of the near run, boxes at
+  // the foot of the far one.
+  for (const rack of RACKS) await add(place(palletRack(rack.bays, LEVELS), rack.x, 0, rack.z, Math.PI / 2));
+  for (const batch of rackStock(prop)) await add(batch);
   await add(place(container(0x2b6a6f), R - 2.6, 0, 8, Math.PI / 2));
-  await add(repeat(prop('crate_wood_1'), [[R - 0.7, 1.5, -22.4, 0.1, 1.5], [R - 0.7, 3.0, -19.4, 0.2, 1.5], [R - 0.7, 1.5, -16.6, -0.2, 1.5], [R - 0.7, 3.0, -6.4, 0.3, 1.5], [R - 0.7, 0, -8.6, 0.2, 1.5]]));
-  await add(repeat(prop('cardboard_box'), [[R - 0.7, 1.5, -18.2, 0.3, 1.4], [R - 0.7, 1.5, -25.2, 1.1, 1.4], [R - 0.7, 0, -12.2, 0.3, 1.4], [R - 0.7, 0.44, -12.2, -0.2, 1.4], [R - 0.7, 3.0, -3.4, 0.9, 1.4]]));
-  await add(repeat(prop('crate_plastic'), [[R - 0.6, 1.5, -15.2, 0.15, 1.6], [R - 0.6, 3.0, -21.2, -0.1, 1.6]]));
+  await add(repeat(prop('crate_wood_1'), [[R - 0.7, 0, -8.6, 0.2, 1.5]]));
+  await add(repeat(prop('cardboard_box'), [[R - 0.7, 0, -12.2, 0.3, 1.4], [R - 0.7, 0.44, -12.2, -0.2, 1.4]]));
   await add(repeat(prop('steel_shelves'), [[R - 0.3, 0, 16.4, -Math.PI / 2, 0.1], [R - 0.3, 0, 17.6, -Math.PI / 2, 0.1]]));
   await add(once(store.model('power_box'), R - 0.08, 1.6, -13, -Math.PI / 2));
 
@@ -40,11 +77,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('welding_cart'), 11.8, 0, F + 0.9, -0.5));
   await add(once(prop('military_crate'), R - 1.1, 0, -27.2, 0.1, 1.4));
 
-  // Left wall: racking where the old clean room stood, a container by the exit, the tool wall by
-  // the door.
-  await add(place(palletRack(3, 3), L + 0.7, 0, -4, Math.PI / 2));
+  // Left wall: a container by the exit and the tool wall by the door. The racking there is built
+  // with the other runs above.
   await add(place(container(0x8a3a2e), L + 2.6, 0, -22, Math.PI / 2));
-  await add(repeat(prop('cardboard_box'), [[L + 0.7, 1.5, -6.2, 0.3, 1.4], [L + 0.7, 3.0, -2.6, -0.4, 1.4], [L + 0.7, 1.5, -1.0, 0.8, 1.4]]));
   await add(once(prop('metal_rack'), L + 0.34, 0, 9.5, Math.PI / 2));
   await add(once(prop('tool_chest'), L + 0.24, 0, 7.0, Math.PI / 2));
   await add(once(prop('tool_cart'), L + 0.8, 0, 4.6, 1.25));

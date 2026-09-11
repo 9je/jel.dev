@@ -20,7 +20,6 @@
     "crate_plastic":     { "id": "plastic_crate_01",               "group": "fabrication" },
     "barrel":            { "id": "barrel_03",                      "group": "fabrication" },
     "fluorescent":       { "id": "mounted_fluorescent_lights",     "group": "fabrication" },
-    "cables":            { "id": "modular_electric_cables",        "group": "fabrication" },
     "military_crate":    { "id": "old_military_crate",             "group": "fabrication-extra" },
     "storage_cart":      { "id": "industrial_storage_cart",        "group": "fabrication-extra" },
     "tool_cart":         { "id": "tool_cart",                      "group": "fabrication-extra" },

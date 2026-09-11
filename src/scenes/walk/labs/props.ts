@@ -79,20 +79,58 @@ export function vendingMachine(accent = '#3D7BE0'): THREE.Group {
   return g;
 }
 
-/** Warehouse racking: blue uprights, beams at each level, grey decking. Origin at floor centre of
- *  the run, bays along x, faces +z. Three draw calls. */
-export function palletRack(bays = 3, levels = 3, bayWidth = 2.7, height = 4.5): THREE.Group {
-  const g = new THREE.Group(); const depth = 1.1; const len = bays * bayWidth;
+export const RACK_BAY = 2.7, RACK_HEIGHT = 4.5, RACK_DEPTH = 1.1;
+
+/** Centres of a run's bays, measured from the centre of the run. */
+export function rackBays(bays: number, bayWidth = RACK_BAY): number[] {
+  return Array.from({ length: bays }, (_, i) => -(bays * bayWidth) / 2 + (i + 0.5) * bayWidth);
+}
+
+/** Warehouse racking: blue uprights on foot plates, braced end frames, orange beams at each level
+ *  and wire mesh decking. Origin at floor centre of the run, bays along x, faces +z. Six draw calls.
+ *
+ *  The braces are what stop a run reading as four blue sticks: a real end frame is a ladder of
+ *  diagonals between its two uprights, and the pair of them at each level is the first thing that
+ *  says steel rather than toy. They are two batches, not one, because a batch carries a position
+ *  and a turn about y, and a diagonal is a lean about x: baking each lean into its own geometry
+ *  buys the second half of the X for one more draw call. */
+export function palletRack(bays = 3, levels = 3, bayWidth = RACK_BAY, height = RACK_HEIGHT): THREE.Group {
+  const g = new THREE.Group(); const depth = RACK_DEPTH; const len = bays * bayWidth;
   const blue = new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.5, metalness: 0.4 });
-  const uprights: Spot[] = [];
-  for (let i = 0; i <= bays; i++) for (const z of [-depth / 2, depth / 2]) uprights.push([-len / 2 + i * bayWidth, height / 2, z]);
-  g.add(instances(new THREE.BoxGeometry(0.09, height, 0.09), blue, uprights));
+  const uprights: Spot[] = [], feet: Spot[] = [];
+  for (let i = 0; i <= bays; i++) for (const z of [-depth / 2, depth / 2]) { uprights.push([-len / 2 + i * bayWidth, height / 2, z]); feet.push([-len / 2 + i * bayWidth, 0.01, z]); }
+  g.add(instances(new THREE.BoxGeometry(0.1, height, 0.1), blue, uprights));
+  g.add(instances(new THREE.BoxGeometry(0.2, 0.02, 0.2), labSteel(0x39434b), feet));
+  const level = height / levels;
+  const braces: Spot[] = [];
+  for (const x of [-len / 2, len / 2]) for (let i = 0; i < levels; i++) braces.push([x, (i + 0.5) * level, 0]);
+  for (const lean of [0.7, -0.7]) g.add(instances(new THREE.BoxGeometry(0.04, 1.5, 0.04).rotateX(lean), blue, braces));
   const beams: Spot[] = [];
-  for (const y of rackSlots(levels, height)) for (let i = 0; i < bays; i++) for (const z of [-depth / 2, depth / 2]) beams.push([-len / 2 + (i + 0.5) * bayWidth, y - 0.08, z]);
+  for (const y of rackSlots(levels, height)) for (const x of rackBays(bays, bayWidth)) for (const z of [-depth / 2, depth / 2]) beams.push([x, y - 0.08, z]);
   g.add(instances(new THREE.BoxGeometry(bayWidth - 0.1, 0.12, 0.08), new THREE.MeshStandardMaterial({ color: 0xd8722c, roughness: 0.5, metalness: 0.4 }), beams));
-  const decks: Spot[] = [];
-  for (const y of rackSlots(levels, height)) for (let i = 0; i < bays; i++) decks.push([-len / 2 + (i + 0.5) * bayWidth, y - 0.02, 0]);
-  g.add(instances(new THREE.BoxGeometry(bayWidth - 0.12, 0.04, depth - 0.1), new THREE.MeshStandardMaterial({ color: 0x6c757c, roughness: 0.8, metalness: 0.6 }), decks));
+  // Wire decking, not a steel pan: the mesh is an alpha map on the deck, alpha tested so it writes
+  // depth and keeps out of the transparent sort, and the beams show through the diamonds.
+  const wire = chainlink(); wire.repeat.set(bayWidth / 0.2, depth / 0.2);
+  const decks: Spot[] = rackSlots(levels, height).flatMap((y) => rackBays(bays, bayWidth).map((x) => [x, y - 0.02, 0] as Spot));
+  g.add(instances(new THREE.BoxGeometry(bayWidth - 0.12, 0.04, depth - 0.1), new THREE.MeshStandardMaterial({ color: 0x9aa5ac, alphaMap: wire, alphaTest: 0.5, roughness: 0.6, metalness: 0.7 }), decks));
+  return g;
+}
+
+/** A shrink wrapped pallet of stock: three bearers and a deck under a load in milky film with a
+ *  strap round its middle. `seed` picks the load's height, so a row of them is not a row of one
+ *  box. 1.2 by 1.0 on plan, origin at the foot of the pallet. Three draw calls, so stand them up
+ *  through `repeat()` rather than one at a time. */
+export function wrappedPallet(seed = 1): THREE.Group {
+  const g = new THREE.Group();
+  const r = rng(seed);
+  const boards: THREE.BufferGeometry[] = [new THREE.BoxGeometry(1.2, 0.02, 1.0).translate(0, 0.11, 0)];
+  for (const z of [-0.45, 0, 0.45]) boards.push(new THREE.BoxGeometry(1.2, 0.1, 0.1).translate(0, 0.05, z));
+  g.add(merged(boards, new THREE.MeshStandardMaterial({ color: 0x9c7f5a, roughness: 0.9 })));
+  const h = 0.7 + r() * 0.6;
+  const load = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, 0.9), new THREE.MeshPhysicalMaterial({ color: 0xdfe6ea, transmission: 0, roughness: 0.35, transparent: true, opacity: 0.85 }));
+  load.position.y = 0.12 + h / 2; g.add(load);
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.05, 0.92), new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.7 }));
+  strap.position.y = 0.12 + h / 2; g.add(strap);
   return g;
 }
 

@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { surface, prepareAO } from '../../materials';
 import { hazardTexture, stencilTexture } from '../../textures';
-import { instances, merged, repeat, type Spot } from '../../merge';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, EXIT_X0, EXIT_X1, EXIT_H, EXIT_LINE_Z, COLUMNS, AISLE, AISLE_HALF, PAINT, SAFETY, AISLE_PAINT, CONCRETE_TINT, FLOOR_TINT } from './layout';
+import { instances, merged, place, type Spot } from '../../merge';
+import { cableTray } from '../../labs/props';
+import { X0, X1, Z0, Z1, H, W, D, XC, ZC, EXIT_X0, EXIT_X1, EXIT_H, EXIT_LINE_Z, COLUMNS, AISLE, AISLE_HALF, CLAD_Y, GIRTS, PAINT, SAFETY, AISLE_PAINT, BLOCK_TINT, CLAD_TINT, GIRT_TINT, FLOOR_TINT } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
@@ -12,6 +13,16 @@ export interface Shell { planes: Set<THREE.Object3D> }
 export function steel(set: ReturnType<StageContext['store']['texture']>, w: number, h: number, tile: number, color: number): THREE.MeshStandardMaterial {
   const m = surface(set, w, h, tile);
   m.map?.dispose(); m.map = null; m.color.setHex(color); return m;
+}
+
+/** One batch for bars of different lengths: a unit box stretched along its own x. `instances()`
+ *  carries a uniform scale only, and a girt is a different length on every wall of the bay. */
+function bars(geometry: THREE.BufferGeometry, material: THREE.Material, runs: [number, number, number, number, number][]): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(geometry, material, runs.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3();
+  runs.forEach(([len, x, y, z, ry], i) => mesh.setMatrixAt(i, m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, ry, 0)), s.set(len, 1, 1))));
+  mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere();
+  return mesh;
 }
 
 /** A strip of floor paint along a polyline, at a lateral offset, as one geometry. */
@@ -29,7 +40,8 @@ function stripe(points: [number, number][], offset: number, width: number): THRE
   return out;
 }
 
-/** Floor, ceiling, walls, dado, aisle paint, columns and the exit header. */
+/** Floor, ceiling, the two wall courses and their girts, dado, aisle paint, columns, the exit
+ *  header, the trunk ducts and the cable run. */
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const concreteF = store.texture('concrete_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
   const planes = new Set<THREE.Object3D>();
@@ -42,23 +54,37 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const floor = plane(W, D, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
   const ceil = plane(W, D, steel(sheet, W, D, 2, 0x59636b)); ceil.rotation.x = Math.PI / 2; ceil.position.set(XC, H, ZC);
 
-  const wall = (w: number, h: number) => { const m = surface(concreteW, w, h, 3); m.color.setHex(CONCRETE_TINT); return m; };
-  for (const [x, ry] of [[X0, Math.PI / 2], [X1, -Math.PI / 2]] as [number, number][]) {
-    const m = plane(D, H, wall(D, H)); m.rotation.y = ry; m.position.set(x, H / 2, ZC);
-  }
+  // A bay wall is built in two courses and the flat plane Jordan saw had neither: painted blockwork
+  // to 4 m, where the trucks and the pallets hit it, and profiled steel cladding for the 8 m above.
+  // The join sits at eye level plus a storey, which gives the wall a horizon, and the girts that
+  // hold the cladding give it three more. Materials are cached by size: two courses on five wall
+  // runs is ten `surface()` calls and each one clones three maps.
+  const mats = new Map<string, THREE.MeshStandardMaterial>();
+  const cached = (key: string, make: () => THREE.MeshStandardMaterial) => { const hit = mats.get(key); if (hit) return hit; const m = make(); mats.set(key, m); return m; };
+  const block = (w: number, h: number) => cached(`b${w}x${h}`, () => { const m = surface(concreteW, w, h, 2); m.color.setHex(BLOCK_TINT); return m; });
+  const clad = (w: number, h: number) => cached(`c${w}x${h}`, () => { const m = steel(sheet, w, h, 1.5, CLAD_TINT); m.metalness = 0.6; m.roughness = 0.55; return m; });
+
+  const girts: [number, number, number, number, number][] = [];
+  /** A wall run from `base` to `top`, in its courses, with the girts it is tall enough to carry.
+   *  A plane's normal points into the room, so the girts stand proud of it along that normal. */
+  const run = (len: number, x: number, z: number, ry: number, base = 0, top = H) => {
+    if (base < CLAD_Y) { const h = Math.min(CLAD_Y, top) - base; const m = plane(len, h, block(len, h)); m.rotation.y = ry; m.position.set(x, base + h / 2, z); }
+    if (top > CLAD_Y) { const b = Math.max(CLAD_Y, base), h = top - b; const m = plane(len, h, clad(len, h)); m.rotation.y = ry; m.position.set(x, b + h / 2, z); }
+    const nx = Math.sin(ry) * 0.06, nz = Math.cos(ry) * 0.06;
+    for (const y of GIRTS) if (y >= base && y <= top) girts.push([len, x + nx, y, z + nz, ry]);
+  };
+  run(D, X0, ZC, Math.PI / 2); run(D, X1, ZC, -Math.PI / 2);
   // The far wall stops short of the left corner: that gap is the exit the spline turns through.
-  const far = plane(X1 - EXIT_X1, H, wall(X1 - EXIT_X1, H)); far.position.set((EXIT_X1 + X1) / 2, H / 2, Z0);
+  run(X1 - EXIT_X1, (EXIT_X1 + X1) / 2, Z0, 0);
   // Above the corridor opening the wall closes again, so the exit reads as a doorway into the next
   // wing rather than as the hall ending in the dark.
-  const header = plane(EXIT_X1 - EXIT_X0, H - EXIT_H, wall(EXIT_X1 - EXIT_X0, H - EXIT_H)); header.position.set((EXIT_X0 + EXIT_X1) / 2, EXIT_H + (H - EXIT_H) / 2, Z0);
+  run(EXIT_X1 - EXIT_X0, (EXIT_X0 + EXIT_X1) / 2, Z0, 0, EXIT_H);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 1.4), new THREE.MeshBasicMaterial({ map: stencilTexture('RECREATION', { width: 1024, height: 256, color: '#C3D6DE', font: '400 150px Michroma, system-ui, sans-serif', alpha: 0.5 }), transparent: true, depthWrite: false }));
   sign.position.set((EXIT_X0 + EXIT_X1) / 2, EXIT_H + 1.3, Z0 + 0.03); root.add(sign);
   // Front wall either side of the booth door and the header above it. The door is the booth's.
-  const frontMat = wall(W, H);
-  for (const [x, w] of [[(X0 - 4) / 2, -4 - X0], [(X1 + 4) / 2, X1 - 4]] as [number, number][]) {
-    const m = plane(w, H, frontMat); m.rotation.y = Math.PI; m.position.set(x, H / 2, Z1 - 0.01);
-  }
-  const lintel = plane(8, H - 4, frontMat); lintel.rotation.y = Math.PI; lintel.position.set(0, 4 + (H - 4) / 2, Z1 - 0.01);
+  for (const [x, w] of [[(X0 - 4) / 2, -4 - X0], [(X1 + 4) / 2, X1 - 4]] as [number, number][]) run(w, x, Z1 - 0.01, Math.PI);
+  run(8, 0, Z1 - 0.01, Math.PI, 4);
+  root.add(bars(new THREE.BoxGeometry(1, 0.12, 0.08), new THREE.MeshStandardMaterial({ color: GIRT_TINT, roughness: 0.6, metalness: 0.5 }), girts));
 
   // Dado: a band of dark machinery paint to 1.2 m with a safety line on top, along every wall. It
   // breaks the tile repeat at eye level and is the first thing that says "shop" rather than "box".
@@ -99,7 +125,14 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     for (let z = -26; z <= 16; z += 6) hangers.push([x, H - 0.6, z]);
   }
   root.add(instances(new THREE.BoxGeometry(0.06, 1.1, 0.06), ductMat, hangers));
-  // Cable runs along the right wall, clipped to the wall face.
-  root.add(repeat(store.model('cables'), [[X1 - 0.2, 6.4, -20, -Math.PI / 2, 1.6], [X1 - 0.2, 6.4, -8, -Math.PI / 2, 1.6], [X1 - 0.2, 6.4, 6, -Math.PI / 2, 1.6]]));
+  // The bundled cable model used to be repeated three times down the right wall. Clipped flat to a
+  // flat wall and lit from above it read as a splat of grey paint rather than as wire, and the same
+  // splat three times over is what Jordan saw. A tray the length of the hall with conduit dropping
+  // out of it every 8 m is the run that was meant: it is continuous, it is structure, and it ties
+  // the cladding to the dado instead of decorating it.
+  for (const [x, ry] of [[X0 + 0.25, Math.PI / 2], [X1 - 0.25, -Math.PI / 2]] as [number, number][]) root.add(place(cableTray(D - 4), x, 5.2, ZC, ry));
+  const drops: Spot[] = [];
+  for (const x of [X0 + 0.25, X1 - 0.25]) for (let z = Z0 + 4; z <= Z1 - 4; z += 8) drops.push([x, 2.6, z]);
+  root.add(instances(new THREE.CylinderGeometry(0.03, 0.03, 5.2, 8), new THREE.MeshStandardMaterial({ color: 0x8b949b, roughness: 0.5, metalness: 0.7 }), drops));
   return { planes };
 }
