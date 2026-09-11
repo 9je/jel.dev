@@ -131,7 +131,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   // was: the office is 8 m deep, so its plinth is already close to the south glass, and any further
   // left would put it under the copy column.
   const exhibits: [string, string, number, () => THREE.Group][] = [
-    ['conch', 'conch.gg', 3.0, controller],
+    ['conch', 'conch.gg', 3.0, () => controller(store.model('gamecube_controller'))],
     ['ezkey', 'ezkey.io', 0.4, key],
     ['gc-bridge', 'gc-bridge', -2.2, adapter],
   ];

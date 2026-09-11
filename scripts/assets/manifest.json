@@ -1,72 +1,334 @@
 {
   "textures": {
-    "metal_plate":    { "id": "metal_plate",              "group": "booth",             "repeat": [2, 2], "size": 768 },
-    "rubber_floor":   { "id": "rubber_tiles",             "group": "booth",             "repeat": [4, 4], "size": 768 },
-    "metal_shutter":  { "id": "painted_metal_shutter",    "group": "booth",             "repeat": [2, 1], "size": 768 },
-    "concrete_floor": { "id": "concrete_floor_02",        "group": "fabrication",       "repeat": [8, 14] },
-    "lab_tile":       { "id": "floor_tiles_08",           "group": "labs",              "repeat": [6, 6] },
-    "wall_panel":     { "id": "plastered_wall_04",        "group": "labs",              "repeat": [4, 2] },
-    "ceiling_tile":   { "id": "ceiling_interior",         "group": "labs",              "repeat": [6, 6] },
-    "concrete_wall":  { "id": "concrete_wall_008",        "group": "fabrication",       "repeat": [10, 3] },
-    "metal_sheet":    { "id": "box_profile_metal_sheet",  "group": "fabrication",       "repeat": [6, 1] }
+    "metal_plate": {
+      "id": "metal_plate",
+      "group": "booth",
+      "repeat": [
+        2,
+        2
+      ],
+      "size": 768
+    },
+    "rubber_floor": {
+      "id": "rubber_tiles",
+      "group": "booth",
+      "repeat": [
+        4,
+        4
+      ],
+      "size": 768
+    },
+    "metal_shutter": {
+      "id": "painted_metal_shutter",
+      "group": "booth",
+      "repeat": [
+        2,
+        1
+      ],
+      "size": 768
+    },
+    "concrete_floor": {
+      "id": "concrete_floor_02",
+      "group": "fabrication",
+      "repeat": [
+        8,
+        14
+      ]
+    },
+    "lab_tile": {
+      "id": "floor_tiles_08",
+      "group": "labs",
+      "repeat": [
+        6,
+        6
+      ]
+    },
+    "wall_panel": {
+      "id": "plastered_wall_04",
+      "group": "labs",
+      "repeat": [
+        4,
+        2
+      ]
+    },
+    "ceiling_tile": {
+      "id": "ceiling_interior",
+      "group": "labs",
+      "repeat": [
+        6,
+        6
+      ]
+    },
+    "concrete_wall": {
+      "id": "concrete_wall_008",
+      "group": "fabrication",
+      "repeat": [
+        10,
+        3
+      ]
+    },
+    "metal_sheet": {
+      "id": "box_profile_metal_sheet",
+      "group": "fabrication",
+      "repeat": [
+        6,
+        1
+      ]
+    }
   },
   "models": {
-    "desk":              { "id": "metal_office_desk",              "group": "booth" },
-    "stool":             { "id": "metal_stool_01",                 "group": "booth" },
-    "desk_lamp":         { "id": "desk_lamp_arm_01",               "group": "booth" },
-    "utility_box":       { "id": "utility_box_01",                 "group": "booth" },
-    "crate_wood_1":      { "id": "wooden_crate_01",                "group": "fabrication" },
-    "crate_wood_2":      { "id": "wooden_crate_02",                "group": "fabrication" },
-    "crate_plastic":     { "id": "plastic_crate_01",               "group": "fabrication" },
-    "barrel":            { "id": "barrel_03",                      "group": "fabrication" },
-    "fluorescent":       { "id": "mounted_fluorescent_lights",     "group": "fabrication" },
-    "military_crate":    { "id": "old_military_crate",             "group": "fabrication-extra" },
-    "storage_cart":      { "id": "industrial_storage_cart",        "group": "fabrication-extra" },
-    "tool_cart":         { "id": "tool_cart",                      "group": "fabrication-extra" },
-    "metal_rack":        { "id": "worn_metal_rack",                "group": "fabrication-extra" },
-    "power_box":         { "id": "power_box_01",                   "group": "fabrication-extra" },
-    "hanging_lamp":      { "id": "hanging_industrial_lamp",        "group": "fabrication-extra" },
-    "fire_extinguisher": { "id": "korean_fire_extinguisher_01",    "group": "fabrication-extra" },
-    "steel_shelves":     { "id": "steel_frame_shelves_01",         "group": "fabrication-dressing" },
-    "welding_cart":      { "id": "portable_welding_cart",          "group": "fabrication-dressing" },
-    "compressor":        { "id": "old_military_compressor",        "group": "fabrication-dressing" },
-    "propane":           { "id": "propane_tank",                   "group": "fabrication-dressing" },
-    "tool_chest":        { "id": "metal_tool_chest",               "group": "fabrication-dressing" },
-    "cardboard_box":     { "id": "cardboard_box_01",               "group": "fabrication-dressing" },
-    "ladder":            { "id": "ladder_sectioned_01",            "group": "fabrication-dressing" },
-    "dock_door":         { "id": "rollershutter_door",             "group": "fabrication-dressing" },
-    "chair":             { "id": "plastic_monobloc_chair_01",      "group": "recreation" },
-    "sofa":              { "id": "sofa_02",                        "group": "recreation" },
-    "table":             { "id": "dining_table",                   "group": "recreation" },
-    "bin":               { "id": "metal_trash_can",                "group": "recreation" },
-    "trashbag":          { "id": "trashbag",                       "group": "recreation" },
-    "office_chair":      { "id": "modern_arm_chair_01",            "group": "operations" },
-    "laptop":            { "id": "classic_laptop",                 "group": "operations" },
-    "medical_box":       { "id": "medical_box",                    "group": "credentials" },
-    "tote":              { "id": "industrial_pastic_container",    "group": "credentials" },
-    "tv":                { "id": "Television_01",                 "group": "recreation" },
-    "microwave":         { "id": "vintage_microwave",              "group": "recreation" },
-    "kettle":            { "id": "vintage_electric_kettle",        "group": "recreation" },
-    "wall_clock":        { "id": "wall_clock",                     "group": "recreation" },
-    "plant":             { "id": "potted_plant_01",                "group": "recreation" },
-    "tea_set":           { "id": "tea_set_01",                     "group": "recreation" },
-    "bench":             { "id": "painted_wooden_bench",           "group": "recreation" },
-    "security_camera":   { "id": "security_camera_01",             "group": "operations" },
-    "microscope":        { "id": "industrial_microscope",          "group": "credentials" },
-    "chemistry_set":     { "id": "chemistry_set",                  "group": "credentials" },
-    "bed_frame":         { "id": "old_bed_frame",                  "group": "credentials" },
-    "wheelchair":        { "id": "wheelchair_01",                  "group": "credentials" },
-    "stool_2":           { "id": "metal_stool_02",                 "group": "credentials" },
-    "utility_box_2":     { "id": "utility_box_02",                 "group": "containment" },
-    "fire_alarm":        { "id": "fire_alarm",                     "group": "containment" },
-    "wet_floor_sign":    { "id": "WetFloorSign_01",                "group": "containment" },
-    "generator":         { "id": "portable_generator",             "group": "containment" },
-    "binder":            { "id": "binder_notebook",                "group": "file" },
-    "clipboard":         { "id": "clipboard",                      "group": "file" },
-    "stationery":        { "id": "stationery_supplies",            "group": "file" },
-    "notepads":          { "id": "office_notepads",                "group": "file" },
-    "radio":             { "id": "vintage_radio_transceiver",      "group": "file" }
+    "desk": {
+      "id": "metal_office_desk",
+      "group": "booth"
+    },
+    "stool": {
+      "id": "metal_stool_01",
+      "group": "booth"
+    },
+    "desk_lamp": {
+      "id": "desk_lamp_arm_01",
+      "group": "booth"
+    },
+    "utility_box": {
+      "id": "utility_box_01",
+      "group": "booth"
+    },
+    "crate_wood_1": {
+      "id": "wooden_crate_01",
+      "group": "fabrication"
+    },
+    "crate_wood_2": {
+      "id": "wooden_crate_02",
+      "group": "fabrication"
+    },
+    "crate_plastic": {
+      "id": "plastic_crate_01",
+      "group": "fabrication"
+    },
+    "barrel": {
+      "id": "barrel_03",
+      "group": "fabrication"
+    },
+    "fluorescent": {
+      "id": "mounted_fluorescent_lights",
+      "group": "fabrication"
+    },
+    "military_crate": {
+      "id": "old_military_crate",
+      "group": "fabrication-extra"
+    },
+    "storage_cart": {
+      "id": "industrial_storage_cart",
+      "group": "fabrication-extra"
+    },
+    "tool_cart": {
+      "id": "tool_cart",
+      "group": "fabrication-extra"
+    },
+    "metal_rack": {
+      "id": "worn_metal_rack",
+      "group": "fabrication-extra"
+    },
+    "power_box": {
+      "id": "power_box_01",
+      "group": "fabrication-extra"
+    },
+    "hanging_lamp": {
+      "id": "hanging_industrial_lamp",
+      "group": "fabrication-extra"
+    },
+    "fire_extinguisher": {
+      "id": "korean_fire_extinguisher_01",
+      "group": "fabrication-extra"
+    },
+    "steel_shelves": {
+      "id": "steel_frame_shelves_01",
+      "group": "fabrication-dressing"
+    },
+    "welding_cart": {
+      "id": "portable_welding_cart",
+      "group": "fabrication-dressing"
+    },
+    "compressor": {
+      "id": "old_military_compressor",
+      "group": "fabrication-dressing"
+    },
+    "propane": {
+      "id": "propane_tank",
+      "group": "fabrication-dressing"
+    },
+    "tool_chest": {
+      "id": "metal_tool_chest",
+      "group": "fabrication-dressing"
+    },
+    "cardboard_box": {
+      "id": "cardboard_box_01",
+      "group": "fabrication-dressing"
+    },
+    "ladder": {
+      "id": "ladder_sectioned_01",
+      "group": "fabrication-dressing"
+    },
+    "dock_door": {
+      "id": "rollershutter_door",
+      "group": "fabrication-dressing"
+    },
+    "chair": {
+      "id": "plastic_monobloc_chair_01",
+      "group": "recreation"
+    },
+    "sofa": {
+      "id": "sofa_02",
+      "group": "recreation"
+    },
+    "table": {
+      "id": "dining_table",
+      "group": "recreation"
+    },
+    "bin": {
+      "id": "metal_trash_can",
+      "group": "recreation"
+    },
+    "trashbag": {
+      "id": "trashbag",
+      "group": "recreation"
+    },
+    "office_chair": {
+      "id": "modern_arm_chair_01",
+      "group": "operations"
+    },
+    "laptop": {
+      "id": "classic_laptop",
+      "group": "operations"
+    },
+    "medical_box": {
+      "id": "medical_box",
+      "group": "credentials"
+    },
+    "tote": {
+      "id": "industrial_pastic_container",
+      "group": "credentials"
+    },
+    "tv": {
+      "id": "Television_01",
+      "group": "recreation"
+    },
+    "microwave": {
+      "id": "vintage_microwave",
+      "group": "recreation"
+    },
+    "kettle": {
+      "id": "vintage_electric_kettle",
+      "group": "recreation"
+    },
+    "wall_clock": {
+      "id": "wall_clock",
+      "group": "recreation"
+    },
+    "plant": {
+      "id": "potted_plant_01",
+      "group": "recreation"
+    },
+    "tea_set": {
+      "id": "tea_set_01",
+      "group": "recreation"
+    },
+    "bench": {
+      "id": "painted_wooden_bench",
+      "group": "recreation"
+    },
+    "security_camera": {
+      "id": "security_camera_01",
+      "group": "operations"
+    },
+    "microscope": {
+      "id": "industrial_microscope",
+      "group": "credentials"
+    },
+    "chemistry_set": {
+      "id": "chemistry_set",
+      "group": "credentials"
+    },
+    "bed_frame": {
+      "id": "old_bed_frame",
+      "group": "credentials"
+    },
+    "wheelchair": {
+      "id": "wheelchair_01",
+      "group": "credentials"
+    },
+    "stool_2": {
+      "id": "metal_stool_02",
+      "group": "credentials"
+    },
+    "utility_box_2": {
+      "id": "utility_box_02",
+      "group": "containment"
+    },
+    "fire_alarm": {
+      "id": "fire_alarm",
+      "group": "containment"
+    },
+    "wet_floor_sign": {
+      "id": "WetFloorSign_01",
+      "group": "containment"
+    },
+    "generator": {
+      "id": "portable_generator",
+      "group": "containment"
+    },
+    "binder": {
+      "id": "binder_notebook",
+      "group": "file"
+    },
+    "clipboard": {
+      "id": "clipboard",
+      "group": "file"
+    },
+    "stationery": {
+      "id": "stationery_supplies",
+      "group": "file"
+    },
+    "notepads": {
+      "id": "office_notepads",
+      "group": "file"
+    },
+    "radio": {
+      "id": "vintage_radio_transceiver",
+      "group": "file"
+    },
+    "gamecube_controller": {
+      "id": "gamecube_controller",
+      "group": "fabrication-dressing",
+      "source": "assets/src/gamecube_controller/scene.gltf",
+      "credit": {
+        "title": "Gamecube Controller",
+        "author": "CoryRichards",
+        "authorUrl": "https://sketchfab.com/CoryRichards",
+        "url": "https://sketchfab.com/3d-models/gamecube-controller-21983501bac64993ac09cdc7936ffdf2",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "http://creativecommons.org/licenses/by/4.0/"
+      }
+    }
   },
-  "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
-  "budgets": { "desktop": { "total": 15728640, "firstFrame": 5242880, "group": 2621440 }, "phone": { "total": 8388608 } }
+  "sizes": {
+    "desktop": {
+      "texture": 1024,
+      "model": 384
+    },
+    "phone": {
+      "texture": 512,
+      "model": 256
+    }
+  },
+  "budgets": {
+    "desktop": {
+      "total": 15728640,
+      "firstFrame": 5242880,
+      "group": 2621440
+    },
+    "phone": {
+      "total": 8388608
+    }
+  }
 }

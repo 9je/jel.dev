@@ -18,4 +18,11 @@ describe('asset source manifest', () => {
     expect(plan.models.desk.out).toBe('public/assets/desktop/models/desk.glb');
     expect(planTargets(src, 'phone').models.desk.size).toBe(256);
   });
+  it('reads a tracked third party model from its source, with its credit', () => {
+    const plan = planTargets(src, 'desktop');
+    expect(plan.models.gamecube_controller.raw).toBe('assets/src/gamecube_controller/scene.gltf');
+    expect(plan.models.gamecube_controller.out).toBe('public/assets/desktop/models/gamecube_controller.glb');
+    expect(src.models.gamecube_controller.credit.license).toBe('CC-BY-4.0');
+    expect(plan.models.gamecube_controller.group).toBe('fabrication-dressing');
+  });
 });

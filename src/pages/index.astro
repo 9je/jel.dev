@@ -56,5 +56,6 @@ const containmentRest = containmentList.filter((p) => p !== containmentFlagship)
     {a.body.map((p) => <p>{p}</p>)}
     <dl class="timeline">{a.timeline.map((t) => <><dt>{t.when}</dt><dd>{t.what}</dd></>)}</dl>
     <ul class="contact"><li><a href={`mailto:${a.email}`}>{a.email}</a></li><li><a href={a.github} rel="noopener">github.com/9je</a></li></ul>
+    <p class="colophon">Built on Astro and Three.js. Models and textures from <a href="https://polyhaven.com" rel="noopener">Poly Haven</a> (CC0), and the GameCube controller by <a href="https://sketchfab.com/CoryRichards" rel="noopener">CoryRichards</a> (<a href="http://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>).</p>
   </StopSection>
 </Walk>

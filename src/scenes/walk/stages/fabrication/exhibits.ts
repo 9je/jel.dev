@@ -36,57 +36,38 @@ function stand(g: THREE.Group, tilt: THREE.Group, pivot: number, opts: { w: numb
 }
 
 /**
- * conch.gg: a GameCube controller. The silhouette is an extruded outline of the real shell, body
- * with a shoulder over each end and the two grips falling away toward whoever holds it, with a
- * bevel so the edges round off. The face is laid out where the console laid it: the main stick in
- * its octagonal gate top left, the pad below it, one oversized green A with the small red B beside
- * it and the grey X and Y kidneys around it, the yellow C nub below, and Start in the middle.
- * Built in millimetres at real size and scaled up on the group.
+ * conch.gg: a GameCube controller, the Sketchfab model conch.gg itself ships (CoryRichards,
+ * CC BY 4.0, credited on the page and in assets/CREDITS.md). `model` is the store's clone. It
+ * arrives at the author's scale, so it is fitted to WIDTH across, its face laid on the raked
+ * group's y 0 plane, then leaned back toward the camera. A real controller rests on its grip ends
+ * and its shoulder humps, both about as deep, so the shell cannot lean on a rail the way the key
+ * does: leaned back it stands on its grips with a matte riser under the shoulders, the way a shop
+ * props one.
  */
-export function controller(): THREE.Group {
+export function controller(model: THREE.Object3D): THREE.Group {
+  const WIDTH = 0.66, LEAN = 0.45;
   const g = new THREE.Group();
-  const S = 4.6 / 1000, PIVOT = 0.375;
-  const tilt = new THREE.Group(); tilt.rotation.x = RAKE; tilt.position.y = PIVOT; g.add(tilt);
-  const mm = new THREE.Group(); mm.scale.setScalar(S); tilt.add(mm);
-
-  // Right half of the outline, top centre round to bottom centre, mirrored for the left.
-  const right: [number, number][] = [[0, 34], [30, 36], [52, 33], [66, 22], [71, 4], [69, -14], [62, -34], [56, -56], [46, -70], [35, -68], [28, -50], [22, -30], [10, -24], [0, -25]];
-  const left = right.slice(1, -1).reverse().map(([x, y]): [number, number] => [-x, y]);
-  const outline = [...right, ...left].map(([x, y]) => new THREE.Vector2(x, y));
-  const shape = new THREE.Shape(); shape.moveTo(outline[0].x, outline[0].y); shape.splineThru(outline.slice(1)); shape.closePath();
-  const body = new THREE.ExtrudeGeometry(shape, { depth: 20, bevelEnabled: true, bevelThickness: 6, bevelSize: 5, bevelSegments: 3, curveSegments: 10 });
-  // Shape y ran away from the player. Lay the face up, so the extrusion hangs below y 0 and that
-  // axis runs away from the camera.
-  body.translate(0, 0, -26); body.rotateX(-Math.PI / 2);
-  mm.add(new THREE.Mesh(body, shell(0x46398f, 0.42, 0.05)));
-
-  const at = (geo: THREE.BufferGeometry, x: number, y: number, h = 0) => geo.translate(x, h, -y);
-  // The face. A is the one bold thing on it, so it is drawn at the size the console drew it.
-  const parts: [THREE.BufferGeometry[], THREE.Material][] = [
-    [[at(new THREE.CylinderGeometry(11.5, 11.5, 6, 20), 37, 4, 3)], shell(0x3fae4b, 0.35, 0.05)],
-    [[at(new THREE.CylinderGeometry(6, 6, 5, 14), 20, -8, 2.5)], shell(0xc93d33, 0.35, 0.05)],
-    [[at(new THREE.CylinderGeometry(9, 8, 10, 14), 30, -34, 5), at(new THREE.SphereGeometry(8, 12, 8).scale(1, 0.5, 1), 30, -34, 10)], shell(0xe4b825, 0.4, 0.05)],
-    [[
-      at(new THREE.CylinderGeometry(6, 6, 5, 14).scale(0.8, 1, 1.7), 55, 2, 2.5),
-      at(new THREE.CylinderGeometry(6, 6, 5, 14).scale(1.7, 1, 0.8), 37, 22, 2.5),
-      at(new THREE.CylinderGeometry(4.5, 4.5, 4, 12), 0, 10, 2),
-      at(new THREE.CylinderGeometry(16, 16, 3, 8), -38, 12, 1.5),
-      at(new THREE.CylinderGeometry(9, 8, 14, 14), -38, 12, 7),
-      at(new THREE.SphereGeometry(10, 12, 8).scale(1, 0.4, 1), -38, 12, 14),
-      at(new THREE.BoxGeometry(24, 5, 8), -32, -30, 2.5),
-      at(new THREE.BoxGeometry(8, 5, 24), -32, -30, 2.5),
-    ], shell(0xb7bcc4, 0.45, 0.1)],
-  ];
-  for (const [geos, mat] of parts) mm.add(merged(geos, mat));
-
-  // The cable leaves the top of the shell, which the rake carries up and away from the camera, and
-  // comes down behind the stand to curl on the cap short of the label plate.
-  const cable = [
-    new THREE.CylinderGeometry(0.009, 0.009, 0.53, 8).rotateX(-2.74).translate(0, 0.256, -0.195),
-    new THREE.TorusGeometry(0.06, 0.009, 6, 18, Math.PI * 1.45).rotateX(Math.PI / 2).translate(0.06, 0.012, -0.36),
-  ];
-  g.add(merged(cable, shell(0x9aa4ac, 0.7, 0.1)));
-  stand(g, tilt, PIVOT, { w: 0.36, back: 32 * S, from: -0.17 });
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(model);
+  const s = WIDTH / (box.max.x - box.min.x);
+  model.scale.multiplyScalar(s);
+  model.position.set(-(box.min.x + box.max.x) / 2 * s, -box.max.y * s, -(box.min.z + box.max.z) / 2 * s);
+  const thick = (box.max.y - box.min.y) * s, half = (box.max.z - box.min.z) / 2 * s;
+  // The lowest point after the lean is the front bottom corner of the box, so the pivot lifts it
+  // to the cap. The real grips sit a touch inside that corner, which is a millimetre or two of air.
+  const pivot = thick * Math.cos(LEAN) + half * Math.sin(LEAN) + 0.002;
+  const tilt = new THREE.Group(); tilt.rotation.x = LEAN; tilt.position.y = pivot; tilt.add(model); g.add(tilt);
+  const riser = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.14), shell(0x1b2129, 0.7, 0.2));
+  riser.position.set(0, 0.07, -0.23); g.add(riser);
+  // The cable, off the top of the shell and away across the cap short of the label plate.
+  const top = new THREE.Vector3(0, 0, -half).applyAxisAngle(new THREE.Vector3(1, 0, 0), LEAN).add(new THREE.Vector3(0, pivot, 0));
+  const end = new THREE.Vector3(0, 0.012, -0.36);
+  const run = end.clone().sub(top), len = run.length();
+  const lead = new THREE.CylinderGeometry(0.009, 0.009, len, 8);
+  lead.rotateX(Math.atan2(run.z, run.y));
+  const cable = new THREE.Mesh(lead, shell(0x9aa4ac, 0.7, 0.1)); cable.position.copy(top.clone().add(end).multiplyScalar(0.5)); g.add(cable);
+  const curl = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.009, 6, 18, Math.PI * 1.45).rotateX(Math.PI / 2), shell(0x9aa4ac, 0.7, 0.1));
+  curl.position.set(0.06, 0.012, -0.4); g.add(curl);
   return g;
 }
 
@@ -118,45 +99,72 @@ export function key(): THREE.Group {
 }
 
 /**
- * gc-bridge: the four port GameCube adapter the bridge reads, flat on the cap with its ports toward
- * the camera and the USB lead out of its side. The four sockets in a row, each the console's own
- * rounded plug outline with a bump on top, are what say GameCube from across a room.
+ * gc-bridge: the four port adapter the bridge reads, with a GameCube controller plug in port one.
+ * The box alone read as a network switch. What says GameCube is the plug, the console's own indigo
+ * with its rounded nose, and the sockets cut to that plug's outline, a rounded square with a bump
+ * on top. The whole thing leans a little toward the camera on a riser so the ports face the eye.
  */
 export function adapter(): THREE.Group {
   const g = new THREE.Group();
-  const W = 0.7, D = 0.36, H = 0.16, R = 0.012;
+  const W = 0.7, D = 0.36, H = 0.16, R = 0.012, LEAN = 0.3;
+  const hw = W / 2, hd = D / 2, F = hd + R;
+  // Lean about the front bottom edge, so the ports stay on the cap and the back rises onto the
+  // riser. The whole box sits BACK behind the origin so the plug and its cord fit on the cap.
+  const BACK = 0.2;
+  const tilt = new THREE.Group(); tilt.position.z = F - BACK; tilt.rotation.x = LEAN; g.add(tilt);
+  const a = new THREE.Group(); a.position.z = -F; tilt.add(a);
   const rr = new THREE.Shape();
-  const r = 0.05, hw = W / 2, hd = D / 2;
+  const r = 0.05;
   rr.moveTo(-hw + r, -hd); rr.lineTo(hw - r, -hd); rr.quadraticCurveTo(hw, -hd, hw, -hd + r);
   rr.lineTo(hw, hd - r); rr.quadraticCurveTo(hw, hd, hw - r, hd); rr.lineTo(-hw + r, hd);
   rr.quadraticCurveTo(-hw, hd, -hw, hd - r); rr.lineTo(-hw, -hd + r); rr.quadraticCurveTo(-hw, -hd, -hw + r, -hd);
   const body = new THREE.ExtrudeGeometry(rr, { depth: H - 2 * R, bevelEnabled: true, bevelThickness: R, bevelSize: R, bevelSegments: 3, curveSegments: 6 });
   body.translate(0, 0, R); body.rotateX(-Math.PI / 2);
-  g.add(new THREE.Mesh(body, shell(0x2f353b, 0.55, 0.2)));
+  a.add(new THREE.Mesh(body, shell(0x2f353b, 0.55, 0.2)));
 
-  // Sockets across the front face, which the bevel carries R proud of the outline: a light plate
-  // with the plug's round bump, and a dark recess in it.
-  const F = hd + R;
-  const plates: THREE.BufferGeometry[] = [], recesses: THREE.BufferGeometry[] = [];
-  for (const x of [-0.255, -0.085, 0.085, 0.255]) {
-    plates.push(new THREE.BoxGeometry(0.115, 0.075, 0.014).translate(x, 0.07, F + 0.006));
-    plates.push(new THREE.CylinderGeometry(0.038, 0.038, 0.014, 16).rotateX(Math.PI / 2).translate(x, 0.108, F + 0.006));
-    recesses.push(new THREE.BoxGeometry(0.085, 0.05, 0.01).translate(x, 0.065, F + 0.014));
-    recesses.push(new THREE.CylinderGeometry(0.024, 0.024, 0.01, 12).rotateX(Math.PI / 2).translate(x, 0.102, F + 0.014));
+  // Sockets across the front face, which the bevel carries R proud of the outline: a light surround
+  // in the plug's outline, and a dark hole inside it.
+  const PORTS = [-0.255, -0.085, 0.085, 0.255];
+  const plates: THREE.BufferGeometry[] = [], holes: THREE.BufferGeometry[] = [];
+  for (const x of PORTS) {
+    plates.push(new THREE.BoxGeometry(0.12, 0.08, 0.014).translate(x, 0.07, F + 0.006));
+    plates.push(new THREE.CylinderGeometry(0.04, 0.04, 0.014, 16).rotateX(Math.PI / 2).translate(x, 0.11, F + 0.006));
+    holes.push(new THREE.BoxGeometry(0.095, 0.058, 0.01).translate(x, 0.066, F + 0.014));
+    holes.push(new THREE.CylinderGeometry(0.028, 0.028, 0.01, 12).rotateX(Math.PI / 2).translate(x, 0.105, F + 0.014));
   }
-  g.add(merged(plates, shell(0x9ea6ad, 0.5, 0.2)));
-  g.add(merged(recesses, shell(0x15181c, 0.7, 0.1)));
+  a.add(merged(plates, shell(0xa3aab1, 0.5, 0.2)));
+  a.add(merged(holes, shell(0x0d1013, 0.8, 0.1)));
   const led = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.006, 0.02), new THREE.MeshStandardMaterial({ color: 0x06131a, emissive: 0x3fd47a, emissiveIntensity: 2.4 }));
-  led.position.set(-0.3, H + 0.002, hd - 0.05); g.add(led);
+  led.position.set(-0.3, H + 0.002, hd - 0.05); a.add(led);
+
+  // The controller plug in port one: the indigo body with its rounded nose in the socket, and a
+  // grey cable out of its back. The lean brings the cable's exit down to the cap right at the
+  // origin, so the cord lies flat from there, in the unleaned group, and curls short of the edge.
+  const indigo = shell(0x46398f, 0.42, 0.05);
+  const plug = [
+    new THREE.BoxGeometry(0.1, 0.07, 0.12).translate(PORTS[0], 0.095, F + 0.075),
+    new THREE.CylinderGeometry(0.03, 0.03, 0.12, 14).rotateX(Math.PI / 2).translate(PORTS[0], 0.13, F + 0.075),
+    new THREE.BoxGeometry(0.06, 0.05, 0.06).translate(PORTS[0], 0.09, F + 0.16),
+  ];
+  a.add(merged(plug, indigo));
+  const cord = [
+    new THREE.CylinderGeometry(0.009, 0.009, 0.1, 8).rotateX(Math.PI / 2).translate(PORTS[0], 0.02, F - BACK + 0.04),
+    new THREE.TorusGeometry(0.05, 0.009, 6, 18, Math.PI * 1.3).rotateX(Math.PI / 2).translate(PORTS[0] - 0.05, 0.02, F - BACK + 0.11),
+  ];
+  g.add(merged(cord, shell(0x9aa4ac, 0.7, 0.1)));
 
   // The USB lead out of the right side, bending back across the cap to its plug.
   const lead = [
     new THREE.CylinderGeometry(0.01, 0.01, 0.2, 8).rotateZ(Math.PI / 2).translate(hw + 0.1, 0.03, 0.02),
     new THREE.TorusGeometry(0.09, 0.01, 6, 16, Math.PI / 2).rotateX(Math.PI / 2).translate(hw + 0.2, 0.03, -0.07),
-    new THREE.CylinderGeometry(0.01, 0.01, 0.12, 8).rotateX(Math.PI / 2).translate(hw + 0.29, 0.03, -0.13),
+    new THREE.CylinderGeometry(0.01, 0.01, 0.06, 8).rotateX(Math.PI / 2).translate(hw + 0.29, 0.03, -0.1),
   ];
-  g.add(merged(lead, shell(0x2b3740, 0.8, 0.1)));
-  const plugBody = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.09), shell(0x1e2328, 0.6, 0.2)); plugBody.position.set(hw + 0.29, 0.03, -0.24); g.add(plugBody);
-  const plugTip = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.016, 0.06), shell(0xc0c8ce, 0.3, 0.8)); plugTip.position.set(hw + 0.29, 0.03, -0.31); g.add(plugTip);
+  a.add(merged(lead, shell(0x2b3740, 0.8, 0.1)));
+  const plugBody = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.09), shell(0x1e2328, 0.6, 0.2)); plugBody.position.set(hw + 0.29, 0.03, -0.175); a.add(plugBody);
+  const plugTip = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.016, 0.06), shell(0xc0c8ce, 0.3, 0.8)); plugTip.position.set(hw + 0.29, 0.03, -0.245); a.add(plugTip);
+
+  // The back bottom edge rises D sin LEAN. The riser's top stops just under the body there.
+  const riser = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.1), shell(0x1b2129, 0.7, 0.2));
+  riser.position.set(0, 0.05, -0.21 - BACK); g.add(riser);
   return g;
 }

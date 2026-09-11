@@ -1,6 +1,6 @@
 # Asset credits
 
-All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP and Draco at build time by `scripts/assets/build.mjs`.
+Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](https://polyhaven.com). All are converted to WebP and Draco at build time by `scripts/assets/build.mjs`.
 
 | Key | Poly Haven asset | Type |
 |---|---|---|
@@ -22,7 +22,6 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | crate_plastic | [plastic_crate_01](https://polyhaven.com/a/plastic_crate_01) | model |
 | barrel | [barrel_03](https://polyhaven.com/a/barrel_03) | model |
 | fluorescent | [mounted_fluorescent_lights](https://polyhaven.com/a/mounted_fluorescent_lights) | model |
-| cables | [modular_electric_cables](https://polyhaven.com/a/modular_electric_cables) | model |
 | military_crate | [old_military_crate](https://polyhaven.com/a/old_military_crate) | model |
 | storage_cart | [industrial_storage_cart](https://polyhaven.com/a/industrial_storage_cart) | model |
 | tool_cart | [tool_cart](https://polyhaven.com/a/tool_cart) | model |
@@ -69,3 +68,7 @@ All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP a
 | stationery | [stationery_supplies](https://polyhaven.com/a/stationery_supplies) | model |
 | notepads | [office_notepads](https://polyhaven.com/a/office_notepads) | model |
 | radio | [vintage_radio_transceiver](https://polyhaven.com/a/vintage_radio_transceiver) | model |
+
+## Other sources
+
+- gamecube_controller: This work is based on "Gamecube Controller" (https://sketchfab.com/3d-models/gamecube-controller-21983501bac64993ac09cdc7936ffdf2) by CoryRichards (https://sketchfab.com/CoryRichards) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/). Source and licence file in `assets/src/gamecube_controller`.

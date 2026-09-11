@@ -15,8 +15,11 @@ export function planTargets(src, tier) {
     raw: { diffuse: `assets/raw/textures/${k}/diffuse.jpg`, normal: `assets/raw/textures/${k}/normal.jpg`, arm: `assets/raw/textures/${k}/arm.jpg` },
     out: { diffuse: `public/assets/${tier}/textures/${k}/diffuse.webp`, normal: `public/assets/${tier}/textures/${k}/normal.webp`, arm: `public/assets/${tier}/textures/${k}/arm.webp` },
   }]));
+  // A model fetched from Poly Haven lands in the ignored raw dir. One with a `source` is tracked in
+  // the repo instead (a third party asset with its own licence file beside it) and is read from
+  // there, so a fresh clone builds it without a fetch step that has nowhere to fetch it from.
   const models = Object.fromEntries(Object.entries(src.models).map(([k, e]) => [k, {
-    ...e, size: sz.model, raw: `assets/raw/models/${k}/${e.id}_1k.gltf`, out: `public/assets/${tier}/models/${k}.glb`,
+    ...e, size: sz.model, raw: e.source ?? `assets/raw/models/${k}/${e.id}_1k.gltf`, out: `public/assets/${tier}/models/${k}.glb`,
   }]));
   return { textures, models };
 }
@@ -44,21 +47,28 @@ function convertModel(raw, out, size) {
 
 const bytes = (p) => statSync(p).size;
 
+// `node scripts/assets/build.mjs desk stool` converts only those keys and leaves every other output
+// as it is on disk. The manifests and credits are still written over the whole set.
+const ONLY = new Set(process.argv.slice(2));
+const wanted = (k) => ONLY.size === 0 || ONLY.has(k);
+
 async function buildTier(tier) {
   const plan = planTargets(SRC, tier);
   const groups = {};
   const group = (g) => (groups[g] ??= { bytes: 0, textures: {}, models: {} });
   for (const [k, t] of Object.entries(plan.textures)) {
-    await convertTexture(t.raw.diffuse, t.out.diffuse, t.size, 82);
-    await convertTexture(t.raw.normal, t.out.normal, t.size, 90);
-    await convertTexture(t.raw.arm, t.out.arm, t.size, 88);
+    if (wanted(k)) {
+      await convertTexture(t.raw.diffuse, t.out.diffuse, t.size, 82);
+      await convertTexture(t.raw.normal, t.out.normal, t.size, 90);
+      await convertTexture(t.raw.arm, t.out.arm, t.size, 88);
+    }
     const b = bytes(t.out.diffuse) + bytes(t.out.normal) + bytes(t.out.arm);
     group(t.group).textures[k] = { diffuse: t.out.diffuse.replace(/^public/, ''), normal: t.out.normal.replace(/^public/, ''), arm: t.out.arm.replace(/^public/, ''), repeat: t.repeat, bytes: b };
     group(t.group).bytes += b;
     console.log(tier, 'texture', k, b);
   }
   for (const [k, m] of Object.entries(plan.models)) {
-    convertModel(m.raw, m.out, m.size);
+    if (wanted(k)) convertModel(m.raw, m.out, m.size);
     const b = bytes(m.out);
     group(m.group).models[k] = { url: m.out.replace(/^public/, ''), bytes: b };
     group(m.group).bytes += b;
@@ -68,9 +78,14 @@ async function buildTier(tier) {
 }
 
 function credits() {
-  const lines = ['# Asset credits', '', 'All assets are CC0 from [Poly Haven](https://polyhaven.com). Converted to WebP and Draco at build time by `scripts/assets/build.mjs`.', '', '| Key | Poly Haven asset | Type |', '|---|---|---|'];
+  const lines = ['# Asset credits', '', 'Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](https://polyhaven.com). All are converted to WebP and Draco at build time by `scripts/assets/build.mjs`.', '', '| Key | Poly Haven asset | Type |', '|---|---|---|'];
   for (const [k, e] of Object.entries(SRC.textures)) lines.push(`| ${k} | [${e.id}](https://polyhaven.com/a/${e.id}) | texture |`);
-  for (const [k, e] of Object.entries(SRC.models)) lines.push(`| ${k} | [${e.id}](https://polyhaven.com/a/${e.id}) | model |`);
+  for (const [k, e] of Object.entries(SRC.models)) if (!e.credit) lines.push(`| ${k} | [${e.id}](https://polyhaven.com/a/${e.id}) | model |`);
+  const other = Object.entries(SRC.models).filter(([, e]) => e.credit);
+  if (other.length) {
+    lines.push('', '## Other sources', '');
+    for (const [k, e] of other) lines.push(`- ${k}: This work is based on "${e.credit.title}" (${e.credit.url}) by ${e.credit.author} (${e.credit.authorUrl}) licensed under ${e.credit.license} (${e.credit.licenseUrl}). Source and licence file in \`${e.source.slice(0, e.source.lastIndexOf('/'))}\`.`);
+  }
   mkdirSync('assets', { recursive: true });
   writeFileSync('assets/CREDITS.md', lines.join('\n') + '\n');
 }

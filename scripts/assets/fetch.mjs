@@ -22,6 +22,7 @@ for (const [key, e] of Object.entries(src.textures)) {
   await download(pick('arm'), `assets/raw/textures/${key}/arm.jpg`);
 }
 for (const [key, e] of Object.entries(src.models)) {
+  if (e.source) continue;  // tracked in the repo, nothing to fetch
   const f = await files(e.id);
   const g = f.gltf?.['1k']?.gltf;
   if (!g) throw new Error(`${e.id} has no 1k gltf`);
