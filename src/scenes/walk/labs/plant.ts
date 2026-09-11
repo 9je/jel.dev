@@ -337,7 +337,11 @@ export function cabinetBank(len: number, h = 2.3): THREE.Group {
     strip.position.set(x, h - 0.2, 0.312); g.add(strip);
   }
   g.add(merged(windows, new THREE.MeshStandardMaterial({ color: 0x10161b, roughness: 0.35, metalness: 0.5 })));
-  g.add(instances(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12), labSteel(0x6f7a82), dials.map(([x, y, z]) => [x, y, z] as Spot)));
+  // Turned to face out of the door. A cylinder stands on its own y by default, which puts a dial
+  // flat on the door like a coin on a table: from the aisle it reads as a short bar rather than as
+  // a gauge, and a bank of them reads as a row of screws.
+  const dialFace = new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12); dialFace.rotateX(Math.PI / 2);
+  g.add(instances(dialFace, labSteel(0x6f7a82), dials.map(([x, y, z]) => [x, y, z] as Spot)));
   g.add(merged(louvres, labSteel(0x9aa5ad)));
   const band = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, 0.005), new THREE.MeshStandardMaterial({ color: 0x2455a4, roughness: 0.7 }));
   band.position.set(0, 1.6, 0.313); band.name = 'band'; g.add(band);

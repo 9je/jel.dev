@@ -39,8 +39,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // ---- The islands ----------------------------------------------------------------------------
   // Three cabinets to an island, shoulder to shoulder along x with their doors to the south, which
-  // is the face the walk arrives at. Two pairs flanking the aisle, both pairs well outside the
-  // 2.2 m of clearance either side of the walked line.
+  // is the face the walk arrives at. Four islands down the west side of the aisle, all of them well
+  // outside the 2.2 m of clearance either side of the walked line, with the cream bank facing them
+  // across it.
   const ISLAND_HALF = 0.92 * 1.5;
   for (const [n, [x, z]] of ISLANDS.entries()) {
     // Pushed off the walked line if the layout ever moves one in: three bays of 0.92 need their own
@@ -49,17 +50,22 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     const reach = AISLE_CLEAR + ISLAND_HALF;
     const cx = Math.abs(x - AISLE_X) < reach ? AISLE_X + side * reach : x;
     for (let i = 0; i < 3; i++) {
-      // One door standing open, on the middle cabinet of the second island: the breakers behind it
-      // are the only machinery in the room anyone actually gets to see.
-      const open = n === 1 && i === 1;
+      // One door standing open, on the middle cabinet of the third island: the breakers behind it
+      // are the only machinery in the room anyone actually gets to see, and the third island is the
+      // one that stands clear of the flagship panel at the hold.
+      const open = n === 2 && i === 1;
       const cab = switchCabinet({ w: 0.9, h: 2.2, color: GREEN, open, label: open ? 'ISOLATED' : undefined });
       await add(place(cab, cx + (i - 1) * 0.92, 0, z, Math.PI));
     }
   }
 
-  // The cream bank down the west wall, faced east into the room (ref 17). Blue band at 1.6 m, a
-  // block letter on every third bay, and the only warm neutral in a room of grey green.
-  await add(place(cabinetBank(BANK.z1 - BANK.z0), BANK.x, 0, (BANK.z0 + BANK.z1) / 2, Math.PI / 2));
+  // The cream bank down the east side of the aisle, faced west at the islands (ref 17). Blue band
+  // at 1.6 m, a block letter on every third bay, and the only warm neutral in a room of grey green.
+  // Turned a quarter the other way from a west wall run, so its bays count up the room from the
+  // doorway and its lettering reads the right way round to the walk.
+  const bank = place(cabinetBank(BANK.z1 - BANK.z0), BANK.x, 0, (BANK.z0 + BANK.z1) / 2, -Math.PI / 2);
+  bank.name = 'control-bank';
+  await add(bank);
 
   // ---- The table ------------------------------------------------------------------------------
   // The exhibit. One group, so the pointer picks the table, the lamp and the page as one thing.
@@ -155,11 +161,11 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(box);
   const alarm = store.model('fire_alarm'); alarm.position.set(X1 - 0.08, 2.1, 24.9); alarm.rotation.y = -Math.PI / 2;
   await add(alarm);
-  // The generator stands in the aisle between the two east islands rather than in the south east
-  // corner it was drawn in. From the walked line the corner is 58 degrees off the heading and out
-  // of every frame the room is ever seen in, and a quarter megabyte of model nobody sees is worse
-  // than no model. Here it is the one thing standing on the floor of the east aisle.
-  await add(place(prop('generator'), -76.0, 0, 13.2, -0.7));
+  // The generator is parked past the bank's north end, by the office door, rather than in the south
+  // east corner it was drawn in. From the walked line the corner is 58 degrees off the heading and
+  // out of every frame the room is ever seen in, and a quarter megabyte of model nobody sees is
+  // worse than no model. Here the sightline to it clears the end of the bank by half a metre.
+  await add(place(prop('generator'), -74.8, 0, 22.5, -0.7));
 
   // The tiles that came down, on the floor under the gaps they came out of.
   const spots: Spot[] = [];

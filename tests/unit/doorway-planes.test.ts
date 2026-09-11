@@ -2,13 +2,13 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as THREE from 'three';
 
 /**
- * The transitions are built by four shells that each close their own side of a shared wall plane.
+ * The transitions are built by five shells that each close their own side of a shared wall plane.
  * The technique they use is two one-sided planes back to back: opposite normals, so whichever side
  * the camera is on, one is front facing and the other is culled and neither fights for depth. Get a
  * normal the wrong way round and the two planes are both front facing in the same place, which is a
  * flicker on every camera move and nothing a still screenshot shows.
  *
- * So this builds the four rooms' shells for real and reads the triangles back out. Every surface a
+ * So this builds the five rooms' shells for real and reads the triangles back out. Every surface a
  * doorway's vestibule contributes is checked against every surface the rooms contribute: same plane,
  * same facing and overlapping in that plane is the failure.
  */
@@ -85,6 +85,11 @@ const clashes = (a: Face, b: Face) => {
     && Math.min(a.v1, b.v1) - Math.max(a.v0, b.v0) > EPS;
 };
 
+/** Every vestibule in the walk, by the name its own shell gives it. `containment-door` is cut
+ *  through the credentials hall's north wall and its far mouth opens into the containment shell's
+ *  south wall, which is the fourth pair of one-sided planes built back to back on a shared plane. */
+const DOORS = ['bay-door', 'hall-door', 'credentials-door', 'containment-door'];
+
 describe('the doorway vestibules against the room walls', () => {
   const built: { room: Face[]; door: Face[] } = { room: [], door: [] };
 
@@ -96,12 +101,13 @@ describe('the doorway vestibules against the room walls', () => {
       ['recreation', (await import('../../src/scenes/walk/stages/recreation/shell')).buildShell],
       ['operations', (await import('../../src/scenes/walk/stages/operations/shell')).buildShell],
       ['credentials', (await import('../../src/scenes/walk/stages/credentials/shell')).buildShell],
+      ['containment', (await import('../../src/scenes/walk/stages/containment/shell')).buildShell],
     ] as [string, (c: never, r: THREE.Group) => unknown][];
     for (const [name, build] of shells) {
       const root = new THREE.Group();
       build(ctx as never, root);
       // The doorways name themselves, so a vestibule's own surfaces can be told from its room's.
-      const doors = ['bay-door', 'hall-door', 'credentials-door'].map((id) => root.getObjectByName(id)).filter(Boolean) as THREE.Object3D[];
+      const doors = DOORS.map((id) => root.getObjectByName(id)).filter(Boolean) as THREE.Object3D[];
       for (const door of doors) {
         for (const part of door.children) built.door.push(...faces(part, `${name}/${door.name}/${part.name || 'part'}`));
         door.removeFromParent();
@@ -110,10 +116,10 @@ describe('the doorway vestibules against the room walls', () => {
     }
   });
 
-  it('builds all three vestibules and all four shells', () => {
+  it('builds all four vestibules and all five shells', () => {
     expect(built.door.length).toBeGreaterThan(0);
     expect(built.room.length).toBeGreaterThan(0);
-    for (const id of ['bay-door', 'hall-door', 'credentials-door']) {
+    for (const id of DOORS) {
       expect(built.door.some((f) => f.owner.includes(id))).toBe(true);
     }
   });

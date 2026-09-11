@@ -26,12 +26,31 @@ export const OFFICE_OPEN = { x0: -77, x1: X1 };
 
 /** The table under the lamp, which is the one warm thing in the room. */
 export const TABLE = { x: -80.6, z: 12 };
-/** Cabinet island centres, three cabinets wide along x, fronts to the walk. */
-export const ISLANDS: [number, number][] = [[-83.2, 9], [-83.2, 15.5], [-75.2, 10], [-75.2, 16]];
-/** The cream control bank along the west wall. */
-export const BANK = { x: X0 + 0.35, z0: 8, z1: 24 };
 /** Metres either side of the walked line that stay empty, so nothing is ever walked through. */
 export const AISLE_CLEAR = 2.2;
+
+/**
+ * Cabinet island centres, three cabinets wide along x, fronts to the walk. All four stand down the
+ * west side now. They were split two west and two east, which put the near east island between the
+ * hold and the cream bank: the walk looks north down a twenty metre room, so anything standing on
+ * one side of the aisle hides that side's wall for the whole length of it, and ref 17 never once
+ * appeared in a frame.
+ */
+export const ISLANDS: [number, number][] = [[-82.9, 8.5], [-82.9, 13], [-82.9, 17.5], [-82.9, 22]];
+
+/**
+ * The cream control bank (ref 17), standing proud of the east wall rather than flat against the
+ * west one. Three things decided this. Against the west wall at -85.65 it sits behind the flagship
+ * panel for most of its run. Against either wall it is only inside the doorway's own cone from
+ * fifteen metres in, because the hold reads the room through a 3.2 m opening from 2.16 m back. And
+ * seven metres off the aisle a 0.9 m bay is twenty pixels wide, which is a cream stripe rather than
+ * a bank of labelled gear. On the aisle's own clearance line its near bays are five metres from the
+ * lens at sixty pixels each, with the window, the dial and the block letter all reading.
+ *
+ * `x` is the run's centre: the carcass is 0.55 deep and the doors and band stand 0.32 proud, so the
+ * face lands exactly on the clearance line at -76.8 and nothing crosses it.
+ */
+export const BANK = { x: -76.48, z0: 8.6, z1: 21 };
 
 /** Ceiling tiles left out, as grid indices: cols along x, rows from the near end of z. The block of
  *  six over the table is the opening the blue void shows through at the hold, and two singles up
