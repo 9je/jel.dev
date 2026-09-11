@@ -78,9 +78,12 @@
 .walk[data-mode='full'] .walk-spacer { display: block; }
 .walk[data-mode='full'] .preloader[data-state='loading'], .walk[data-mode='full'] .preloader[data-state='slow'], .walk[data-mode='full'] .preloader[data-state='done'] { display: grid; }
 .walk[data-mode='full'] .stops { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
-.walk[data-mode='full'] .stop { position: absolute; inset: 0; min-height: 0; opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity 400ms ease, transform 400ms ease, visibility 0s linear 400ms; }
+/* One stop is readable at a time. Two equal 400 ms fades crossed, and at a transition Jordan caught
+   the leaving stop's copy and the arriving stop's copy both at half opacity over each other. The
+   leaving one now goes out first and fast, with no delay, and the arriving one waits for it. */
+.walk[data-mode='full'] .stop { position: absolute; inset: 0; min-height: 0; opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms; }
 .walk[data-mode='full'] .stop::before { display: none; }
-.walk[data-mode='full'] .stop[data-active] { opacity: 1; visibility: visible; transform: none; transition: opacity 400ms ease, transform 400ms ease, visibility 0s; }
+.walk[data-mode='full'] .stop[data-active] { opacity: 1; visibility: visible; transform: none; transition: opacity 320ms ease 200ms, transform 320ms ease 200ms, visibility 0s; }
 /* The copy takes the pointer, the rest of the stop does not. The active section is `inset: 0`, so
    turning events back on for the whole of it put an invisible sheet over the canvas and the room
    underneath could never be clicked. Everything a stop holds lives inside `.stop-inner`, and the

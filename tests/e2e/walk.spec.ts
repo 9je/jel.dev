@@ -115,3 +115,30 @@ test.describe('wide coarse pointer', () => {
     expect(await anchor.evaluate((el) => getComputedStyle(el).position)).toBe('static');
   });
 });
+
+test('one stop is readable at a time, and the leaving one is gone inside 450 ms', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  // Every stop and every transition between them: the camera never has two panels of copy up.
+  for (const t of [0, 0.05, 0.13, 0.2, 0.3, 0.4, 0.48, 0.56, 0.63, 0.7, 0.77, 0.84, 0.92, 1]) {
+    await page.evaluate((v) => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, v * max); }, t);
+    await page.waitForTimeout(1200);
+    await expect(page.locator('section[data-stop][data-active]')).toHaveCount(1);
+    const opacities = await page.locator('section[data-stop]:not([data-active])').evaluateAll((els) => els.map((e) => Number(getComputedStyle(e).opacity)));
+    expect(Math.max(...opacities)).toBe(0);
+  }
+  // The crossfade itself: the leaving stop's opacity transition runs at once and is short, and the
+  // arriving stop's does not start until after it has finished.
+  const timing = await page.evaluate(() => {
+    const ms = (el: Element) => { const s = getComputedStyle(el); return parseFloat(s.transitionDuration) * 1000 + parseFloat(s.transitionDelay) * 1000; };
+    const delay = (el: Element) => parseFloat(getComputedStyle(el).transitionDelay) * 1000;
+    const out = document.querySelector('section[data-stop]:not([data-active])')!;
+    const on = document.querySelector('section[data-stop][data-active]')!;
+    return { out: ms(out), outDelay: delay(out), inDelay: delay(on) };
+  });
+  expect(timing.out).toBeLessThanOrEqual(450);
+  expect(timing.outDelay).toBe(0);
+  expect(timing.inDelay).toBeGreaterThanOrEqual(timing.out);
+});
+
