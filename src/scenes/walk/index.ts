@@ -148,6 +148,32 @@ async function activateHotspot(h: Hotspot, els: WalkElements, coarse: boolean, i
   openTarget(h, els, coarse, interact);
 }
 
+/**
+ * The phone sheet's handle: it says which way it goes, and it takes a drag as well as a tap. A
+ * flick up opens the sheet, a flick down closes it, and anything shorter than 24 px is a tap the
+ * disclosure handles itself. The click after a drag is cancelled, or the swipe would open the
+ * sheet and the tap behind it would close it again in the same gesture.
+ */
+function wireSheets(els: WalkElements): void {
+  for (const d of els.root.querySelectorAll<HTMLDetailsElement>('details[data-stop-more]')) {
+    if (d.dataset.wired) continue;
+    d.dataset.wired = '';
+    const label = d.querySelector<HTMLElement>('[data-stop-more-label]');
+    const toggle = d.querySelector<HTMLElement>('.stop-more-toggle');
+    d.addEventListener('toggle', () => { if (label) label.textContent = d.open ? 'Less' : 'More'; });
+    if (!toggle) continue;
+    let from = 0, dragged = false;
+    toggle.addEventListener('pointerdown', (e) => { from = e.clientY; dragged = false; });
+    toggle.addEventListener('pointerup', (e) => {
+      const dy = e.clientY - from;
+      if (Math.abs(dy) < 24) return;
+      dragged = true;
+      d.open = dy < 0;
+    });
+    toggle.addEventListener('click', (e) => { if (dragged) { e.preventDefault(); dragged = false; } });
+  }
+}
+
 /** Pointer picking over the canvas. Returns the function that removes everything it added. */
 function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): () => void {
   const label = els.hotspotLabel;
@@ -236,7 +262,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
   // The markup ships every stop body open so the stacked page reads with no JavaScript. Only the
   // full walk closes them, and only on a phone, where an open body would be a fixed sheet over the
   // room. Doing it here rather than in init() means the lite path never loses its in-flow copy.
-  if (coarse) for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open');
+  if (coarse) { for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open'); wireSheets(els); }
   els.root.dataset.mode = 'full';
   els.preloader.dataset.state = 'loading';
   els.preloader.setAttribute('aria-busy', 'true');

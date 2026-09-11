@@ -89,16 +89,40 @@ test.describe('phone', () => {
     const details = page.locator('section[data-stop="booth"] details[data-stop-more]');
     const summary = page.locator('section[data-stop="booth"] .stop-more-toggle');
     const body = page.locator('section[data-stop="booth"] .stop-body');
+    const sheet = page.locator('section[data-stop="booth"] .stop-inner');
     await expect(details).not.toHaveAttribute('open', '');
-    expect(await body.evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
+    await expect(summary).toHaveText('More');
+    // The sheet itself is what sits over the room, and it peeks: the handle, the title and the
+    // lead are on screen with the body shut behind them.
+    expect(await sheet.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    expect(await body.evaluate((el) => getComputedStyle(el).overflowY)).toBe('hidden');
     await summary.tap();
     await expect(details).toHaveAttribute('open', '');
-    // The behaviour that matters: the toggle stays visible and tappable (a display:none summary
-    // is what the cascade bug looked like), the sheet scrolls on its own, and it sits fixed over
-    // the room rather than in the document flow.
+    // The behaviour that matters: the handle stays visible and tappable (a display:none summary
+    // is what the cascade bug looked like), it says which way it goes, and the sheet scrolls on
+    // its own rather than chaining the swipe back into the walk.
     expect(await summary.evaluate((el) => getComputedStyle(el).display)).not.toBe('none');
+    await expect(summary).toHaveText('Less');
     expect(await body.evaluate((el) => getComputedStyle(el).overflowY)).toBe('auto');
-    expect(await body.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+  });
+
+  test('the handle takes a swipe as well as a tap', async ({ page }) => {
+    await page.goto('/?quality=low');
+    await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+    const details = page.locator('section[data-stop="booth"] details[data-stop-more]');
+    const summary = page.locator('section[data-stop="booth"] .stop-more-toggle');
+    // page.touchscreen only taps, so the drag is dispatched: down on the handle, up 60 px away.
+    const drag = (dy: number) => summary.evaluate((el, d) => {
+      const box = el.getBoundingClientRect();
+      const send = (type: string, y: number) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: box.x + box.width / 2, clientY: y }));
+      send('pointerdown', box.y + 2);
+      send('pointerup', box.y + 2 + d);
+    }, dy);
+    await expect(details).not.toHaveAttribute('open', '');
+    await drag(-60);
+    await expect(details).toHaveAttribute('open', '');
+    await drag(60);
+    await expect(details).not.toHaveAttribute('open', '');
   });
 });
 

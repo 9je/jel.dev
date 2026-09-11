@@ -12,8 +12,13 @@ const Heading = level === 1 ? 'h1' : 'h2';
     {id === 'booth' && (
       <p class="scroll-cue" data-scroll-cue aria-hidden="true"><span class="scroll-cue-chevron"></span></p>
     )}
+    {/* On a phone this is the sheet: the handle and its word are the grab, and the body behind it
+        is what slides. Everywhere else the summary is hidden and the body is simply open. */}
     <details class="stop-more" data-stop-more open>
-      <summary class="stop-more-toggle">Read the room</summary>
+      <summary class="stop-more-toggle">
+        <span class="stop-more-handle" aria-hidden="true"></span>
+        <span class="stop-more-label" data-stop-more-label>More</span>
+      </summary>
       <div class="stop-body"><slot /></div>
     </details>
   </div>
