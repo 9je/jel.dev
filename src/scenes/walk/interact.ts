@@ -96,6 +96,32 @@ export function createHover(): Hover {
  *
  * The one DOM function in the module, and it only reads.
  */
+/**
+ * The copy an exhibit card carries, cloned out of the panel the walk already ships in its markup so
+ * there is one source for it. A flagship hands over the text half of its bay, a project row hands
+ * over its summary line and its body with the disclosure already unfolded, and anything else hands
+ * over its children, which is what a certification badge is.
+ *
+ * Cloned, never moved: the panel it came from stays in the copy column, where the reader clicked.
+ */
+export function exhibitContent(el: HTMLElement, doc: Document): DocumentFragment {
+  const frag = doc.createDocumentFragment();
+  const copy = (from: Element | null, into: Node) => { for (const n of from?.children ?? []) into.appendChild(n.cloneNode(true)); };
+  const bay = el.querySelector('.bay-text');
+  if (bay) { copy(bay, frag); return frag; }
+  const summary = el.querySelector('summary');
+  if (summary) {
+    const head = doc.createElement('div');
+    head.className = 'exhibit-head';
+    copy(summary, head);
+    frag.appendChild(head);
+    copy(el.querySelector('.row-body'), frag);
+    return frag;
+  }
+  copy(el, frag);
+  return frag;
+}
+
 export function targetFor(id: string, _kind: Hotspot['kind'], root: ParentNode): HTMLElement | null {
   // Every id here is a content slug, but a stray quote would break out of the attribute selector.
   const safe = id.replace(/["\\]/g, '\\$&');

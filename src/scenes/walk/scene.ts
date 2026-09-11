@@ -14,7 +14,17 @@ import { createHover, pickHotspot } from './interact';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
 export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean; pixelRatioCap: number }
-export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; hotspots(): Hotspot[]; pick(nx: number, ny: number): Hotspot | null; hover(h: Hotspot | null): void; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void }
+export interface WalkHandle {
+  setProgress(t: number): void;
+  anchors: Map<string, THREE.Vector3>;
+  /** How far each anchored exhibit reaches from its anchor, in metres. Zero for the anchors a stage
+   *  placed by hand, which already sit clear of the prop they belong to. */
+  anchorRadii: Map<string, number>;
+  /** Registers where an exhibit's card should hang, measured off the prop, unless the stage that
+   *  built it already named a point by hand. */
+  ensureAnchor(h: Hotspot): void;
+  camera: THREE.PerspectiveCamera; store: AssetStore; hotspots(): Hotspot[]; pick(nx: number, ny: number): Hotspot | null; hover(h: Hotspot | null): void; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void;
+}
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 
@@ -63,6 +73,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   let disposed = false;
   const store = await AssetStore.open(opts.tier);
   const anchors = new Map<string, THREE.Vector3>();
+  const anchorRadii = new Map<string, number>();
   const pacer = createPacer(4);
   const ctx: StageContext = { scene, tier: opts.tier, anchors, store, typeface: await typefaceReady, pace: pacer.pace };
   const grey = greybox(ctx);
@@ -279,7 +290,15 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
 
   return {
     setProgress(t) { target = t; stream(t); },
-    anchors, camera, store,
+    anchors, anchorRadii, camera, store,
+    ensureAnchor(h) {
+      if (anchors.has(h.id) || disposed) return;
+      const box = new THREE.Box3().setFromObject(h.object);
+      if (box.isEmpty()) return;
+      const sphere = box.getBoundingSphere(new THREE.Sphere());
+      anchors.set(h.id, sphere.center.clone());
+      anchorRadii.set(h.id, sphere.radius);
+    },
     hotspots,
     pick(nx, ny) {
       if (disposed) return null;

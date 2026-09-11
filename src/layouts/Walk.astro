@@ -14,6 +14,12 @@ const { title, description, tickerLines } = Astro.props;
     <canvas class="walk-canvas" data-walk-canvas aria-hidden="true"></canvas>
     <main class="stops" id="top"><slot /></main>
     <div class="hotspot-label" data-hotspot-label hidden aria-hidden="true"></div>
+    {/* One card for the whole walk. Clicking any exhibit fills it with that exhibit's copy and
+        pins it beside the thing in the room, so every hotspot answers a click the same way. */}
+    <aside class="exhibit-card" data-exhibit-card hidden aria-label="Exhibit">
+      <button type="button" class="exhibit-close" data-exhibit-close>Close</button>
+      <div class="exhibit-body" data-exhibit-body></div>
+    </aside>
     <div class="walk-spacer" data-spacer aria-hidden="true"></div>
     <Dock />
     <Ticker lines={tickerLines} />

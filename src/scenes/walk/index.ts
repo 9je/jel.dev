@@ -5,7 +5,7 @@ import { STOPS, stopAt, tForStop, type StopId } from './path';
 import type { Hotspot } from './stages/types';
 
 export interface WalkElements {
-  root: HTMLElement; canvas: HTMLCanvasElement; dock: HTMLElement; preloader: HTMLElement; spacer: HTMLElement; sections: HTMLElement[]; hotspotLabel: HTMLElement | null;
+  root: HTMLElement; canvas: HTMLCanvasElement; dock: HTMLElement; preloader: HTMLElement; spacer: HTMLElement; sections: HTMLElement[]; hotspotLabel: HTMLElement | null; card: HTMLElement | null;
 }
 
 export function queryElements(): WalkElements | null {
@@ -15,7 +15,12 @@ export function queryElements(): WalkElements | null {
   const preloader = document.querySelector<HTMLElement>('[data-preloader]');
   const spacer = document.querySelector<HTMLElement>('[data-spacer]');
   if (!root || !canvas || !dock || !preloader || !spacer) return null;
-  return { root, canvas, dock, preloader, spacer, sections: Array.from(document.querySelectorAll<HTMLElement>('section[data-stop]')), hotspotLabel: document.querySelector<HTMLElement>('[data-hotspot-label]') };
+  return {
+    root, canvas, dock, preloader, spacer,
+    sections: Array.from(document.querySelectorAll<HTMLElement>('section[data-stop]')),
+    hotspotLabel: document.querySelector<HTMLElement>('[data-hotspot-label]'),
+    card: document.querySelector<HTMLElement>('[data-exhibit-card]'),
+  };
 }
 
 const FALLBACK_KEY = 'jel:fallback';
@@ -73,6 +78,9 @@ let handle: WalkHandle | null = null;
 let scroll: ScrollController | null = null;
 let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
 let pinRaf = 0;
+// Places the open exhibit card against its anchor. Held here so opening a card can place it in the
+// same frame rather than leaving it at the default for one, and so teardown can drop it.
+let pinCard: (() => void) | null = null;
 // Everything the pointer wiring below added to the document, as one function, so teardown does not
 // have to know the shape of it.
 let unwire: (() => void) | null = null;
@@ -101,17 +109,24 @@ type Interact = typeof import('./interact');
 const FOCUS_MS = 2500;
 let focusTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Unfolds the panel an exhibit belongs to, marks it, and puts the keyboard on it. */
-function openTarget(h: Hotspot, els: WalkElements, coarse: boolean, interact: Interact) {
+/** The outline a panel wears for a moment, so the reader can see which row the exhibit was. */
+function mark(el: HTMLElement, els: WalkElements) {
+  if (focusTimer) clearTimeout(focusTimer);
+  for (const prev of els.root.querySelectorAll('[data-focus]')) prev.removeAttribute('data-focus');
+  el.setAttribute('data-focus', '');
+  focusTimer = setTimeout(() => { el.removeAttribute('data-focus'); focusTimer = null; }, FOCUS_MS);
+}
+
+/** Unfolds the panel an exhibit belongs to, marks it, and puts the keyboard on it. The phone flow:
+ *  a tap opens the sheet with that project's row open, where a card would cover the room. */
+function openTarget(h: Hotspot, els: WalkElements, interact: Interact) {
   const el = interact.targetFor(h.id, h.kind, els.root);
   if (!el) return;
   // On a phone the stop body is a closed sheet, so the row would otherwise open inside something
   // nobody can see. startFull stripped `open` from it, and a tap is the reader asking for it back.
-  if (coarse) els.root.querySelector(`section[data-stop="${h.stop}"] details[data-stop-more]`)?.setAttribute('open', '');
+  els.root.querySelector(`section[data-stop="${h.stop}"] details[data-stop-more]`)?.setAttribute('open', '');
   if (el instanceof HTMLDetailsElement) el.open = true;
-  if (focusTimer) clearTimeout(focusTimer);
-  for (const prev of els.root.querySelectorAll('[data-focus]')) prev.removeAttribute('data-focus');
-  el.setAttribute('data-focus', '');
+  mark(el, els);
   // The stop body is the only thing that should move. It sits inside a fixed layer, so the document
   // is already showing it, but a browser that decides otherwise would drive the camera through
   // Lenis, so the page scroll is put straight back.
@@ -123,7 +138,48 @@ function openTarget(h: Hotspot, els: WalkElements, coarse: boolean, interact: In
   // order for good. Only a heading or a badge name, which are not focusable, needs the attribute.
   if (key.tabIndex < 0) key.setAttribute('tabindex', '-1');
   key.focus({ preventScroll: true });
-  focusTimer = setTimeout(() => { el.removeAttribute('data-focus'); focusTimer = null; }, FOCUS_MS);
+}
+
+/** Empties the exhibit card and puts it away. */
+function closeCard(els: WalkElements, restoreFocus = false) {
+  const card = els.card;
+  if (!card || card.hidden) return;
+  const held = card.contains(document.activeElement);
+  card.hidden = true;
+  card.removeAttribute('data-anchor');
+  card.querySelector('[data-exhibit-body]')?.replaceChildren();
+  // Only when the keyboard was inside the card: taking focus back on a click that closed it would
+  // scroll the stop title into view for a reader who never left the pointer.
+  if (restoreFocus && held) {
+    const title = els.root.querySelector<HTMLElement>('section[data-stop][data-active] .stop-title');
+    if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
+  }
+}
+
+/**
+ * Opens the exhibit card beside the thing that was clicked, filled with that exhibit's own copy.
+ * Every hotspot answers the same way: Jordan's complaint was that two of the three products in the
+ * bay unfolded a row in the list and the third threw up a pinned panel.
+ */
+function openCard(h: Hotspot, els: WalkElements, interact: Interact) {
+  const card = els.card;
+  const src = interact.targetFor(h.id, h.kind, els.root);
+  if (!card || !src) return;
+  // The personnel file on the control desk stands for its stop rather than for a plate of its own,
+  // and the stop's copy is already open in the column beside it. Marking it is the whole of what a
+  // card would do here, so it is marked rather than duplicated.
+  if (src.classList.contains('stop-body')) { mark(src, els); return; }
+  card.querySelector('[data-exhibit-body]')?.replaceChildren(interact.exhibitContent(src, document));
+  // The card lives outside the stop sections, so it does not inherit the wing's colour. The section
+  // carries it in its own style attribute, which is cheaper to read than a computed style.
+  const wing = src.closest<HTMLElement>('section[data-stop]')?.style.getPropertyValue('--wing-light');
+  if (wing) card.style.setProperty('--wing-light', wing);
+  handle?.ensureAnchor(h);
+  card.dataset.anchor = h.id;
+  card.hidden = false;
+  pinCard?.();
+  mark(src, els);
+  card.querySelector<HTMLElement>('[data-exhibit-close]')?.focus({ preventScroll: true });
 }
 
 /**
@@ -145,7 +201,7 @@ async function activateHotspot(h: Hotspot, els: WalkElements, coarse: boolean, i
     });
     if (gen !== generation) return;
   }
-  openTarget(h, els, coarse, interact);
+  if (coarse) openTarget(h, els, interact); else openCard(h, els, interact);
 }
 
 /**
@@ -215,7 +271,8 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
   const onLeave = () => { at = null; if (raf) { cancelAnimationFrame(raf); raf = 0; } setHover(null); hideLabel(); };
   const open = (x: number, y: number) => {
     const h = pickAt(x, y);
-    if (!h) return;
+    // A click on the room and not on an exhibit is the reader putting the card away.
+    if (!h) { closeCard(els); return; }
     setHover(null); hideLabel();
     void activateHotspot(h, els, coarse, interact);
   };
@@ -228,6 +285,10 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     open(e.clientX, e.clientY);
   };
 
+  const onEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCard(els, true); };
+  const onClose = () => closeCard(els, true);
+  const closeBtn = els.card?.querySelector<HTMLElement>('[data-exhibit-close]') ?? null;
+
   // A coarse pointer has no hover to give, so it gets the tap alone and the label never shows.
   if (coarse) {
     els.canvas.addEventListener('pointerdown', onDown);
@@ -236,6 +297,8 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     els.canvas.addEventListener('pointermove', onMove);
     els.canvas.addEventListener('pointerleave', onLeave);
     els.canvas.addEventListener('click', onClick);
+    document.addEventListener('keydown', onEscape);
+    closeBtn?.addEventListener('click', onClose);
   }
 
   return () => {
@@ -244,6 +307,9 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     els.canvas.removeEventListener('pointermove', onMove);
     els.canvas.removeEventListener('pointerleave', onLeave);
     els.canvas.removeEventListener('click', onClick);
+    document.removeEventListener('keydown', onEscape);
+    closeBtn?.removeEventListener('click', onClose);
+    closeCard(els);
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     hovered = null;
     hideLabel();
@@ -299,7 +365,8 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
     // The camera moves every frame, so the panels pinned to world anchors have to follow it.
-    const pin = () => { if (!handle) return; pinOverlays(els.sections, handle.anchors, handle.camera, scroll?.progress() ?? 0); pinRaf = requestAnimationFrame(pin); };
+    pinCard = () => { if (handle && els.card && !els.card.hidden) pinOverlays(els.card, handle.anchors, handle.anchorRadii, handle.camera); };
+    const pin = () => { if (!handle) return; pinCard?.(); pinRaf = requestAnimationFrame(pin); };
     pin();
     scroll = createScroll();
     scroll.onProgress((t) => {
@@ -307,7 +374,8 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
       // The cue has done its job the moment the walk moves, and it never comes back.
       if (t > 0.01) els.root.dataset.scrolled = '';
     });
-    scroll.onStop((id) => activate(els, id));
+    // The card belongs to the exhibit the camera is standing in front of. Walking away closes it.
+    scroll.onStop((id) => { activate(els, id); closeCard(els); });
     for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) {
       a.addEventListener('click', (e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -357,6 +425,7 @@ function teardown() {
   scroll?.dispose(); scroll = null;
   handle?.dispose(); handle = null;
   if (pinRaf) { cancelAnimationFrame(pinRaf); pinRaf = 0; }
+  pinCard = null;
   if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
   if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
 }

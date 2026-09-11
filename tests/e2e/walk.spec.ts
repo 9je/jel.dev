@@ -57,12 +57,76 @@ test('a hash on load opens at that stop on the full path', async ({ page }) => {
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
 });
 
-test('the fabrication flagship pins to its exhibit on the full path', async ({ page }) => {
+/**
+ * Clicks (or taps) the canvas across a grid until every exhibit in the room has answered, and
+ * reports which. Picking is a raycast off the click and not off a rendered frame, so this does not
+ * wait on SwiftShader drawing anything; the grid is what stands in for a reader who can see where
+ * the plinths are. `want` stops the sweep on that exhibit and leaves its card open.
+ */
+async function sweep(page: import('@playwright/test').Page, kind: 'click' | 'tap', want?: string) {
+  return page.evaluate(({ how, want }) => {
+    const canvas = document.querySelector('canvas')!;
+    const card = document.querySelector<HTMLElement>('[data-exhibit-card]')!;
+    const hit: Record<string, [number, number]> = {};
+    const open = () => document.querySelectorAll('details[data-project][open], details[data-stop-more][open]').length;
+    const send = (type: string, x: number, y: number) => canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+    for (let ry = 0.25; ry < 0.95; ry += 0.03) {
+      for (let rx = 0.03; rx < 0.98; rx += 0.02) {
+        const x = Math.round(rx * window.innerWidth), y = Math.round(ry * window.innerHeight);
+        card.hidden = true;
+        const before = open();
+        if (how === 'click') canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: x, clientY: y }));
+        else { send('pointerdown', x, y); send('pointerup', x, y); }
+        const id = card.hidden ? null : card.dataset.anchor;
+        const key = id ?? (open() > before ? 'sheet' : null);
+        if (key && !(key in hit)) hit[key] = [x, y];
+        if (id && id === want) {
+          const box = card.getBoundingClientRect();
+          return { hit, card: { anchor: id, text: card.textContent ?? '', left: box.left, right: box.right, top: box.top, bottom: box.bottom, vw: window.innerWidth, vh: window.innerHeight } };
+        }
+      }
+    }
+    card.hidden = true;
+    return { hit, card: null };
+  }, { how: kind, want });
+}
+
+test('every exhibit in the bay answers a click with the same card', async ({ page }) => {
+  test.setTimeout(180_000);
   await page.goto('/?quality=low#fabrication');
-  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
+  // Jordan's complaint: two of the three products unfolded a row in the list and the third threw up
+  // a pinned panel. All three now open the one card.
+  const all = await sweep(page, 'click');
+  expect(Object.keys(all.hit).sort()).toEqual(['conch', 'ezkey', 'gc-bridge']);
+
+  const card = page.locator('[data-exhibit-card]');
+  const shot = (await sweep(page, 'click', 'conch')).card!;
+  expect(shot.anchor).toBe('conch');
+  expect(shot.text).toContain('conch.gg');
+  // On the frame, both ways: a card hanging off the edge is a card nobody can read.
+  expect(shot.left).toBeGreaterThanOrEqual(0);
+  expect(shot.right).toBeLessThanOrEqual(shot.vw);
+  expect(shot.top).toBeGreaterThanOrEqual(0);
+  expect(shot.bottom).toBeLessThanOrEqual(shot.vh);
+  await expect(card).toBeVisible();
+
+  // Escape puts it away, and so does a click on the room with nothing behind it.
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+  await sweep(page, 'click', 'conch');
+  await expect(card).toBeVisible();
+  await page.mouse.click(2, 2);
+  await expect(card).toBeHidden();
+});
+
+test('the flagship bay sits in the copy column and is never pinned', async ({ page }) => {
+  await page.goto('/?quality=low#fabrication');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
   const bay = page.locator('section[data-stop="fabrication"] [data-flagship]');
-  await expect(bay).toHaveAttribute('data-anchor', 'ezkey');
-  await expect.poll(async () => bay.evaluate((el) => getComputedStyle(el).getPropertyValue('--ax').trim() !== ''), { timeout: 30_000 }).toBe(true);
+  expect(await bay.evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
+  await expect(page.locator('[data-exhibit-card]')).toBeHidden();
 });
 
 test('every room builds in the background and a far dock jump lands', async ({ page }) => {
@@ -131,12 +195,17 @@ test.describe('wide coarse pointer', () => {
   // single chromium project, everything else about the device (viewport, touch) stays.
   const { defaultBrowserType: _defaultBrowserType, ...ipad } = devices['iPad Pro 11 landscape'];
   test.use({ ...ipad });
-  test('a pinned plate never takes a touch, even past the 900px breakpoint', async ({ page }) => {
+  test('a tap opens the sheet, never a card, past the 900px breakpoint', async ({ page }) => {
+    test.setTimeout(180_000);
     await page.goto('/?quality=low#fabrication');
-    await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+    await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
     await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
-    const anchor = page.locator('section[data-stop="fabrication"] [data-anchor]');
-    expect(await anchor.evaluate((el) => getComputedStyle(el).position)).toBe('static');
+    // A coarse pointer keeps the sheet flow: tapping an exhibit opens the sheet with that project's
+    // row unfolded, and the card, which would cover the room on a touch screen, never appears.
+    const all = await sweep(page, 'tap');
+    expect(Object.keys(all.hit)).toEqual(['sheet']);
+    await expect(page.locator('[data-exhibit-card]')).toBeHidden();
+    expect(await page.locator('section[data-stop="fabrication"] [data-flagship]').evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
   });
 });
 

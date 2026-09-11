@@ -143,17 +143,6 @@
   @media (prefers-reduced-motion: reduce) { .walk[data-mode='full'] .stop-body { transition: none; } }
 }
 
-/* Panels pinned to a world anchor: a flagship bay hangs beside the exhibit it describes. */
-.walk[data-mode='full'] .stop [data-anchor] { position: fixed; left: clamp(calc(6vw + 40ch + 2rem), var(--ax, 50vw), calc(100vw - 30ch - 2rem)); top: clamp(6rem, var(--ay, 50vh), calc(100vh - 6rem)); transform: translate(0, -50%); width: 30ch; max-height: 62vh; overflow: auto; margin: 0; padding: 1rem 1.15rem; gap: 0.75rem; grid-template-columns: 1fr; opacity: 0; pointer-events: none; transition: opacity 250ms ease 0ms; }
-/* The bay is a two column card in the stacked layout. Pinned to an exhibit it is a caption, so the
-   art direction is the room behind it rather than the placeholder art inside it. */
-.walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: none; }
-.walk[data-mode='full'] .stop [data-anchor] .bay-title { font-size: 1.25rem; }
-.walk[data-mode='full'] .stop [data-anchor] .bay-summary { font-size: 1rem; }
-/* The panel belongs to a stop the camera has arrived at, not to one it is passing through, so it
-   waits for the hold and then fades in. Leaving is immediate: it must be gone before the travel
-   starts, or it sits over whatever the camera is moving toward. */
-.walk[data-mode='full'] .stop[data-active] [data-anchor][data-settled]:not([data-offscreen]) { opacity: 1; pointer-events: auto; transition: opacity 250ms ease 700ms; }
 /* The project rows are a three column table in the stacked layout. Over the walk they live in a
    column barely 30 characters wide, so the title and its status plate take one line and the summary
    drops underneath at the full width of the panel. The list gets a solid ground of its own: rows
@@ -163,20 +152,45 @@
 .walk[data-mode='full'] .stop .row-title { min-width: 0; overflow-wrap: anywhere; }
 .walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
 .walk[data-mode='full'] .stop .row-body { padding: 0 0.25rem 1rem; }
-/* Too narrow to hang a panel beside anything: the bay drops back into the flow of the stop, with
-   its own two column layout and its artwork restored. */
-@media (max-width: 900px) {
-  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
-  .walk[data-mode='full'] .stop-title { white-space: normal; }
-  .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
+@media (max-width: 900px) { .walk[data-mode='full'] .stop-title { white-space: normal; } }
+
+/* The exhibit card. One for the whole walk: a click on any exhibit fills it with that exhibit's own
+   copy and hangs it beside the thing in the room, and a click on the room, Escape, the close
+   control or walking on puts it away. It is the only panel on the walk that is ever pinned, and it
+   is only ever there because the reader asked for it. */
+.exhibit-card {
+  position: fixed;
+  left: var(--cx, 50vw);
+  top: var(--cy, 50vh);
+  transform: translateY(-50%);
+  z-index: 4;
+  width: min(34ch, calc(100vw - 2rem));
+  max-height: 62vh;
+  overflow: auto;
+  padding: 0.9rem 1.1rem 1rem;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--surface-edge);
+  /* The wing's own colour, on the edge facing the exhibit's side of the room. */
+  border-left: 2px solid var(--wing-light);
+  border-radius: var(--radius);
+  transition: opacity 160ms ease;
 }
-/* Pinned plates never take a touch, at any viewport width. Placed after the base pinned rule above
-   (and after the max-width block) so it wins the equal-specificity tie by source order rather than
-   being shadowed by it, the way an identical override earlier in the file was. */
-@media (pointer: coarse) {
-  .walk[data-mode='full'] .stop [data-anchor] { position: static; width: auto; max-height: none; transform: none; padding: 1.5rem; grid-template-columns: 1fr; opacity: 1; pointer-events: auto; }
-  .walk[data-mode='full'] .stop [data-anchor] .bay-visual { display: grid; }
-}
+.exhibit-card[data-offscreen] { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .exhibit-card { transition: none; } }
+.exhibit-close { float: right; margin: -0.2rem -0.3rem 0 0.6rem; padding: 0.15rem 0.4rem; background: none; border: 1px solid var(--surface-edge); border-radius: var(--radius); color: var(--text-dim); font: inherit; font-size: 0.75rem; font-stretch: 75%; letter-spacing: 0.06em; cursor: pointer; }
+.exhibit-close:hover { color: var(--panel-white); }
+.exhibit-card p { margin: 0 0 0.65rem; max-width: none; }
+.exhibit-card p:last-child, .exhibit-card ul:last-child { margin-bottom: 0; }
+/* A project row's summary, rebuilt as the card's head: the name and its status plate on one line,
+   the one line summary under them. */
+.exhibit-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.7rem; margin-bottom: 0.65rem; }
+.exhibit-head .row-title { font-weight: 600; font-size: 1.05rem; }
+.exhibit-head .row-line { flex-basis: 100%; }
+/* A certification badge: the plate art, its name, its issuer. */
+.exhibit-card .badge-name { display: block; font-size: 1.05rem; }
+.exhibit-card .badge-issuer { display: block; }
+.exhibit-card img { width: 88px; height: 88px; margin-bottom: 0.7rem; object-fit: contain; }
 
 /* Hotspots: the name of whatever the pointer is on, and the mark a panel wears for a moment after
    an exhibit opened it. */
