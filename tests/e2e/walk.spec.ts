@@ -142,3 +142,21 @@ test('one stop is readable at a time, and the leaving one is gone inside 450 ms'
   expect(timing.inDelay).toBeGreaterThanOrEqual(timing.out);
 });
 
+test('the canvas follows the viewport with no band under it', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  for (const size of [{ width: 1400, height: 1200 }, { width: 900, height: 1400 }, { width: 1600, height: 900 }]) {
+    await page.setViewportSize(size);
+    // The box, not the drawing buffer: the box is what a band appears under, and the stylesheet
+    // holds it to the frame with no script in the loop, so this is true in the same frame the
+    // viewport changed. The buffer follows on the next rendered frame, which SwiftShader can take
+    // tens of seconds over at this size, and a mismatched buffer only scales the image anyway.
+    const box = await page.locator('[data-walk-canvas]').evaluate((el) => {
+      const c = el as HTMLCanvasElement;
+      const r = c.getBoundingClientRect();
+      return { h: c.clientHeight, w: c.clientWidth, bottom: r.bottom, right: r.right, innerH: window.innerHeight, innerW: window.innerWidth };
+    });
+    expect(box).toMatchObject({ h: size.height, w: size.width, bottom: size.height, right: size.width, innerH: size.height, innerW: size.width });
+  }
+});

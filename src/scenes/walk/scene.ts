@@ -122,14 +122,26 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     settled.add(d.id);
   }
 
-  function resize() {
-    renderer.setSize(window.innerWidth, window.innerHeight, false); post?.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
+  let sizedW = 0, sizedH = 0;
+  /**
+   * The drawing buffer follows `window.innerHeight`. The canvas's own box is left to the stylesheet,
+   * which pins it to the viewport with no script in the loop: a renderer that writes the box in
+   * pixels is a renderer that can leave a stale one behind, and a canvas shorter than the frame is
+   * the black band Jordan caught under the room. `visualViewport` fires where a plain resize does
+   * not: a phone's address bar collapsing, a pinch, a desktop window whose visible area changed.
+   */
+  function resize(force = false) {
+    const w = window.innerWidth, h = window.innerHeight;
+    if (!force && w === sizedW && h === sizedH) return;
+    sizedW = w; sizedH = h;
+    renderer.setSize(w, h, false); post?.setSize(w, h);
+    camera.aspect = w / h;
     // A portrait phone crops a 55 degree horizontal cone down to almost nothing, so a taller frame
     // than it is wide gets a wider lens and keeps the room in shot.
     camera.fov = camera.aspect < 1 ? 72 : 55;
     camera.updateProjectionMatrix();
   }
+  const onResize = () => resize();
 
   let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, raf = 0;
   const cam = { position: new THREE.Vector3(), target: new THREE.Vector3() };
@@ -157,7 +169,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
         for (const mat of Array.isArray(m) ? m : m ? [m] : []) mat.needsUpdate = true;
       });
     }
-    resize();
+    resize(true);
   }
   function sample(dt: number) {
     const verdict = governor.push(dt);
@@ -203,6 +215,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   function frame() {
     if (disposed) return;
     raf = requestAnimationFrame(frame);
+    // Checked every frame as well as on the events: a viewport can change without firing either of
+    // them, and the buffer would then be drawn at the old size and scaled into the new box. The
+    // call is two reads and a comparison unless the frame actually changed.
+    resize();
     pacer.frame();
     const dt = Math.min(clock.getDelta(), 0.05);
     // The pacer charges up to its whole budget to every frame a room is building in, and the
@@ -216,7 +232,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     hoverFx.update(dt);
     if (post) post.render(dt); else renderer.render(scene, camera);
   }
-  resize(); window.addEventListener('resize', resize);
+  resize(true); window.addEventListener('resize', onResize); window.visualViewport?.addEventListener('resize', onResize);
   // Warm the GPU before the preloader clears: every program compiles now, in parallel where the
   // driver allows it, and one frame renders so the first scroll starts on hot shaders. Without this
   // the first look into the hangar compiled a few dozen programs synchronously mid-gesture.
@@ -274,7 +290,9 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id) || settled.has(d.id); },
     whenReady: (id) => readiness.get(id)?.promise ?? Promise.resolve(),
     dispose() {
-      disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);
+      disposed = true; cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize); window.visualViewport?.removeEventListener('resize', onResize);
+      canvas.removeEventListener('webglcontextlost', onContextLost);
       hoverFx.dispose();
       for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); post?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
