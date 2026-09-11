@@ -9,121 +9,30 @@ import { screenFace } from '../../labs/textures';
 import { papers, glassRoom } from '../../labs/props';
 import { signBox } from '../../labs/signage';
 import { OFFICE, SODIUM } from './layout';
+import { controller, key, adapter } from './exhibits';
 
 /** An edge-lit acrylic label, standing at the back of a plinth: a clear plate with the product's
- *  name burned through it and the wing's orange in the channel it stands in. Origin at the foot of
- *  the plate, face toward +z. Three draw calls, and every one of them takes the hover pulse. */
+ *  name burned through its top and the wing's orange in the channel it stands in. Origin at the foot
+ *  of the plate, face toward +z. Three draw calls, and every one of them takes the hover pulse.
+ *  The plate is 0.72 tall with the name in its upper third, so a product standing half a metre off
+ *  the cap in front of it hides clear acrylic and not the name. */
 function labelPlate(label: string): THREE.Group {
   const g = new THREE.Group();
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.36), new THREE.MeshPhysicalMaterial({ color: LABS.glassTint, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0, side: THREE.DoubleSide }));
-  plate.position.y = 0.21; plate.name = 'plate'; g.add(plate);
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.72), new THREE.MeshPhysicalMaterial({ color: LABS.glassTint, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0, side: THREE.DoubleSide }));
+  plate.position.y = 0.38; plate.name = 'plate'; g.add(plate);
   // The name is an alpha mapped plane, not a screen: a lit black card in front of a product is the
   // text box Jordan counted, and acrylic that only glows where the letters are is the label a
   // product actually gets. Three reads an alpha map's green channel, and the stencil's ink is pale
   // blue on clear, so the glyphs come through opaque and the ground does not come through at all.
   const map = stencilTexture(label, { width: 512, height: 160, color: '#CFE6EE', font: '600 96px Michroma, system-ui, sans-serif', alpha: 1, flecks: false });
   const ink = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.32), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xcfe6ee, emissiveIntensity: 1.6, emissiveMap: map, alphaMap: map, transparent: true, depthWrite: false }));
-  ink.position.set(0, 0.21, 0.01); ink.renderOrder = 1; ink.name = 'ink'; g.add(ink);
+  ink.position.set(0, 0.57, 0.01); ink.renderOrder = 1; ink.name = 'ink'; g.add(ink);
   const strip = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.03, 0.03), new THREE.MeshStandardMaterial({ color: 0x101820, emissive: SODIUM, emissiveIntensity: 2.4 }));
   strip.position.y = 0.02; strip.name = 'strip'; g.add(strip);
   return g;
 }
 
 const shell = (color: number, roughness = 0.5, metalness = 0.3) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
-
-/**
- * conch.gg: a GameCube controller, about 0.4 m across, raked back on a clear acrylic stand so the
- * face reads from the hold. Origin at the plinth top, face up, +z toward the camera.
- *
- * The previous pass was a pale box with two nubs and Jordan could not tell what it was. What makes
- * the shape legible is the console's own indigo, the pill body with a shoulder over each end, and
- * the face layout nothing else has: one oversized green A with a small red B beside it, the grey
- * kidneys around them, the yellow C nub, and the main stick sitting in its octagonal gate.
- *
- * Everything is built from indexed primitives so each colour merges to a single draw call. Five in
- * total for the controller, plus the cable and the stand.
- */
-function controller(): THREE.Group {
-  const g = new THREE.Group();
-  // The rake, about 26 degrees, taken around a pivot low enough that the grips still rest near the
-  // cap rather than hanging through it.
-  const tilt = new THREE.Group(); tilt.rotation.x = 0.45; tilt.position.y = 0.13; g.add(tilt);
-
-  const FACE = 0.05;
-  // The shell: a pill body (box between two discs), a shoulder swelling over each end, and the two
-  // grips falling away from them toward whoever is holding it.
-  const casing: THREE.BufferGeometry[] = [
-    new THREE.BoxGeometry(0.22, FACE, 0.19).translate(0, FACE / 2, 0),
-    new THREE.CylinderGeometry(0.095, 0.095, FACE, 18).translate(-0.11, FACE / 2, 0),
-    new THREE.CylinderGeometry(0.095, 0.095, FACE, 18).translate(0.11, FACE / 2, 0),
-  ];
-  for (const side of [-1, 1]) {
-    casing.push(new THREE.SphereGeometry(0.075, 14, 10).scale(1, 0.55, 1).translate(side * 0.13, FACE, -0.04));
-    const grip = new THREE.CapsuleGeometry(0.032, 0.09, 4, 10);
-    grip.rotateX(Math.PI / 2.5); grip.rotateZ(side * 0.38); grip.translate(side * 0.145, -0.02, 0.11);
-    casing.push(grip);
-  }
-  tilt.add(merged(casing, shell(0x4b3f8f, 0.42, 0.05)));
-
-  // The face. A is the one bold thing on it, so it is drawn at the size the console drew it.
-  const a = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.015, 20), shell(0x4cb04f, 0.35, 0.05));
-  a.position.set(0.085, FACE + 0.006, 0.01); tilt.add(a);
-  const b = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.014, 14), shell(0xc8322b, 0.35, 0.05));
-  b.position.set(0.002, FACE + 0.005, 0.04); tilt.add(b);
-  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.028, 0.018, 14), shell(0xe8b923, 0.4, 0.05));
-  c.position.set(0.075, FACE + 0.008, 0.072); tilt.add(c);
-
-  // The grey furniture: the two kidneys around A, the main stick in its octagonal gate, and the pad.
-  const grey: THREE.BufferGeometry[] = [
-    new THREE.CylinderGeometry(0.023, 0.023, 0.012, 12).translate(0.155, FACE + 0.005, -0.008),
-    new THREE.CylinderGeometry(0.023, 0.023, 0.012, 12).translate(0.082, FACE + 0.005, -0.062),
-    new THREE.RingGeometry(0.046, 0.058, 8).rotateX(-Math.PI / 2).translate(-0.115, FACE + 0.003, -0.015),
-    new THREE.CylinderGeometry(0.03, 0.026, 0.022, 14).translate(-0.115, FACE + 0.009, -0.015),
-    new THREE.BoxGeometry(0.05, 0.01, 0.018).translate(-0.115, FACE + 0.004, 0.072),
-    new THREE.BoxGeometry(0.018, 0.01, 0.05).translate(-0.115, FACE + 0.004, 0.072),
-  ];
-  tilt.add(merged(grey, shell(0xb9c1c8, 0.45, 0.1)));
-
-  // The cable, off the back of the shell and away across the cap.
-  const cable = [
-    new THREE.CylinderGeometry(0.009, 0.009, 0.22, 8).rotateX(Math.PI / 2).translate(0, 0.012, -0.23),
-    new THREE.TorusGeometry(0.07, 0.009, 6, 18, Math.PI * 1.4).rotateX(Math.PI / 2).translate(0.07, 0.012, -0.34),
-  ];
-  g.add(merged(cable, shell(0x9aa4ac, 0.7, 0.1)));
-
-  // The stand: a clear base and the rail the shell leans back on.
-  const acrylic = new THREE.MeshPhysicalMaterial({ color: LABS.glassTint, transparent: true, opacity: 0.28, roughness: 0.08, metalness: 0 });
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.012, 0.24), acrylic); base.position.set(0, 0.006, -0.03); g.add(base);
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.17), acrylic);
-  rail.position.set(0, 0.075, -0.075); rail.rotation.x = 0.45 + Math.PI / 2.1; g.add(rail);
-  return g;
-}
-
-/** ezkey.io: a padlock, lit from inside so the one product that is a key store glows like one. */
-function padlock(): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.06), new THREE.MeshStandardMaterial({ color: 0x6ec1d6, emissive: 0x6ec1d6, emissiveIntensity: 0.4, roughness: 0.35, metalness: 0.5 }));
-  body.position.y = 0.08; g.add(body);
-  const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 8, 20), labSteel(0xaeb8bf));
-  shackle.position.y = 0.16; g.add(shackle);
-  g.rotation.z = 0.06;
-  return g;
-}
-
-/** gc-bridge: an adapter with its cable curling away across the plinth. */
-function adapter(): THREE.Group {
-  const g = new THREE.Group();
-  const dark = shell(0x39424b, 0.5, 0.4);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.09), dark); body.position.y = 0.025; g.add(body);
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.004, 0.06), labSteel(0xa7b1b8)); plate.position.y = 0.052; g.add(plate);
-  const led = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.004, 0.012), new THREE.MeshStandardMaterial({ color: 0x06131a, emissive: 0x3fd47a, emissiveIntensity: 2.4 }));
-  led.position.set(0.05, 0.053, 0); g.add(led);
-  const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), shell(0x2b3740, 0.8, 0.1));
-  lead.position.set(0.28, 0.01, 0.08); lead.rotation.set(0, 0.5, Math.PI / 2); g.add(lead);
-  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.008, 6, 20, Math.PI * 1.5), shell(0x2b3740, 0.8, 0.1));
-  coil.position.set(0.5, 0.01, 0.28); coil.rotation.x = Math.PI / 2; g.add(coil);
-  return g;
-}
 
 /**
  * The dispatch office: glass above a white sill on all four sides, a door in the front and back
@@ -223,7 +132,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   // left would put it under the copy column.
   const exhibits: [string, string, number, () => THREE.Group][] = [
     ['conch', 'conch.gg', 3.0, controller],
-    ['ezkey', 'ezkey.io', 0.4, padlock],
+    ['ezkey', 'ezkey.io', 0.4, key],
     ['gc-bridge', 'gc-bridge', -2.2, adapter],
   ];
   const hotspots: Hotspot[] = [];
