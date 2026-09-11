@@ -29,7 +29,11 @@ export const STOPS: Stop[] = [
   // own x: the spline parks at -79.83 and the lab runs on -79, so a straight north aim leans the
   // frame toward the west row and crowds the east one against the edge.
   { id: 'credentials', t: 0.7, hold: [0.67, 0.74], lookAt: [-79.2, 1.75, -12], light: '#D9E8EE' },
-  { id: 'containment', t: 0.84, hold: [0.81, 0.88], lookAt: [-79, 1.2, 22], wing: 'containment', light: '#D7383A' },
+  // The containment hold stands short of the room, in the credentials hall, and looks north
+  // through the CONTAINMENT doorway. The aim is the table halfway up the aisle rather than the
+  // far wall: the lamp over the redacted page is what the room is about, and aiming past it put
+  // the one warm thing in a cold room down at the bottom edge of the frame.
+  { id: 'containment', t: 0.84, hold: [0.81, 0.88], lookAt: [-80.6, 1.3, 12], wing: 'containment', light: '#D7383A' },
   { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];
 

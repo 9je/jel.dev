@@ -4,6 +4,7 @@ import { prepareAO } from '../../materials';
 import { merged, instances, type Spot } from '../../merge';
 import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, labSteel, LABS } from '../../labs/materials';
 import { glassRoom } from '../../labs/props';
+import { doorway } from '../../labs/signage';
 import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
@@ -21,6 +22,10 @@ const GATE_Z1 = -27, GATE_H = 3.2;
  *  south reveal. This room's south wall is built around it: a second plane in the same place facing
  *  the same way would be two front faces on one plane, which is what fights for depth. */
 const VESTIBULE_W = 1;
+/** The north end: the doorway into containment, on the walked line, and the wall it is cut through.
+ *  The hold at t 0.84 stands 2.16 m short of this plane and reads the switchgear room through it, so
+ *  the opening is the frame that room is first seen in and the wall around it has to be solid. */
+const NORTH_DOOR = { x: -79, w: 3.2, h: 3.0, depth: 1.2 };
 
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const planes = new Set<THREE.Object3D>();
@@ -50,6 +55,25 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   overDoor.position.set(X1 - VESTIBULE_W / 2, (H + GATE_H) / 2, Z0);
   const head = plane(GATE_Z1 - Z0, H - GATE_H, labWall(store, GATE_Z1 - Z0, H - GATE_H));
   head.rotation.y = -Math.PI / 2; head.position.set(X1, (H + GATE_H) / 2, (Z0 + GATE_Z1) / 2);
+
+  // The north end, closed around the containment doorway. Containment closes the same plane from
+  // its own side with its own 3.4 m wall, both faces turned away from each other, so the two are
+  // one-sided planes back to back rather than a pair fighting for the pixel.
+  const nd0 = NORTH_DOOR.x - NORTH_DOOR.w / 2, nd1 = NORTH_DOOR.x + NORTH_DOOR.w / 2;
+  for (const [w, x] of [[nd0 - X0, (X0 + nd0) / 2], [X1 - nd1, (nd1 + X1) / 2]] as [number, number][]) {
+    const m = plane(w, H, labWall(store, w, H)); m.rotation.y = Math.PI; m.position.set(x, H / 2, Z1);
+  }
+  const lintel = plane(NORTH_DOOR.w, H - NORTH_DOOR.h, labWall(store, NORTH_DOOR.w, H - NORTH_DOOR.h));
+  lintel.rotation.y = Math.PI; lintel.position.set(NORTH_DOOR.x, (H + NORTH_DOOR.h) / 2, Z1);
+
+  const north = doorway({
+    w: NORTH_DOOR.w, h: NORTH_DOOR.h, depth: NORTH_DOOR.depth, axis: 'z', sign: 'CONTAINMENT', tape: false,
+    floor: labFloor(store, NORTH_DOOR.w, NORTH_DOOR.depth), wall: labWall(store, NORTH_DOOR.depth, NORTH_DOOR.h),
+  });
+  // Turned about, so the lit CONTAINMENT sign hangs over the mouth the walk arrives at rather
+  // than over the one it leaves by. The vestibule itself is symmetric either way.
+  north.rotation.y = Math.PI;
+  north.position.set(NORTH_DOOR.x, 0, Z1); north.name = 'containment-door'; root.add(north);
 
   // A dark steel ceiling the room's full length, four fixtures over the corridor outside the lab.
   const ceiling = plane(W, D, labSteel(0x1a222a)); ceiling.rotation.x = Math.PI / 2; ceiling.position.set(XC, H, ZC);

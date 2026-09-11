@@ -3,7 +3,7 @@ import type { AssetStore } from '../assets';
 import { instances, merged, type Spot } from '../merge';
 import { LABS, labSteel, labGlass, ceilingGrid } from './materials';
 import { stencilTexture } from '../textures';
-import { screenFace, paperSheet, hazardPlate, chainlink, rng } from './textures';
+import { screenFace, paperSheet, chainlink, rng } from './textures';
 
 export function rackSlots(levels: number, height: number): number[] { return Array.from({ length: levels }, (_, i) => +(((i + 1) * height) / levels).toFixed(4)); }
 export { gridPitch } from './materials';
@@ -29,15 +29,6 @@ export function pickBox(w: number, h: number, d: number, x: number, y: number, z
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
   m.position.set(x, y, z); m.visible = false;
   return m;
-}
-
-/** A switchgear cabinet: grey green box, hazard plate on the door, origin at floor centre. */
-export function switchCabinet(w = 0.9, h = 2.2, color = 0x3a5a4a): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.6), new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.5 })); body.position.y = h / 2; g.add(body);
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), new THREE.MeshStandardMaterial({ map: hazardPlate(), roughness: 0.5 })); plate.position.set(0, h * 0.62, 0.301); g.add(plate);
-  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.03), labSteel(0x9aa5ad)); handle.position.set(w * 0.35, h * 0.48, 0.31); g.add(handle);
-  return g;
 }
 
 /** A wall screen: dark frame, lit face. Origin at the centre of the face, hang it on a wall. */

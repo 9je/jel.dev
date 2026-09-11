@@ -75,6 +75,37 @@ describe('the server hall kit', () => {
     expect(box.max.y).toBeGreaterThan(3.9);
   });
 
+  it('bays a cream cabinet bank every 0.9 m with a door on each', () => {
+    const bank = kit.cabinetBank(3.6);
+    const doors = bank.children.filter((o) => o.name === 'door');
+    expect(doors).toHaveLength(4);
+    const box = new THREE.Box3().setFromObject(bank);
+    expect(box.max.x - box.min.x).toBeGreaterThan(3.5);
+    expect(box.min.y).toBeCloseTo(0);
+  });
+
+  it('shows the breakers behind an open switch cabinet door', () => {
+    expect(kit.switchCabinet({ open: true }).getObjectByName('breakers')).toBeTruthy();
+    expect(kit.switchCabinet({}).getObjectByName('breakers')).toBeFalsy();
+    // Shut, the door hangs in its own plane; open, it has swung off the hinge.
+    const swing = (g: T.Group) => (g.getObjectByName('door')!.parent as T.Group).rotation.y;
+    expect(swing(kit.switchCabinet({}))).toBe(0);
+    expect(swing(kit.switchCabinet({ open: true }))).toBeCloseTo(1.4);
+  });
+
+  it('hangs a cable drop the length it was asked for', () => {
+    const box = new THREE.Box3().setFromObject(kit.cableDrop([0, 4, 0], 2.5));
+    expect(box.max.y).toBeCloseTo(4, 1);
+    expect(box.min.y).toBeLessThan(1.7);
+  });
+
+  it('merges fallen tiles into one mesh whatever the count', () => {
+    const tiles = kit.fallenTiles([[0, 0.01, 0], [1, 0.01, 0.4, 0.6], [2, 0.02, -1, 2.1]]);
+    expect(tiles).toBeInstanceOf(THREE.Mesh);
+    const box = new THREE.Box3().setFromObject(tiles);
+    expect(box.max.x - box.min.x).toBeGreaterThan(2.5);
+  });
+
   it('runs the trunk the length it was asked for', () => {
     const box = new THREE.Box3().setFromObject(kit.trunkPipe(10));
     expect(box.max.x - box.min.x).toBeCloseTo(10, 1);

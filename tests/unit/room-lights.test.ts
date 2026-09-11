@@ -4,6 +4,7 @@ import { boothLights } from '../../src/scenes/walk/stages/booth';
 import { lights as recreationLights } from '../../src/scenes/walk/stages/recreation/lighting';
 import { lights as operationsLights } from '../../src/scenes/walk/stages/operations/lighting';
 import { lights as credentialsLights } from '../../src/scenes/walk/stages/credentials/lighting';
+import { lights as containmentLights } from '../../src/scenes/walk/stages/containment/lighting';
 
 // The door's own standby lamp, which the booth appends to its placements. Stood in for here so the
 // booth's lighting can be read without building the door.
@@ -17,6 +18,7 @@ const ROOMS: [string, Placement[]][] = [
   ['recreation', recreationLights()],
   ['operations', operationsLights()],
   ['credentials', credentialsLights()],
+  ['containment', containmentLights()],
 ];
 
 const allFinite = (n: number[]) => n.every((v) => Number.isFinite(v));

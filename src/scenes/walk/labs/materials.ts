@@ -70,6 +70,10 @@ export interface CeilingGridOptions {
   /** A pattern of the caller's own, which wins over `litEvery`. `i` runs along x, `j` along z. */
   lit?: (i: number, j: number) => boolean;
   intensity?: number;
+  /** The tile's own colour. The shared ceiling map is a warm grey, which is right under a white
+   *  lab's own lights and wrong in a room lit cold: a ceiling is the largest surface in a low room
+   *  and it is what sets the temperature of everything under it. */
+  tint?: number;
   /** Fitting size of one lit panel, `[along x, along z]`. Defaults to a panel the size of a tile.
    *  A 0.6 m tile grid hung with 1.2 m troffers is the usual suspended ceiling, and it is what
    *  stops a sparse pattern reading as a scatter of glowing postage stamps. */
@@ -77,6 +81,31 @@ export interface CeilingGridOptions {
   /** Lit panels, by their index in the grid's own enumeration (see `nearestLitPanel`), to pull out
    *  of the shared batch so a room can drive them one at a time. */
   flickerIndex?: number | number[];
+  /** Tiles left out of the ceiling entirely, as `[i, j]` in the same enumeration `lit` is given, so
+   *  whatever is above the grid shows through the hole. A tile is dropped, not hidden: the two
+   *  triangles that would have covered it are cut out of the ceiling's index. A missing tile is
+   *  never lit, so a grid given both this and `flickerIndex` would enumerate its panels differently
+   *  from `nearestLitPanel`, which knows nothing about holes. */
+  missing?: [number, number][];
+}
+
+/** The ceiling plane, with the cells named in `missing` cut out of its index. A plane with the tile
+ *  pitch as its segment count carries the same uv as the single quad it replaces, so the tile map
+ *  lands identically and only the holes are new. */
+function tiledCeiling(w: number, d: number, cols: number, rows: number, missing: [number, number][]): THREE.PlaneGeometry {
+  const g = new THREE.PlaneGeometry(w, d, cols, rows);
+  const index = g.getIndex();
+  if (!index || missing.length === 0) return g;
+  // The plane is built in xy and turned a quarter about x to face down, which puts its first row of
+  // cells at the far end of z. `j` counts from the near end, so the rows are read back to front.
+  const gone = new Set(missing.map(([i, j]) => (rows - 1 - j) * cols + i));
+  const kept: number[] = [];
+  for (let cell = 0; cell < cols * rows; cell++) {
+    if (gone.has(cell)) continue;
+    for (let k = 0; k < 6; k++) kept.push(index.getX(cell * 6 + k));
+  }
+  g.setIndex(kept);
+  return g;
 }
 
 /** A suspended ceiling: tiles at a pitch with a pattern of them replaced by lit panels. One draw
@@ -95,15 +124,20 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   // reach it. A little emissive makes the tiles read as a lit suspended ceiling instead of a void.
   // The emissive follows the tile map rather than sitting flat over it: a flat emissive washes the
   // grid out and the ceiling reads as painted plaster instead of a suspended one.
-  tileMat.color.setHex(0xc9d3d8); tileMat.emissive.setHex(0xc9d3d8); tileMat.emissiveIntensity = 0.28;
+  const tint = opts.tint ?? 0xc9d3d8;
+  tileMat.color.setHex(tint); tileMat.emissive.setHex(tint); tileMat.emissiveIntensity = 0.28;
   if (tileMat.map) tileMat.emissiveMap = tileMat.map;
-  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), tileMat); prepareAO(ceil.geometry); ceil.rotation.x = Math.PI / 2; ceil.position.y = y; group.add(ceil);
+  const missing = opts.missing ?? [];
+  const ceil = new THREE.Mesh(tiledCeiling(w, d, cols, rows, missing), tileMat); prepareAO(ceil.geometry); ceil.rotation.x = Math.PI / 2; ceil.position.y = y; group.add(ceil);
   // Whole tiles only, centred, so the leftover is split between both edges.
   const ox = -cols * tile / 2, oz = -rows * tile / 2;
+  const hole = new Set(missing.map(([i, j]) => `${i},${j}`));
   const spots: THREE.Matrix4[] = [];
   const driven = new Map<number, THREE.Matrix4>();
   let litIndex = 0;
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+    // A fitting in a tile that is on the floor is a fitting hanging in a hole.
+    if (hole.has(`${i},${j}`)) continue;
     if (!lit(i, j)) continue;
     const m = new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.02, oz + (j + 0.5) * tile);
     if (wanted.includes(litIndex)) driven.set(litIndex, m); else spots.push(m);

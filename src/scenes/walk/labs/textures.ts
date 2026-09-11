@@ -106,3 +106,67 @@ export function chainlink(size = 256): THREE.CanvasTexture {
   // an alpha tested wire at a grazing angle sparkles into speckle without it.
   const t = own(c, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 16; return t;
 }
+
+/**
+ * The inside of a switch cabinet: rows of breaker toggles on a back plate, a few of them thrown.
+ * Colour map, so the cabinet's interior reads as hardware in shadow rather than as a lit panel.
+ * The face is only ever seen through an open door at an angle, so it is drawn coarse on purpose:
+ * legible toggles beat a finely rendered panel nobody gets closer than two metres to.
+ */
+export function breakerFace(seed = 1): THREE.CanvasTexture {
+  const w = 256, h = 384;
+  const [c, ctx] = canvas(w, h); const r = rng(seed);
+  ctx.fillStyle = '#20282e'; ctx.fillRect(0, 0, w, h);
+  // Three din rails, twelve breakers on each, with a busbar running down the left of the plate.
+  ctx.fillStyle = '#3c4750'; ctx.fillRect(14, 30, w - 28, 4);
+  for (let row = 0; row < 3; row++) {
+    const y = 60 + row * 106;
+    ctx.fillStyle = '#161d23'; ctx.fillRect(16, y - 6, w - 32, 62);
+    for (let i = 0; i < 12; i++) {
+      const x = 22 + i * 18;
+      ctx.fillStyle = '#c8ccce'; ctx.fillRect(x, y, 14, 50);
+      // The toggle: up and grey is closed, down and red is a breaker somebody has thrown.
+      const tripped = r() > 0.78;
+      ctx.fillStyle = tripped ? '#c8322b' : '#4d5760';
+      ctx.fillRect(x + 3, tripped ? y + 30 : y + 8, 8, 12);
+    }
+  }
+  ctx.fillStyle = '#8a939a'; ctx.fillRect(14, h - 46, w - 28, 6);
+  ctx.fillStyle = '#e8b923'; ctx.fillRect(14, h - 28, 40, 10);
+  return own(c);
+}
+
+/**
+ * The first disclosure: a typed page with five of its eight lines struck out in black and a
+ * PENDING RELEASE stamp across it. Colour map for a sheet of A4 lying on the table under the lamp.
+ *
+ * The bars are the whole point of the prop, so they are drawn at full black on cream rather than as
+ * a soft redaction: under a 3.5 intensity warm point at half a metre, anything lighter reads as a
+ * smudge on the paper instead of as something deliberately taken out.
+ */
+export function redactedSheet(): THREE.CanvasTexture {
+  const w = 420, h = 594;
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = '#f1eee2'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#1b2129'; ctx.font = '700 26px Michroma, system-ui, sans-serif'; ctx.textBaseline = 'top';
+  ctx.fillText('FIRST DISCLOSURE', 40, 56);
+  ctx.fillStyle = '#5d646a'; ctx.fillRect(40, 96, w - 80, 2);
+  // Eight lines of body: three left as typed grey, five struck out.
+  const struck = new Set([1, 2, 4, 5, 7]);
+  const runs = [0.86, 0.92, 0.74, 0.9, 0.81, 0.95, 0.68, 0.88];
+  runs.forEach((run, i) => {
+    const y = 136 + i * 46, len = (w - 80) * run;
+    if (struck.has(i)) { ctx.fillStyle = '#0a0c0e'; ctx.fillRect(40, y - 4, len, 26); return; }
+    ctx.fillStyle = '#6b7075';
+    for (let x = 40; x < 40 + len; x += 12) ctx.fillRect(x, y + 6, 8, 3);
+  });
+  // The stamp, tilted across the lower third, drawn as an outlined box with the words inside it.
+  ctx.save();
+  ctx.translate(w * 0.5, h * 0.74); ctx.rotate((-20 * Math.PI) / 180);
+  ctx.strokeStyle = '#b8322c'; ctx.lineWidth = 5; ctx.strokeRect(-150, -34, 300, 68);
+  ctx.fillStyle = '#b8322c'; ctx.font = '700 34px Michroma, system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('PENDING RELEASE', 0, 2);
+  ctx.restore();
+  return own(c);
+}

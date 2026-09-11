@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { instances, merged, type Spot } from '../merge';
 import { labSteel } from './materials';
 import { cagePosts } from './props';
-import { chainlink, hazardPlate, unitFace, rng } from './textures';
+import { breakerFace, chainlink, hazardPlate, unitFace, rng } from './textures';
+import { stencilTexture } from '../textures';
 
 /**
  * The server hall kit. The first pass of the room was two rows of dark boxes behind a red stick
@@ -196,4 +197,167 @@ export function wallPanel(w: number, h: number): THREE.Group {
   const latch = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.02), labSteel(0x39434b));
   latch.position.set(w / 2 - 0.07, -h * 0.08, 0.068); latch.name = 'latch'; g.add(latch);
   return g;
+}
+
+/**
+ * A bundle of `n` cables dropped from a point, curling as they fall. Merged, dark, origin wherever
+ * `from` is in the space it is added to, so a room hangs one through a hole in its ceiling with a
+ * single call. One draw call.
+ *
+ * The curl matters more than the count. Four straight tubes read as a bundle of rod; each strand
+ * here leaves the drop on its own bearing, bows out by a few centimetres on the way down and hangs
+ * plumb at the bottom, which is what a cable does when it has been pulled through a ceiling and
+ * left.
+ */
+export function cableDrop(from: [number, number, number], len: number, n = 4): THREE.Mesh {
+  const [x, y, z] = from;
+  const strands: THREE.BufferGeometry[] = [];
+  // The whole drop leans as it falls, and each strand leaves the hole on its own bearing. Four
+  // plumb tubes read as scaffold pole from eight metres back; a run that swings out and comes back
+  // reads as wire that was pulled through a ceiling and let go.
+  const lean = Math.cos(x * 1.7 + z) * 0.22, leanZ = Math.sin(x + z * 1.3) * 0.22;
+  for (let i = 0; i < n; i++) {
+    const bearing = (i / n) * Math.PI * 2;
+    const out = 0.05 + (i % 2) * 0.05;
+    const dx = Math.cos(bearing) * out, dz = Math.sin(bearing) * out;
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(x, y, z),
+      new THREE.Vector3(x + dx + lean * 0.5, y - len * 0.35, z + dz + leanZ * 0.5),
+      new THREE.Vector3(x + dx * 1.5 + lean, y - len * 0.74, z + dz * 1.5 + leanZ),
+      new THREE.Vector3(x + dx * 1.2 + lean * 0.85, y - len, z + dz * 1.2 + leanZ * 0.85),
+    ]);
+    strands.push(new THREE.TubeGeometry(curve, 16, 0.011, 5, false));
+  }
+  const m = merged(strands, new THREE.MeshStandardMaterial({ color: 0x1b232a, roughness: 0.8, metalness: 0.15 }));
+  m.name = 'drop';
+  return m;
+}
+
+export interface CabinetSpec {
+  w?: number; h?: number;
+  color?: number;
+  /** Swing the door open on its hinge, showing the breakers and the cable run out of the top. */
+  open?: boolean;
+  /** What the hazard plate on the door says, and the name stencilled under it. */
+  label?: string;
+}
+
+const CAB_D = 0.7;
+
+/**
+ * A switchgear cabinet: a painted carcass with a hazard plate, a handle and a stencilled name on
+ * its door, origin at floor centre, front facing +z. Five draw calls shut, eight open.
+ *
+ * The v1 of this was a coloured box with a plate stuck on it, and a room of them read as a row of
+ * wardrobes. The door is a separate leaf on its own hinge now, which is what buys the one cabinet
+ * somebody left standing open: the breakers behind it are the only place in this room where the
+ * machinery is actually visible, and a room of sealed boxes needs exactly one of them.
+ */
+export function switchCabinet(spec: CabinetSpec = {}): THREE.Group {
+  const { w = 0.9, h = 2.2, color = 0x3a5a4a, open = false, label } = spec;
+  const g = new THREE.Group();
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, CAB_D), new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.45 }));
+  body.position.y = h / 2; body.name = 'body'; g.add(body);
+  // A plinth in bare steel, as the reference has: it is the line that lifts a cabinet off the floor
+  // rather than letting it sink into a grey tile at the same value.
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.1, CAB_D + 0.04), labSteel(0x39434b));
+  plinth.position.y = 0.05; g.add(plinth);
+
+  // The leaf hangs on the left jamb, so `open` is a turn about that edge rather than a panel that
+  // has slid out of the carcass.
+  const hinge = new THREE.Group();
+  hinge.position.set(-w / 2 + 0.02, h / 2, CAB_D / 2);
+  hinge.rotation.y = open ? 1.4 : 0;
+  g.add(hinge);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, h - 0.2, 0.03), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.45 }));
+  door.position.x = (w - 0.06) / 2; door.name = 'door'; hinge.add(door);
+
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshStandardMaterial({ map: hazardPlate(label ?? 'HIGH VOLTAGE'), roughness: 0.55 }));
+  plate.position.set(0, h * 0.22, 0.017); door.add(plate);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.16, 0.02), labSteel(0x9aa5ad));
+  handle.position.set((w - 0.06) / 2 - 0.07, -0.05, 0.025); handle.name = 'handle'; door.add(handle);
+  const name = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.2, 0.09), new THREE.MeshBasicMaterial({
+    map: stencilTexture(label ?? 'SWITCHGEAR', { width: 512, height: 72, color: '#0e151b', font: '600 44px Michroma, system-ui, sans-serif', alpha: 0.9 }),
+    transparent: true, depthWrite: false,
+  }));
+  name.position.set(0, -h * 0.3, 0.017); door.add(name);
+
+  if (open) {
+    // The inside: a back plate of breakers, and the cable run somebody pulled out of the top.
+    const breakers = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.12, h - 0.4), new THREE.MeshStandardMaterial({ map: breakerFace(Math.round(w * 100)), roughness: 0.7, metalness: 0.2 }));
+    breakers.position.set(0, h / 2, CAB_D / 2 - 0.06); breakers.name = 'breakers'; g.add(breakers);
+    g.add(cableDrop([0, h - 0.05, CAB_D / 2 - 0.2], h - 0.9, 3));
+  }
+  return g;
+}
+
+/** Which bays of a run carry a stencilled block letter. Every door labelled is a label per draw
+ *  call and a wall of shouting text; the reference letters one bay in three. */
+const LABEL_EVERY = 3;
+const BAY = 0.9;
+
+/**
+ * The cream control bank along a wall (ref 17): a run of bays at 0.9 m, each with a dark window, a
+ * dial and a louvre on its door, a blue band across the whole run at 1.6 m and a block letter on
+ * every third bay. Origin at the floor centre of the run, bays along x, facing +z.
+ *
+ * The band is what makes it one bank rather than a queue of lockers, and it is the only place the
+ * dado blue appears above waist height in the room.
+ */
+export function cabinetBank(len: number, h = 2.3): THREE.Group {
+  const g = new THREE.Group();
+  const bays = Math.max(1, Math.round(len / BAY));
+  const cream = new THREE.MeshStandardMaterial({ color: 0xd8d2bf, roughness: 0.6, metalness: 0.2 });
+
+  const carcass = new THREE.Mesh(new THREE.BoxGeometry(len, h, 0.55), cream);
+  carcass.position.y = h / 2; carcass.name = 'carcass'; g.add(carcass);
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(len, 0.12, 0.6), labSteel(0x39434b));
+  plinth.position.y = 0.06; g.add(plinth);
+
+  const x0 = -len / 2 + (len - bays * BAY) / 2;
+  const windows: THREE.BufferGeometry[] = [], dials: Spot[] = [], louvres: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < bays; i++) {
+    const x = x0 + (i + 0.5) * BAY;
+    // One door per bay, as its own mesh over the shared cream: the run has to read as doors you
+    // could open, and a single merged front is a painted wall.
+    const door = new THREE.Mesh(new THREE.BoxGeometry(BAY - 0.04, h - 0.34, 0.03), cream);
+    door.position.set(x, h / 2 + 0.05, 0.29); door.name = 'door'; g.add(door);
+
+    const win = new THREE.BoxGeometry(0.25, 0.18, 0.01); win.translate(x, h - 0.42, 0.31); windows.push(win);
+    dials.push([x + 0.22, h - 0.44, 0.31]);
+    const louvre = new THREE.BoxGeometry(BAY - 0.3, 0.12, 0.01); louvre.translate(x, 0.55, 0.31); louvres.push(louvre);
+
+    if (i % LABEL_EVERY !== 1) continue;
+    const letter = String.fromCharCode(65 + Math.floor(i / LABEL_EVERY));
+    const strip = new THREE.Mesh(new THREE.PlaneGeometry(BAY - 0.14, 0.13), new THREE.MeshBasicMaterial({
+      map: stencilTexture(`BLOCK ${letter}`, { width: 512, height: 96, color: '#17334f', font: '600 52px Michroma, system-ui, sans-serif', alpha: 0.95, flecks: false }),
+      transparent: true, depthWrite: false,
+    }));
+    strip.position.set(x, h - 0.2, 0.312); g.add(strip);
+  }
+  g.add(merged(windows, new THREE.MeshStandardMaterial({ color: 0x10161b, roughness: 0.35, metalness: 0.5 })));
+  g.add(instances(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12), labSteel(0x6f7a82), dials.map(([x, y, z]) => [x, y, z] as Spot)));
+  g.add(merged(louvres, labSteel(0x9aa5ad)));
+  const band = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, 0.005), new THREE.MeshStandardMaterial({ color: 0x2455a4, roughness: 0.7 }));
+  band.position.set(0, 1.6, 0.313); band.name = 'band'; g.add(band);
+  return g;
+}
+
+/**
+ * Ceiling tiles on the floor, each on its own lie. One draw call whatever the count. The tilt is a
+ * few degrees about x on top of the turn each spot names: a tile that has fallen never lands flat,
+ * and a scatter of perfectly level squares reads as tiling somebody laid there.
+ */
+export function fallenTiles(spots: Spot[]): THREE.Mesh {
+  const tiles: THREE.BufferGeometry[] = spots.map(([x, y, z, ry = 0], i) => {
+    const t = new THREE.BoxGeometry(0.6, 0.02, 0.6);
+    t.rotateX(i % 2 === 0 ? 0.15 : -0.15);
+    t.rotateY(ry);
+    t.translate(x, y, z);
+    return t;
+  });
+  const m = merged(tiles, new THREE.MeshStandardMaterial({ color: 0xa6b2b8, roughness: 0.94 }));
+  m.name = 'fallen';
+  return m;
 }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, place } from '../../merge';
-import { papers, tapeLine } from '../../labs/props';
+import { papers } from '../../labs/props';
 import { gurney, tripodCamera, hardCase, cableCoil, tarpWall } from '../../labs/furniture';
 import { labSteel, LABS } from '../../labs/materials';
 import { stencilTexture } from '../../textures';
@@ -109,7 +109,6 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(tote(X1 - 1.2, -12, 0.3));
 
   await add(papers([[X1 - 2.4, 0, -9.2, 0.5], [X1 - 2.0, 0, -6.4, 1.3], [X0 + 2.2, 0, -11.6, 0.9]]));
-  await add(tapeLine([X0 + 0.4, 4], [X1 - 0.4, 4], 1.0));
 
   // disposeObject() reaches the badge textures through their materials, so this is belt and braces
   // for the ones already assigned and the only cleanup for one still in flight.
