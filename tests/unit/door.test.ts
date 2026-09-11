@@ -68,6 +68,42 @@ describe('buildDoor', () => {
     expect(box.min.x + box.max.x).toBeCloseTo(0, 5);
     door.dispose();
   });
+  it('lights the sign as neon: a tube core driven past white on a black backing', () => {
+    const door = build();
+    const sign = door.root.getObjectByName('sign')!;
+    const letters = sign.getObjectByName('letters') as import('three').Mesh;
+    const [tube, walls] = letters.material as import('three').MeshStandardMaterial[];
+    expect(tube.emissive.getHex()).toBe(mod.NEON);
+    expect(walls.emissiveIntensity).toBeLessThan(tube.emissiveIntensity * 0.6);
+    expect(tube.emissiveIntensity).toBeGreaterThan(1);
+    // The old lit cyan panel is gone: what the letters sit on is near black, so only the tubes glow.
+    const backing = (sign.getObjectByName('backing') as import('three').Mesh).material as import('three').MeshStandardMaterial;
+    expect(backing.emissive.getHex()).toBe(0x000000);
+    expect(backing.color.getHex()).toBeLessThan(0x101010);
+    // The halo sits between the backing and the letters, additive, and never writes depth.
+    const halo = sign.getObjectByName('halo') as import('three').Mesh;
+    const hm = halo.material as import('three').MeshBasicMaterial;
+    expect(hm.blending).toBe(THREE.AdditiveBlending); expect(hm.depthWrite).toBe(false);
+    expect(halo.position.z).toBeGreaterThan((sign.getObjectByName('backing') as import('three').Mesh).position.z);
+    expect(halo.position.z).toBeLessThan(letters.position.z);
+    door.dispose();
+  });
+  it('washes the fascia with the tube colour from in front of the sign, in world space', () => {
+    const door = build();
+    expect(door.glow.kind).toBe('spot'); expect(door.glow.color).toBe(mod.NEON);
+    expect(door.glow.position[2]).toBeGreaterThan(door.glow.target[2]);
+    expect(door.glow.target[2]).toBeCloseTo(22, 5);
+    expect(door.glow.target[1]).toBeCloseTo(3.7, 5);
+    door.dispose();
+  });
+  it('hums and stutters on its own clock, and the wash follows', () => {
+    const door = build();
+    const tube = ((door.root.getObjectByName('letters') as import('three').Mesh).material as import('three').MeshStandardMaterial[])[0];
+    door.update(0, 1); const steady = tube.emissiveIntensity, wash = door.glow.intensity;
+    door.update(0, 9.72); expect(tube.emissiveIntensity).toBeLessThan(steady * 0.2); expect(door.glow.intensity).toBeLessThan(wash * 0.2);
+    door.update(0, 12); expect(tube.emissiveIntensity).toBeGreaterThan(steady * 0.9);
+    door.dispose();
+  });
   it('stands the standby light clear of its housing, in world space', () => {
     const door = build();
     expect(door.lamp.position).toEqual([3.15, 3.05, 22.5]);
@@ -75,5 +111,18 @@ describe('buildDoor', () => {
     door.update(1);
     expect(door.lamp.color).toBe(0x2ecc71);
     door.dispose();
+  });
+});
+
+describe('neonLevel', () => {
+  it('runs near full between stutters and never fully dark', () => {
+    const levels = Array.from({ length: 200 }, (_, i) => mod.neonLevel(0.4 + i * 0.045));
+    for (const l of levels) { expect(l).toBeGreaterThan(0.94); expect(l).toBeLessThanOrEqual(1); }
+    expect(mod.neonLevel(9.7)).toBeGreaterThan(0.05);
+    expect(mod.neonLevel(9.7)).toBeLessThan(0.2);
+  });
+  it('keeps the stutter short', () => {
+    const dark = Array.from({ length: 970 }, (_, i) => mod.neonLevel(i * 0.01)).filter((l) => l < 0.9).length * 0.01;
+    expect(dark).toBeLessThan(0.4);
   });
 });

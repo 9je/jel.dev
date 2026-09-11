@@ -19,19 +19,27 @@ const AVERAGE_ADVANCE = 0.95;
  * The typeface arrives over the network (see `ctx.typeface`), and a sign is not worth losing the
  * room over, so a null font falls back to a flat stencil plane of about the same width.
  */
-export function signLetters(font: Font | null, text: string, opts: { size: number; depth: number; color?: number; emissive?: number; emissiveIntensity?: number }): THREE.Mesh {
+export function signLetters(font: Font | null, text: string, opts: { size: number; depth: number; color?: number; emissive?: number; emissiveIntensity?: number; tube?: boolean }): THREE.Mesh {
   const material = new THREE.MeshStandardMaterial({
     color: opts.color ?? LABS.panel,
     emissive: opts.emissive ?? 0x000000,
     emissiveIntensity: opts.emissiveIntensity ?? 0,
-    metalness: 0.35,
-    roughness: 0.45,
+    metalness: opts.tube ? 0 : 0.35,
+    roughness: opts.tube ? 0.3 : 0.45,
   });
   if (font) {
     // curveSegments 4 and no bevel: at sign scale the extra tessellation is invisible and a bevelled
-    // run of eight letters is thousands of triangles for an edge nobody reads.
-    const geometry = new TextGeometry(text, { font, size: opts.size, depth: opts.depth, curveSegments: 4, bevelEnabled: false });
-    return new THREE.Mesh(geometry, material);
+    // run of eight letters is thousands of triangles for an edge nobody reads. A neon run is the
+    // exception: a rounded edge is what makes a lit stroke read as glass tube rather than a slab of
+    // acrylic, and one sign of eight letters can afford it.
+    const bevel = opts.tube ? { bevelEnabled: true, bevelThickness: opts.depth * 0.35, bevelSize: opts.size * 0.012, bevelSegments: 2 } : { bevelEnabled: false };
+    const geometry = new TextGeometry(text, { font, size: opts.size, depth: opts.depth, curveSegments: opts.tube ? 6 : 4, ...bevel });
+    if (!opts.tube) return new THREE.Mesh(geometry, material);
+    // An extrude puts its caps in one material group and its walls in another. A tube's walls fall
+    // away from the eye, so they carry half the front's light: at full brightness the run read as
+    // blocks of lit acrylic, every side face as hot as the stroke.
+    const walls = material.clone(); walls.emissiveIntensity = material.emissiveIntensity * 0.45; walls.roughness = 0.5;
+    return new THREE.Mesh(geometry, [material, walls]);
   }
   const w = Math.max(opts.size, text.length * opts.size * AVERAGE_ADVANCE);
   const px = 128;

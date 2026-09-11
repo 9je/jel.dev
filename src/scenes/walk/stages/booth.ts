@@ -5,7 +5,7 @@ import { merged } from '../merge';
 import { LABS } from '../labs/materials';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
-import type { Placement, PointPlacement } from '../rig';
+import type { Placement, PointPlacement, SpotPlacement } from '../rig';
 
 // The booth is the room the walk opens in. The camera stands at z 26 on the path and looks at the
 // shutter at z 22, so only the front half of the room is ever in frame and everything that has to
@@ -14,12 +14,14 @@ const W = 8, D = 8, H = 4.4, Z0 = 22, Z1 = 30;
 const DOOR_W = 6, DOOR_H = 3.6;
 
 /** The room's placements. Pure, and exported, so the lighting can be checked against the rig's room
- *  budget without standing a scene up. The door's standby lamp is the door's own placement, passed
- *  in rather than declared here, because its colour follows the shutter. */
-export function boothLights(lamp: PointPlacement): Placement[] {
+ *  budget without standing a scene up. The door's standby lamp and the neon sign's wash are the
+ *  door's own placements, passed in rather than declared here, because the lamp's colour follows
+ *  the shutter and the wash follows the tube's flicker. */
+export function boothLights(lamp: PointPlacement, glow: SpotPlacement): Placement[] {
   return [
     // Cool ceiling strip washing down the shutter, warm pool at the desk.
     { kind: 'spot', position: [0, H - 0.3, 25.4], target: [0, 0.1, 23.3], color: 0x8fd0e0, intensity: 16, distance: 12, angle: Math.PI / 4.2, penumbra: 0.9, decay: 1.7, shadow: true },
+    glow,
     { kind: 'point', position: [1.18, 1, 23.68], color: 0xffc98a, intensity: 2.6, distance: 3.2, decay: 2 },
     lamp,
   ];
@@ -74,7 +76,8 @@ function build({ scene, store, anchors, tier, typeface }: StageContext): Stage {
 
   anchors.set('booth', new THREE.Vector3(-2.5, 1.6, 23));
 
-  return { id: 'booth', root, lights: boothLights(door.lamp), update(t) { door.update(doorOpenAmount(t)); }, dispose() { door.dispose(); disposeObject(root); scene.remove(root); } };
+  let clock = 0;
+  return { id: 'booth', root, lights: boothLights(door.lamp, door.glow), update(t, dt) { clock += dt; door.update(doorOpenAmount(t), clock); }, dispose() { door.dispose(); disposeObject(root); scene.remove(root); } };
 }
 
 export const BOOTH_DEF: StageDef = { id: 'booth', stop: 'booth', groups: ['booth'], near: ['booth', 'fabrication'], replaces: 'booth', build };

@@ -284,3 +284,37 @@ export function consoleFace(): THREE.CanvasTexture {
   ctx.fillStyle = '#2a3033'; ctx.fillRect(446, 216, 24, 16);
   return own(c);
 }
+
+/**
+ * A neon run's corona, text-shaped: the letters drawn in the tube colour under a wide blur on a
+ * clear ground, to stand behind the extruded run and show past its strokes. Bloom draws a corona on
+ * the tiers that run the post stack. This is the one the low tier has no bloom to draw, and on the
+ * tiers that do it is the wider, dimmer half the bloom radius does not reach. Michroma is loaded
+ * before any room builds (see `scene.ts`), so the canvas draws the same face the geometry was cut
+ * from and the blurred ink lands on the letters. The ink box comes back in canvas pixels so the
+ * caller can scale the plane to lay that ink over its run.
+ */
+export function neonGlow(text: string, color: string): { texture: THREE.CanvasTexture; w: number; h: number; ink: { x: number; y: number; w: number; h: number } } {
+  const w = 1536, h = 272, pad = 120;
+  const [c, ctx] = canvas(w, h);
+  ctx.clearRect(0, 0, w, h);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  // Michroma is wide: size the face so the run fits inside the pad with room for the blur's tail.
+  const face = (px: number) => `600 ${px}px Michroma, system-ui, sans-serif`;
+  ctx.font = face(100);
+  const size = Math.min(200, Math.floor(((w - 2 * pad) * 100) / Math.max(1, ctx.measureText(text).width)));
+  ctx.font = face(size);
+  const m = ctx.measureText(text);
+  // Node's stub context measures nothing: fall back to the face's typical proportions, 0.95 em
+  // per capital and caps 0.72 em tall, so a plane built without a DOM is still sign sized.
+  const measured = m.actualBoundingBoxAscent !== undefined;
+  const left = measured ? m.actualBoundingBoxLeft : 0, right = measured ? m.actualBoundingBoxRight : text.length * size * 0.95;
+  const asc = measured ? m.actualBoundingBoxAscent : size * 0.72, desc = measured ? m.actualBoundingBoxDescent : 0;
+  const inkW = left + right, inkH = asc + desc;
+  const x = (w - inkW) / 2 + left, y = (h - inkH) / 2 + asc;
+  ctx.fillStyle = color; ctx.shadowColor = color;
+  // Three passes: a tight bright blur that hugs the strokes, a wide faint one for the tail, and
+  // one more tight pass so the near corona keeps up with the tail's accumulation.
+  for (const blur of [22, 70, 22]) { ctx.shadowBlur = blur; ctx.fillText(text, x, y); }
+  return { texture: own(c), w, h, ink: { x: x - left, y: y - asc, w: inkW, h: inkH } };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ROOM_BUDGET, checkBudget, type Placement, type PointPlacement } from '../../src/scenes/walk/rig';
+import { ROOM_BUDGET, checkBudget, type Placement, type PointPlacement, type SpotPlacement } from '../../src/scenes/walk/rig';
 import { boothLights } from '../../src/scenes/walk/stages/booth';
 import { lights as recreationLights } from '../../src/scenes/walk/stages/recreation/lighting';
 import { lights as operationsLights } from '../../src/scenes/walk/stages/operations/lighting';
@@ -10,12 +10,13 @@ import { lights as fileLights } from '../../src/scenes/walk/stages/file/lighting
 // The door's own standby lamp, which the booth appends to its placements. Stood in for here so the
 // booth's lighting can be read without building the door.
 const doorLamp: PointPlacement = { kind: 'point', position: [3.15, 3.05, 22.5], color: 0xc8322b, intensity: 2, distance: 3.2, decay: 2 };
+const doorGlow: SpotPlacement = { kind: 'spot', position: [0, 3.75, 22.85], target: [0, 3.7, 22], color: 0x3fd7f0, intensity: 12, distance: 3.2, angle: Math.PI / 2.2, penumbra: 1, decay: 1.6 };
 
 // The fabrication floor's lighting is built against the asset store and the LED ticker in the DOM,
 // so it has no store-free path to call from a unit test. Every other dressed room declares its
 // placements as data, and this is where they are held to the budget the rig enforces at register().
 const ROOMS: [string, Placement[]][] = [
-  ['booth', boothLights(doorLamp)],
+  ['booth', boothLights(doorLamp, doorGlow)],
   ['recreation', recreationLights()],
   ['operations', operationsLights()],
   ['credentials', credentialsLights()],
