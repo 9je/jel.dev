@@ -57,6 +57,10 @@ let hashchangeListener: (() => void) | null = null;
 
 export function startLite(els: WalkElements) {
   els.root.dataset.mode = 'lite';
+  // The stacked page has no toggle: the sheet styling that the toggle belongs to is scoped to the
+  // full walk. So every body is open here, including on a phone that got this far through a
+  // fallback after startFull had already closed them.
+  for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.setAttribute('open', '');
   els.preloader.dataset.state = 'hidden';
   markCurrentFromHash(els);
   hashchangeListener = () => markCurrentFromHash(els);
@@ -95,6 +99,10 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
   // history.replaceState before we get a chance to read it, corrupting which stop we open on.
   const raw = location.hash.replace('#', '');
   const initial: StopId = STOPS.some((s) => s.id === raw) ? (raw as StopId) : 'booth';
+  // The markup ships every stop body open so the stacked page reads with no JavaScript. Only the
+  // full walk closes them, and only on a phone, where an open body would be a fixed sheet over the
+  // room. Doing it here rather than in init() means the lite path never loses its in-flow copy.
+  if (coarse) for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open');
   els.root.dataset.mode = 'full';
   els.preloader.dataset.state = 'loading';
   els.preloader.setAttribute('aria-busy', 'true');
@@ -146,8 +154,12 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
           // after 20s regardless so a download that never settles doesn't strand the dock at 90%.
           els.preloader.dataset.state = 'loading'; els.preloader.setAttribute('aria-busy', 'true');
           setPreloader(els, 0.9);
-          const timeout = new Promise<void>((resolve) => setTimeout(resolve, 20_000));
+          // Cleared as soon as the race settles: readiness usually wins it, and a timer left armed
+          // would keep the tab awake for another twenty seconds for nothing.
+          let waitTimer: ReturnType<typeof setTimeout> | undefined;
+          const timeout = new Promise<void>((resolve) => { waitTimer = setTimeout(resolve, 20_000); });
           void Promise.race([handle.whenReady(id), timeout]).then(() => {
+            clearTimeout(waitTimer);
             if (gen !== generation) return;
             setPreloader(els, 1); els.preloader.dataset.state = 'done'; els.preloader.setAttribute('aria-busy', 'false');
             hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
@@ -186,7 +198,6 @@ async function init() {
   const els = queryElements();
   if (!els) return;
   const input = readTierInput();
-  if (input.coarse) for (const d of document.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open');
   const tier = decideTier(input);
   // Readable from devtools on a machine that runs badly: which tier it got and why.
   els.root.dataset.tier = tier; els.root.dataset.renderer = input.renderer;

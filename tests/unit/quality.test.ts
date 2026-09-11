@@ -73,6 +73,16 @@ describe('FrameGovernor', () => {
     expect(run(g, 4.5, 8)).toBe('bail');
     expect(run(g, 10, 8)).toBe('keep');
   });
+  it('starts over on reset, warmup and window both fresh', () => {
+    // The scene resets the governor when the background build finishes. A trim decided on build
+    // frames must not leave it in stage 1, and the new window must fill from empty.
+    const g = new FrameGovernor();
+    expect(run(g, 3.5, 8)).toBe('trim');
+    g.reset();
+    for (let i = 0; i < 8; i++) expect(g.push(1 / 8)).toBe('keep');
+    expect(run(g, 1.5, 8)).toBe('keep');
+    expect(run(g, 2.5, 8)).toBe('trim');
+  });
   it('settles after a trim that worked', () => {
     const g = new FrameGovernor();
     expect(run(g, 3.5, 8)).toBe('trim');

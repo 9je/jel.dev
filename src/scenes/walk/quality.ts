@@ -108,4 +108,8 @@ export class FrameGovernor {
     this.stage = verdict === 'keep' || verdict === 'bail' ? 2 : 1;
     return verdict;
   }
+  /** Back to stage 0 with an empty window and a fresh warmup. The scene resets the governor when the
+   *  background build finishes: frames paced against a build are not evidence about the scene the
+   *  machine is left running, and a half filled window carried over would decide on them. */
+  reset(): void { this.stage = 0; this.settle = 0; this.elapsed = 0; this.frames = 0; }
 }

@@ -86,6 +86,14 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // the tube clears, in path order, paced against the frame budget.
   const gated = defs.filter((d) => opts.gate.includes(d.stop));
   const later = defs.filter((d) => !gated.includes(d));
+  // A room is settled once its build has been attempted, whether it stood up or failed. A failed
+  // room runs on the greybox for the rest of the session, so it is as ready as it will ever be and
+  // the dock must land on it rather than showing the tube again on every jump.
+  const settled = new Set<string>();
+  // True while the background loop still has rooms in flight. The build spends up to the pacer's
+  // budget in every frame, and that cost belongs to the build rather than to the scene, so the
+  // governor is not fed while it runs.
+  let building = later.length > 0;
   const progress = new Map<string, [number, number]>();
   const report = () => {
     let l = 0, t = 0; for (const [a, b] of progress.values()) { l += a; t += b; }
@@ -102,6 +110,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       console.warn(`the ${d.id} stage did not build, running on the greybox`, err);
       opts.onDegraded?.();
     }
+    settled.add(d.id);
   }
 
   function resize() {
@@ -169,7 +178,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     raf = requestAnimationFrame(frame);
     pacer.frame();
     const dt = Math.min(clock.getDelta(), 0.05);
-    sample(dt);
+    // The pacer charges up to its whole budget to every frame a room is building in, and the
+    // governor's first window is only two seconds wide: a marginal machine judged during the build
+    // would be trimmed, or handed to the lite path, for frames it will never render again.
+    if (!building) sample(dt);
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
     rig.update(current, dt);
@@ -196,24 +208,35 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // away, fallback fired) still has to let a dock click's whenReady() settle.
   const settleReadiness = () => { for (const r of readiness.values()) r.resolve(); };
   void (async () => {
-    for (const d of later) {
-      if (disposed) { settleReadiness(); return; }
-      try {
-        await Promise.all(d.groups.map((g) => store.loadGroup(g)));
-        await ensure(d);
-        const stage = built.get(d.id);
-        // compileAsync traverses the whole tree regardless of visibility in three 0.185, and it needs
-        // the scene passed through so it can see the rig's lights and cache the right light count.
-        if (stage && !disposed) { await renderer.compileAsync(stage.root, camera, scene); stream(target); }
-      } catch (err) { console.warn(`background build of ${d.id} failed`, err); opts.onDegraded?.(); }
-      readiness.get(d.stop)?.resolve();
+    try {
+      for (const d of later) {
+        if (disposed) { settleReadiness(); return; }
+        try {
+          await Promise.all(d.groups.map((g) => store.loadGroup(g)));
+          await ensure(d);
+          // ensure() swallows a build error in its own catch, so a room that threw shows up here only
+          // as a missing entry. Without this check the room never degrades and never settles: the
+          // tube would come back on every dock jump to it for the rest of the session.
+          if (!disposed && !built.has(d.id)) throw new Error(`stage ${d.id} did not build`);
+          const stage = built.get(d.id);
+          // compileAsync traverses the whole tree regardless of visibility in three 0.185, and it needs
+          // the scene passed through so it can see the rig's lights and cache the right light count.
+          if (stage && !disposed) { await renderer.compileAsync(stage.root, camera, scene); stream(target); }
+        } catch (err) { console.warn(`background build of ${d.id} failed, running on the greybox`, err); opts.onDegraded?.(); }
+        settled.add(d.id);
+        readiness.get(d.stop)?.resolve();
+      }
+    } finally {
+      // The scene the machine actually has to run starts here. Judge it on those frames alone, with
+      // the governor's warmup and windows starting fresh rather than half full of build frames.
+      building = false; governor.reset();
     }
   })();
 
   return {
     setProgress(t) { target = t; stream(t); },
     anchors, camera, store,
-    ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id); },
+    ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id) || settled.has(d.id); },
     whenReady: (id) => readiness.get(id)?.promise ?? Promise.resolve(),
     dispose() {
       disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);

@@ -45,26 +45,43 @@ describe('assignSlots', () => {
   const size = { spots: 2, points: 1 };
   it('keeps a placement in the slot it already holds', () => {
     const a = spot(0), b = spot(1), p = point(0);
-    const first = assignSlots([null, null, null], [a, b, p], size);
+    const first = assignSlots([null, null, null], [a, b, p], size, false);
     expect(first).toEqual([a, b, p]);
-    const second = assignSlots(first, [b, a, p], size);
+    const second = assignSlots(first, [b, a, p], size, false);
     expect(second).toEqual([a, b, p]);
   });
   it('drops what does not fit and never puts a point in a spot slot', () => {
-    const out = assignSlots([null, null, null], [spot(0), spot(1), spot(2), point(0), point(1)], size);
+    const out = assignSlots([null, null, null], [spot(0), spot(1), spot(2), point(0), point(1)], size, false);
     expect(out.map((p) => p?.position[0])).toEqual([0, 1, 0]);
     expect(out[2]?.kind).toBe('point');
   });
-  it('gives shadow casters the lowest spot slots', () => {
-    const out = assignSlots([null, null, null], [spot(0), spot(1, true)], size);
-    expect(out[0]?.position[0]).toBe(1);
+  it('gives the current room\'s shadow caster the lowest spot slot, over a resident plain spot', () => {
+    const plain = spot(0), caster = spot(1, true);
+    const out = assignSlots([plain, null, null], [caster, plain], size, true);
+    expect(out[0]).toBe(caster);
+    expect(out[1]).toBe(plain);
+  });
+  it('ranks a caster as a plain spot when the rig casts no shadows', () => {
+    // A previous room's caster sits behind the current room's spot in the composed set, and with
+    // shadows off there is no shadow map to win: the room the camera is standing in keeps the slot.
+    const current = spot(0), previousCaster = spot(9, true);
+    const out = assignSlots([null], [current, previousCaster], { spots: 1, points: 0 }, false);
+    expect(out[0]).toBe(current);
+  });
+  it('lets only the current room\'s casters take shadow slots', () => {
+    // composeSet puts the current room first, its casters ahead of its plain lights. The previous
+    // room's caster trails the lot, so it must not push the current room's plain spot out.
+    const currentCaster = spot(0, true), currentPlain = spot(1), previousCaster = spot(9, true);
+    const out = assignSlots([null, null], [currentCaster, currentPlain, previousCaster], { spots: 2, points: 0 }, true);
+    expect(out[0]).toBe(currentCaster);
+    expect(out[1]).toBe(currentPlain);
   });
   it('migrates a caster down into a freed shadow slot even when it already holds a plain slot', () => {
     // A caster sitting in slot 1 must not stay there once it is the higher-priority item: it belongs
     // in slot 0, the shadow slot, and the fade hides the hop. Retention is only for non-casters.
     const plainSize = { spots: 2, points: 0 };
     const spotA = spot(0), spotCaster = spot(1, true);
-    const out = assignSlots([spotA, spotCaster], [spotCaster, spotA], plainSize);
+    const out = assignSlots([spotA, spotCaster], [spotCaster, spotA], plainSize, true);
     expect(out[0]).toBe(spotCaster);
     expect(out[1]).toBe(spotA);
   });
@@ -74,7 +91,7 @@ describe('assignSlots', () => {
     // booth key now behind the camera) must take the lowest slots, and the booth key drops to slot 2.
     const threeSpots = { spots: 3, points: 0 };
     const boothKey = spot(0, true), sodium1 = spot(1, true), sodium2 = spot(2, true);
-    const out = assignSlots([boothKey, sodium1], [sodium1, sodium2, boothKey], threeSpots);
+    const out = assignSlots([boothKey, sodium1], [sodium1, sodium2, boothKey], threeSpots, true);
     expect([out[0], out[1]]).toEqual(expect.arrayContaining([sodium1, sodium2]));
     expect(out[2]).toBe(boothKey);
   });

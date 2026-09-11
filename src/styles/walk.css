@@ -86,15 +86,21 @@
 @media (pointer: coarse) {
   /* A swipe anywhere on a phone must walk the camera. The body therefore never scrolls under the
      thumb: it is closed behind a toggle, and open it is a sheet the reader chose, with its own
-     scrolling that does not chain back into the page. */
-  .stop-more > summary { display: inline-block; list-style: none; margin-top: 0.5rem; padding: 0.55rem 0.9rem; border: 1px solid var(--surface-edge); border-radius: var(--radius); background: var(--surface); font: inherit; cursor: pointer; }
-  .stop-more > summary::-webkit-details-marker { display: none; }
+     scrolling that does not chain back into the page.
+     Every rule here is scoped to the full walk, because only the full walk has a camera to swipe.
+     The markup ships the details open, and it is startFull that closes it, so a phone with no
+     JavaScript, a phone in the frame before the scene mounts, and a phone on the lite path all
+     keep their copy in the flow of the stacked page instead of stacking one fixed sheet per stop.
+     A sheet left open on a stop the camera then leaves needs no closing: the stop it lives in is
+     `visibility: hidden` in the full walk, and visibility inherits into a fixed child. */
+  .walk[data-mode='full'] .stop-more > summary { display: inline-block; list-style: none; margin-top: 0.5rem; padding: 0.55rem 0.9rem; border: 1px solid var(--surface-edge); border-radius: var(--radius); background: var(--surface); font: inherit; cursor: pointer; }
+  .walk[data-mode='full'] .stop-more > summary::-webkit-details-marker { display: none; }
   /* The unconditional `.stop-more[open] > summary { display: none }` above still applies to this
      same selector unless overridden per property, so `display` has to be restated here or the
      close control vanishes the moment the sheet opens on a phone. */
-  .stop-more[open] > summary { display: inline-block; position: fixed; left: 0; right: 0; bottom: min(70vh, 32rem); z-index: 3; margin: 0; border-radius: var(--radius) var(--radius) 0 0; text-align: center; }
-  .stop-more[open] > summary::after { content: ' (close)'; color: var(--text-dim); }
-  .stop-more[open] > .stop-body { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; max-width: none; max-height: min(70vh, 32rem); overflow: auto; overscroll-behavior: contain; padding: 1rem 1.25rem 2rem; background: var(--surface); border-top: 1px solid var(--surface-edge); }
+  .walk[data-mode='full'] .stop-more[open] > summary { display: inline-block; position: fixed; left: 0; right: 0; bottom: min(70vh, 32rem); z-index: 3; margin: 0; border-radius: var(--radius) var(--radius) 0 0; text-align: center; }
+  .walk[data-mode='full'] .stop-more[open] > summary::after { content: ' (close)'; color: var(--text-dim); }
+  .walk[data-mode='full'] .stop-more[open] > .stop-body { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; max-width: none; max-height: min(70vh, 32rem); overflow: auto; overscroll-behavior: contain; padding: 1rem 1.25rem 2rem; background: var(--surface); border-top: 1px solid var(--surface-edge); }
   /* Scoped to the closed state: at equal specificity this rule and the open sheet rule above are
      tied, and an unscoped reset here would win by coming later, flattening the open sheet's own
      scroll bound right back to none/visible. */

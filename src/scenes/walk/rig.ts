@@ -22,43 +22,51 @@ export function checkBudget(lights: Placement[]): void {
   if (points > ROOM_BUDGET.points) throw new Error(`a room may declare ${ROOM_BUDGET.points} points, this one declares ${points}`);
 }
 
+const isCaster = (p: Placement): boolean => p.kind === 'spot' && !!p.shadow;
+
 /** Placements that matter at a stop: the current room's, then the room ahead, then the one behind.
- *  Shadow casters lead within a room so they land in the shadow slots. */
+ *  Shadow casters lead within a room, so the set opens with the current room's casters and
+ *  `assignSlots` can read that leading run off the front without knowing about rooms. */
 export function composeSet(rooms: Map<StopId, Placement[]>, stop: StopId): Placement[] {
   const i = STOPS.findIndex((s) => s.id === stop);
   const order = [STOPS[i]?.id, STOPS[i + 1]?.id, STOPS[i - 1]?.id].filter(Boolean) as StopId[];
   const out: Placement[] = [];
   for (const id of order) {
     const lights = rooms.get(id); if (!lights) continue;
-    out.push(...lights.filter((l) => l.kind === 'spot' && l.shadow), ...lights.filter((l) => !(l.kind === 'spot' && l.shadow)));
+    out.push(...lights.filter(isCaster), ...lights.filter((l) => !isCaster(l)));
   }
   return out;
 }
 
-/** Slot array, spots first then points. Priority order is shadow casters first, then `wanted` order;
- *  whatever fits the rig's per-type capacity in that order is selected. Selected casters always pack
- *  into the lowest spot slots, in priority order, bypassing retention: a shadow map must never sit
- *  idle on a caster far from the camera while a nearer one waits in a plain slot, and the fade (a
- *  slot's level drops to 0 before it jumps) hides a caster hopping down when priority reorders it.
+/** Slot array, spots first then points. Priority is `wanted` order, which composeSet has already put
+ *  in room order, and whatever fits the rig's per-type capacity in that order is selected.
+ *  Shadow slots go to the leading run of casters in `wanted`, which is the current room's casters,
+ *  and only when the rig casts shadows at all. Ranking every caster in the composed set ahead of
+ *  everything else put a room the camera had already left in front of the room it is standing in,
+ *  and it did so even with shadows off, where a caster is just another spot.
+ *  Those casters pack into the lowest spot slots, in priority order, bypassing retention: a shadow
+ *  map must never sit idle on a caster far from the camera while a nearer one waits in a plain slot,
+ *  and the fade (a slot's level drops to 0 before it jumps) hides a caster hopping down when
+ *  priority reorders it.
  *  A selected non-caster keeps the slot it already holds; free slots fill in priority order; the
  *  rest is dropped. Retention is scoped to the selected non-casters, or a room evicted by a
  *  higher-priority room would squat on its slot forever because its placement is still technically
  *  `wanted` (composeSet keeps the previous room around at low priority so a step back still finds it
  *  lit). */
-export function assignSlots(previous: (Placement | null)[], wanted: Placement[], size: RigSize): (Placement | null)[] {
+export function assignSlots(previous: (Placement | null)[], wanted: Placement[], size: RigSize, shadows: boolean): (Placement | null)[] {
   const out: (Placement | null)[] = new Array(size.spots + size.points).fill(null);
   const isSpotSlot = (i: number) => i < size.spots;
-  const casters = wanted.filter((p) => p.kind === 'spot' && p.shadow);
-  const ordered = [...casters, ...wanted.filter((p) => !casters.includes(p))];
+  const lead: Placement[] = [];
+  if (shadows) for (const p of wanted) { if (!isCaster(p)) break; lead.push(p); }
   let spotsLeft = size.spots, pointsLeft = size.points;
   const selected: Placement[] = [];
-  for (const p of ordered) {
+  for (const p of wanted) {
     if (p.kind === 'spot') { if (spotsLeft > 0) { selected.push(p); spotsLeft--; } }
     else if (pointsLeft > 0) { selected.push(p); pointsLeft--; }
   }
-  const selectedCasters = selected.filter((p) => p.kind === 'spot' && p.shadow);
+  const selectedCasters = selected.filter((p) => lead.includes(p));
   selectedCasters.forEach((p, i) => { out[i] = p; });
-  const rest = new Set(selected.filter((p) => !(p.kind === 'spot' && p.shadow)));
+  const rest = new Set(selected.filter((p) => !selectedCasters.includes(p)));
   previous.forEach((p, i) => { if (p && rest.has(p) && i < out.length && out[i] === null) out[i] = p; });
   const placed = new Set(out.filter(Boolean) as Placement[]);
   for (const p of selected) {
@@ -87,7 +95,7 @@ export class LightRig {
   private stop: StopId | null = null;
   readonly lightCount: number;
 
-  constructor(private scene: THREE.Scene, private size: RigSize, shadows: boolean) {
+  constructor(private scene: THREE.Scene, private size: RigSize, private readonly shadows: boolean) {
     this.group.name = 'rig'; scene.add(this.group);
     for (let i = 0; i < size.spots; i++) {
       const l = new THREE.SpotLight(0xffffff, 0, 1, Math.PI / 4, 0.5, 2);
@@ -113,7 +121,7 @@ export class LightRig {
     const stop = stopAt(t).id;
     if (stop !== this.stop) {
       this.stop = stop;
-      const assigned = assignSlots(this.slots.map((s) => s.target), composeSet(this.rooms, stop), this.size);
+      const assigned = assignSlots(this.slots.map((s) => s.target), composeSet(this.rooms, stop), this.size, this.shadows);
       this.slots.forEach((s, i) => { s.target = assigned[i]; });
     }
     for (const s of this.slots) {
