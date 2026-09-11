@@ -1,12 +1,14 @@
 // Enforces the spec's JavaScript budgets against the built chunks. The first visit bundle, which is
-// everything except the rooms that build in the background, stays under 320 KB gzipped. Each of
+// everything except the rooms that build in the background, stays under 340 KB gzipped. Each of
 // those later rooms is a chunk of its own, capped at 25 KB. 320 KB since 2026-09-10, when the
-// shared Labs kit joined the first visit (it was 300 KB).
+// shared Labs kit joined the first visit (it was 300 KB), and 340 KB since 2026-09-11, when the
+// control room's console, monitor, pinboard and open file joined that kit alongside the three
+// canvases they are painted with.
 import { readdirSync, readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 
-const LIMIT = 320 * 1024;
+const LIMIT = 340 * 1024;
 const LATER_LIMIT = 25 * 1024;
 // Rooms the preloader gates on. Their chunks count with the first visit.
 const GATED = ['booth', 'fabrication'];

@@ -451,3 +451,105 @@ export function tarpWall(w: number, h: number, seed = 1): THREE.Group {
   rail.position.y = h / 2 + 0.04; g.add(rail);
   return g;
 }
+
+// ---------------------------------------------------------------------------------------------
+// The control room's kit. Ref 18 is a dispatch office read from the operator's own chair: a keyed
+// console under the window, screens along the desk, a board of paperwork on the wall behind, and a
+// file open under a lamp. These four pieces are what put a person at that desk five minutes ago.
+
+/** A keyed control console: a carcass with a slanted face carrying the keys, on the desk. 1.0 along
+ *  the desk by 0.5 deep, origin at the desk top on its own centre, face toward +z. Three calls. */
+export function controlConsole(face: THREE.Texture): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.16, 0.5), carcass(0x9ea5a3, 0.6));
+  body.position.set(0, 0.08, 0); g.add(body);
+  // The keyed face is a wedge lying back over the carcass: a slab with a printed top reads as a
+  // table mat, and the tilt is the whole reason a console looks like something a person operates.
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.44), carcass(0xb3b8b6, 0.55));
+  deck.rotation.x = -0.3; deck.position.set(0, 0.2, 0.02); g.add(deck);
+  const keys = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.42), new THREE.MeshStandardMaterial({
+    map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.5, roughness: 0.75,
+  }));
+  keys.rotation.x = -Math.PI / 2 - 0.3; keys.position.set(0, 0.212, 0.023); keys.name = 'keys'; g.add(keys);
+  return g;
+}
+
+export interface MonitorSpec { alive: boolean; face?: THREE.Texture }
+
+/** A desk monitor on a plinth stand, 0.55 by 0.36, origin at the desk top on its own centre, screen
+ *  toward +z. A dead one carries the same dark glass with nothing behind it, which is what a room
+ *  with one live screen and two dark ones needs to read as a shift that ended. Three calls. */
+export function monitor(spec: MonitorSpec): THREE.Group {
+  const g = new THREE.Group();
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.02), carcass(DARK, 0.5));
+  stand.position.set(0, 0.1, -0.01); g.add(stand);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.36, 0.04), carcass(DARK, 0.5));
+  body.position.set(0, 0.38, 0); g.add(body);
+  const map = spec.alive ? spec.face : undefined;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.31), new THREE.MeshStandardMaterial({
+    color: 0x0b1117, map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: spec.alive ? 1.1 : 0,
+    roughness: 0.4,
+  }));
+  screen.position.set(0, 0.38, 0.021); screen.name = 'face'; g.add(screen);
+  return g;
+}
+
+/** A cork board with paperwork pinned to it: `w` by `h`, origin at the centre of the board, facing
+ *  +z. Six sheets on their own angles, a pin in each, and a stencilled strip across the bottom that
+ *  says what the board is for. Four draw calls. */
+export function pinboard(w: number, h: number, label = 'ROSTER'): THREE.Group {
+  const g = new THREE.Group();
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, h + 0.06, 0.04), carcass(0x4a3b2a, 0.85));
+  g.add(frame);
+  const cork = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x6f5636, roughness: 0.95 }));
+  cork.position.z = 0.021; g.add(cork);
+  const r = rng(11);
+  const sheets: THREE.BufferGeometry[] = [];
+  const pins: Spot[] = [];
+  for (let i = 0; i < 6; i++) {
+    const x = -w / 2 + 0.2 + (i % 3) * (w - 0.4) / 2, y = h / 2 - 0.24 - Math.floor(i / 3) * (h - 0.62);
+    const tilt = (r() - 0.5) * 0.22;
+    const s = new THREE.PlaneGeometry(0.16, 0.22); s.rotateZ(tilt); s.translate(x, y, 0.024);
+    sheets.push(s);
+    pins.push([x + Math.sin(tilt) * 0.09, y + 0.09, 0.03]);
+  }
+  g.add(merged(sheets, new THREE.MeshStandardMaterial({ map: paperSheet(6), roughness: 0.92 })));
+  g.add(instances(new THREE.CylinderGeometry(0.008, 0.008, 0.014, 6).rotateX(Math.PI / 2), carcass(0xd7383a, 0.4), pins));
+  const strip = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.5, 0.1), new THREE.MeshBasicMaterial({
+    map: stencilTexture(label, { width: 256, height: 64, color: '#e8e4d8', font: '600 34px Michroma, system-ui, sans-serif', alpha: 0.85, flecks: false }),
+    transparent: true, depthWrite: false,
+  }));
+  strip.position.set(0, -h / 2 + 0.09, 0.026); g.add(strip);
+  return g;
+}
+
+/** A manila folder standing open on a desk: two leaves hinged at the fold, the near one propped up
+ *  on the fold at fifty degrees with the form on it. Origin at the desk top on the fold, leaves
+ *  along z, the propped one toward +z and facing +z. The form is a child named `page`, so a room
+ *  can aim a lamp at it and a test can find it. Three draw calls.
+ *
+ *  The lift is fifty degrees rather than the eight it was drawn with. A folder lying flat on a desk
+ *  is read from seven metres back at fifteen degrees off the horizontal, and at that angle an A4
+ *  leaf is a seventy by twenty pixel sliver with nothing on it anybody can see. Propped, the same
+ *  leaf is a card facing the lens, and a room turns the whole folder so that card faces the camera.
+ */
+export function openFile(page?: THREE.Texture): THREE.Group {
+  const g = new THREE.Group();
+  const LEAF = 0.4, DEEP = 0.29;
+  const card = new THREE.MeshStandardMaterial({ color: 0xd6b979, roughness: 0.9, side: THREE.DoubleSide });
+  const flat = new THREE.Mesh(new THREE.BoxGeometry(LEAF, 0.005, DEEP), card);
+  flat.position.set(0, 0.0025, -DEEP / 2); g.add(flat);
+  // The propped leaf swings about the fold, so it hangs off a pivot at the fold rather than sitting
+  // at its own centre and turning, which would drive its hinge edge down through the desk.
+  const hinge = new THREE.Group(); hinge.rotation.x = -0.87; g.add(hinge);
+  const lifted = new THREE.Mesh(new THREE.BoxGeometry(LEAF, 0.005, DEEP), card);
+  lifted.position.set(0, 0.0025, DEEP / 2); hinge.add(lifted);
+  // Half a turn about the sheet's own normal before it is laid down, or the form is typed upside
+  // down on the leaf: laying a plane flat maps the top of its canvas toward the fold, which is the
+  // bottom of the card once the leaf is propped.
+  const form = new THREE.PlaneGeometry(LEAF * 0.84, DEEP * 0.9).rotateZ(Math.PI).rotateX(-Math.PI / 2);
+  const sheet = new THREE.Mesh(form, new THREE.MeshStandardMaterial({ map: page, roughness: 0.9 }));
+  sheet.position.set(0, 0.007, DEEP / 2); sheet.name = 'page';
+  hinge.add(sheet);
+  return g;
+}

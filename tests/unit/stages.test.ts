@@ -5,9 +5,10 @@ import { RECREATION_DEF } from '../../src/scenes/walk/stages/recreation';
 import { OPERATIONS_DEF } from '../../src/scenes/walk/stages/operations';
 import { CREDENTIALS_DEF } from '../../src/scenes/walk/stages/credentials';
 import { CONTAINMENT_DEF } from '../../src/scenes/walk/stages/containment';
+import { FILE_DEF } from '../../src/scenes/walk/stages/file';
 import { STOPS } from '../../src/scenes/walk/path';
 
-const DEFS = [BOOTH_DEF, FABRICATION_DEF, RECREATION_DEF, OPERATIONS_DEF, CREDENTIALS_DEF, CONTAINMENT_DEF];
+const DEFS = [BOOTH_DEF, FABRICATION_DEF, RECREATION_DEF, OPERATIONS_DEF, CREDENTIALS_DEF, CONTAINMENT_DEF, FILE_DEF];
 
 describe('stage definitions', () => {
   it('each names a real stop and is near it', () => {

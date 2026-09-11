@@ -86,7 +86,14 @@ export function createHover(): Hover {
 }
 
 /**
- * The panel an exhibit opens: a flagship bay first, then a project row, then a certification badge.
+ * The panel an exhibit opens: a flagship bay first, then a project row, then a certification badge,
+ * and failing all three the body of the stop the id names.
+ *
+ * The last fallback is what the personnel file needs. Every other exhibit on the walk stands for an
+ * entry in the content collections and has a plate of its own to open; the open file on the control
+ * desk stands for the stop itself, and what it has to open is the copy of that stop. Matching on
+ * the stop rather than on a plate keeps that case out of the content schema.
+ *
  * The one DOM function in the module, and it only reads.
  */
 export function targetFor(id: string, _kind: Hotspot['kind'], root: ParentNode): HTMLElement | null {
@@ -94,5 +101,6 @@ export function targetFor(id: string, _kind: Hotspot['kind'], root: ParentNode):
   const safe = id.replace(/["\\]/g, '\\$&');
   return root.querySelector<HTMLElement>(`[data-flagship="${safe}"]`)
     ?? root.querySelector<HTMLElement>(`[data-project="${safe}"]`)
-    ?? root.querySelector<HTMLElement>(`[data-cert="${safe}"]`);
+    ?? root.querySelector<HTMLElement>(`[data-cert="${safe}"]`)
+    ?? root.querySelector<HTMLElement>(`section[data-stop="${safe}"] .stop-body`);
 }

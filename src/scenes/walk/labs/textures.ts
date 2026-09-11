@@ -170,3 +170,117 @@ export function redactedSheet(): THREE.CanvasTexture {
   ctx.restore();
   return own(c);
 }
+
+/**
+ * The personnel file's propped leaf: a buff form, landscape, with a black header band carrying the
+ * name, a photograph blocked out beside two typed fields, and the service record ruled under them.
+ * `lines[0]` is the name, `lines[1]` and `lines[2]` are the fields, and the rest are records.
+ *
+ * Drawn coarse on purpose, and the coarseness is the whole design. On the settled frame the leaf is
+ * fifty pixels across, so nothing survives that is not a block at full black on buff: the band, the
+ * bordered photograph, the two field rules and three ruled rows. The words on it are for the reader
+ * who opens the still, and the blocks are for everyone else.
+ */
+export function personnelSheet(lines: string[]): THREE.CanvasTexture {
+  const w = 560, h = 420;
+  const [c, ctx] = canvas(w, h);
+  const [name = '', role = '', origin = '', ...records] = lines;
+  // Buff rather than white. Under the lamp the form is the brightest thing in the room by a long
+  // way, and a white ground clips to flat paper with nothing on it at all.
+  ctx.fillStyle = '#ddd2b6'; ctx.fillRect(0, 0, w, h);
+  ctx.textBaseline = 'middle';
+  // Header band. Black, full bleed, a fifth of the sheet, the name reversed out of it.
+  ctx.fillStyle = '#0c1014'; ctx.fillRect(0, 0, w, 86);
+  ctx.fillStyle = '#f2eee2'; ctx.font = '700 46px Michroma, system-ui, sans-serif';
+  ctx.fillText(fit(ctx, name, w - 48), 24, 45);
+  // The photograph: a head and shoulders blocked out on grey inside a heavy black border. At the
+  // size the form is read from the hold this is the one element that says personnel file at all.
+  ctx.fillStyle = '#0c1014'; ctx.fillRect(20, 110, 152, 186);
+  ctx.fillStyle = '#9d9787'; ctx.fillRect(28, 118, 136, 170);
+  ctx.fillStyle = '#5d584e'; ctx.beginPath(); ctx.arc(96, 176, 38, 0, Math.PI * 2); ctx.fill();
+  ctx.fillRect(52, 222, 88, 66);
+  // Two fields beside it, each a value on a heavy rule.
+  [role, origin].forEach((value, i) => {
+    const y = 146 + i * 84;
+    ctx.font = '600 32px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#12171d';
+    ctx.fillText(fit(ctx, value, 340), 194, y);
+    ctx.fillStyle = '#0c1014'; ctx.fillRect(194, y + 28, 344, 7);
+  });
+  // The record, ruled: the year in the file's one accent and the entry beside it.
+  records.slice(0, 3).forEach((entry, i) => {
+    const y = 330 + i * 34;
+    const cut = entry.indexOf(' ');
+    ctx.font = '700 28px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#8a3a2c';
+    ctx.fillText(cut > 0 ? entry.slice(0, cut) : entry, 22, y);
+    ctx.font = '400 22px system-ui, sans-serif'; ctx.fillStyle = '#2b3138';
+    ctx.fillText(fit(ctx, cut > 0 ? entry.slice(cut + 1) : '', 390), 126, y + 1);
+    ctx.fillStyle = '#0c1014'; ctx.fillRect(22, y + 16, w - 44, 3);
+  });
+  return own(c);
+}
+
+/** Shrinks `text` until it fits `max` pixels at the context's current font, so a long entry loses
+ *  its tail rather than running off the edge of the form it is typed on. */
+function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
+  if (ctx.measureText(text).width <= max) return text;
+  let cut = text.length;
+  while (cut > 4 && ctx.measureText(`${text.slice(0, cut)}...`).width > max) cut--;
+  return `${text.slice(0, cut).trimEnd()}...`;
+}
+
+/**
+ * The live monitor on the control desk: the same record the file carries, typed up on a terminal.
+ * A cyan header, the years down the left with their entries beside them, and a block cursor on the
+ * line after the last of them. Drawn once, not animated: a cursor that blinks is the only motion in
+ * a still room and it pulls the eye off the page under the lamp, which is what the room is about.
+ */
+export function timelineScreen(rows: { when: string; what: string }[]): THREE.CanvasTexture {
+  const w = 512, h = 340;
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = '#050d14'; ctx.fillRect(0, 0, w, h);
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(0, 0, w, 46);
+  ctx.fillStyle = '#04222c'; ctx.font = '600 26px Michroma, system-ui, sans-serif';
+  ctx.fillText('PERSONNEL FILE', 18, 10);
+  rows.slice(0, 3).forEach((row, i) => {
+    const y = 76 + i * 72;
+    ctx.font = '600 26px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#e6b14a';
+    ctx.fillText(row.when, 18, y);
+    ctx.font = '400 20px system-ui, sans-serif'; ctx.fillStyle = '#9fc0cf';
+    ctx.fillText(fit(ctx, row.what, 366), 122, y + 4);
+    ctx.fillStyle = '#12313f'; ctx.fillRect(18, y + 44, w - 36, 2);
+  });
+  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(18, h - 42, 16, 26);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 2);
+  return own(c);
+}
+
+/**
+ * A control desk's face: four rows of square keys on a grey panel, two of them lit amber, a slider
+ * down the right and stencilled legends under each block. Colour and emissive map, so the two live
+ * keys glow and the rest of the panel stays lit by the room.
+ */
+export function consoleFace(): THREE.CanvasTexture {
+  const w = 512, h = 256;
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = '#b9bdbb'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#a2a7a5'; ctx.fillRect(0, 0, w, 10);
+  // Keys, six by three, dark grey with a lit lip.
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 6; col++) {
+    const x = 26 + col * 58, y = 56 + row * 56;
+    const live = (row === 1 && col === 2) || (row === 2 && col === 4);
+    ctx.fillStyle = '#6d7370'; ctx.fillRect(x - 3, y - 3, 46, 40);
+    ctx.fillStyle = live ? '#e0a13a' : '#3a4044'; ctx.fillRect(x, y, 40, 34);
+    ctx.fillStyle = live ? '#f6d79a' : '#525a5f'; ctx.fillRect(x + 3, y + 3, 34, 6);
+  }
+  // Legends: short stencilled words under the blocks, the way a dispatch desk labels its banks.
+  ctx.font = '600 15px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#41474a';
+  ctx.fillText('BAY', 26, 40); ctx.fillText('DOOR', 142, 40); ctx.fillText('LIGHTS', 258, 40);
+  // The slider, and the two lamps over it.
+  ctx.fillStyle = '#8d9290'; ctx.fillRect(404, 48, 72, 156);
+  ctx.fillStyle = '#31373a'; ctx.fillRect(436, 60, 8, 132);
+  ctx.fillStyle = '#d8dcda'; ctx.fillRect(422, 126, 36, 18);
+  ctx.fillStyle = '#3fd47a'; ctx.fillRect(410, 216, 24, 16);
+  ctx.fillStyle = '#2a3033'; ctx.fillRect(446, 216, 24, 16);
+  return own(c);
+}

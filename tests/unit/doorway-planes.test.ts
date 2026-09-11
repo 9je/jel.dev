@@ -102,6 +102,7 @@ describe('the doorway vestibules against the room walls', () => {
       ['operations', (await import('../../src/scenes/walk/stages/operations/shell')).buildShell],
       ['credentials', (await import('../../src/scenes/walk/stages/credentials/shell')).buildShell],
       ['containment', (await import('../../src/scenes/walk/stages/containment/shell')).buildShell],
+      ['file', (await import('../../src/scenes/walk/stages/file/shell')).buildShell],
     ] as [string, (c: never, r: THREE.Group) => unknown][];
     for (const [name, build] of shells) {
       const root = new THREE.Group();
@@ -116,7 +117,7 @@ describe('the doorway vestibules against the room walls', () => {
     }
   });
 
-  it('builds all four vestibules and all five shells', () => {
+  it('builds all four vestibules and all six shells', () => {
     expect(built.door.length).toBeGreaterThan(0);
     expect(built.room.length).toBeGreaterThan(0);
     for (const id of DOORS) {

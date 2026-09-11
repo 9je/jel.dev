@@ -132,14 +132,23 @@ export function cableTray(len: number): THREE.Group {
 }
 
 export interface GlassRoomDoor { face: 'north' | 'south'; x: number; w: number }
+export type GlassFace = 'north' | 'south' | 'east' | 'west';
 export interface GlassRoomSpec {
   w: number; d: number; h: number; sill: number;
   doors: GlassRoomDoor[];
+  /** Which of the four walls are glazed. Defaults to all of them. A room that is glass on one side
+   *  and painted block on the others (the control room looks south through its front and is solid
+   *  everywhere else) asks for that one face, and builds the rest as `labWall` planes of its own:
+   *  a glazed wall the room then covers with a wall plane is two surfaces fighting for the pixel. */
+  faces?: GlassFace[];
   sign?: string;
   litEvery?: number;
   panelIntensity?: number;
   /** Fitting size of one lit ceiling panel, `[along x, along z]`. See `ceilingGrid`. */
   panel?: [number, number];
+  /** The ceiling tile's own colour. The shared map is a warm grey, which is right over a white lab
+   *  and wrong over a room lit cold. See `ceilingGrid`. */
+  tint?: number;
   floor?: THREE.Material;
   /** A second, frosted pane set over the lower 1.2 m above the sill, the way a real clean room is
    *  glazed (ref 02). It reads from outside as privacy glass and from inside as a soft band that
@@ -165,38 +174,42 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.2, D - 0.2), spec.floor);
     floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; g.add(floor);
   }
-  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9, panel: spec.panel });
+  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9, panel: spec.panel, tint: spec.tint });
   g.add(ceiling);
   const lid = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.12, D + 0.2), labSteel(0x2b3740)); lid.position.y = H + 0.12; g.add(lid); // clear of the ceiling plane, or the two fight for the pixel
 
+  const wanted = new Set<GlassFace>(spec.faces ?? ['north', 'south', 'east', 'west']);
   const faces: { z: number; ry: number; door?: GlassRoomDoor }[] = [
     { z: hz, ry: 0, door: doors.find((d) => d.face === 'north') },
     { z: -hz, ry: Math.PI, door: doors.find((d) => d.face === 'south') },
-  ];
+  ].filter((f) => wanted.has(f.z > 0 ? 'north' : 'south'));
+  const sides = ([{ x: -hx, side: 'west' }, { x: hx, side: 'east' }] as { x: number; side: GlassFace }[]).filter((s) => wanted.has(s.side));
 
   // Sill: a white panel band round the room, split at each door.
   const sillMat = new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.7 });
   const sills: THREE.BufferGeometry[] = [];
   const band = (len: number, x: number, z: number, ry: number) => { const b = new THREE.BoxGeometry(len, S, 0.12); b.rotateY(ry); b.translate(x, S / 2, z); sills.push(b); };
-  band(D, -hx, 0, Math.PI / 2); band(D, hx, 0, Math.PI / 2);
+  for (const s of sides) band(D, s.x, 0, Math.PI / 2);
   for (const f of faces) {
     if (!f.door) { band(W, 0, f.z, 0); continue; }
     const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
     band(leftLen, -hx + leftLen / 2, f.z, 0); band(rightLen, hx - rightLen / 2, f.z, 0);
   }
-  g.add(merged(sills, sillMat));
+  if (sills.length > 0) g.add(merged(sills, sillMat));
 
   // Glazing bars: corner posts, door posts, mullions, top and sill rails. Three draw calls.
   const steel = labSteel();
-  const posts: Spot[] = [[-hx, H / 2, -hz], [hx, H / 2, -hz], [-hx, H / 2, hz], [hx, H / 2, hz]];
+  const posts: Spot[] = [];
+  for (const f of faces) posts.push([-hx, H / 2, f.z], [hx, H / 2, f.z]);
+  for (const s of sides) if (faces.length === 0) posts.push([s.x, H / 2, -hz], [s.x, H / 2, hz]);
   for (const f of faces) if (f.door) posts.push([f.door.x - f.door.w / 2, H / 2, f.z], [f.door.x + f.door.w / 2, H / 2, f.z]);
   // Mullions skip the door span on each face, with enough margin that one just past the door post
   // does not double up with it as a doubled bar.
   const inDoor = (x: number, f: (typeof faces)[number]) => !!f.door && Math.abs(x - f.door.x) < f.door.w / 2 + 0.3;
   for (let x = -hx + 2.5; x < hx - 0.5; x += 2.5) for (const f of faces) if (!inDoor(x, f)) posts.push([x, H / 2, f.z]);
-  for (let z = -hz + 2.6; z < hz - 0.5; z += 2.6) posts.push([-hx, H / 2, z], [hx, H / 2, z]);
-  g.add(instances(new THREE.BoxGeometry(0.1, H, 0.1), steel, posts));
-  g.add(instances(new THREE.BoxGeometry(W, 0.1, 0.1), steel, [[0, H, -hz], [0, H, hz]]));
+  for (let z = -hz + 2.6; z < hz - 0.5; z += 2.6) for (const s of sides) posts.push([s.x, H / 2, z]);
+  if (posts.length > 0) g.add(instances(new THREE.BoxGeometry(0.1, H, 0.1), steel, posts));
+  if (faces.length > 0) g.add(instances(new THREE.BoxGeometry(W, 0.1, 0.1), steel, faces.map((f) => [0, H, f.z] as Spot)));
   // The sill rail on a door face stops at the opening, like the sill band under it.
   const rails: THREE.BufferGeometry[] = [];
   for (const f of faces) {
@@ -204,14 +217,15 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
     const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
     for (const [len, x] of [[leftLen, -hx + leftLen / 2], [rightLen, hx - rightLen / 2]] as [number, number][]) { const r = new THREE.BoxGeometry(len, 0.1, 0.1); r.translate(x, S, f.z); rails.push(r); }
   }
-  g.add(merged(rails, steel));
-  g.add(instances(new THREE.BoxGeometry(0.1, 0.1, D), steel, [[-hx, H, 0], [hx, H, 0], [-hx, S, 0], [hx, S, 0]]));
+  if (rails.length > 0) g.add(merged(rails, steel));
+  const sideRails: Spot[] = sides.flatMap((s) => [[s.x, H, 0], [s.x, S, 0]] as Spot[]);
+  if (sideRails.length > 0) g.add(instances(new THREE.BoxGeometry(0.1, 0.1, D), steel, sideRails));
 
   // Glass: panes above the sill, a door face split around its opening, a named panel over each
   // door. Rendered last so it sorts over everything inside.
   const panes: THREE.BufferGeometry[] = [];
   const pane = (w: number, x: number, z: number, ry: number) => { const p = new THREE.PlaneGeometry(w, H - S); p.rotateY(ry); p.translate(x, S + (H - S) / 2, z); panes.push(p); };
-  pane(D, -hx, 0, Math.PI / 2); pane(D, hx, 0, -Math.PI / 2);
+  for (const s of sides) pane(D, s.x, 0, s.side === 'west' ? Math.PI / 2 : -Math.PI / 2);
   for (const f of faces) {
     if (!f.door) { pane(W, 0, f.z, f.ry); continue; }
     const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
@@ -224,8 +238,10 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
       sign.position.set(f.door.x, H - 0.25, f.z + out * 3); sign.rotation.y = f.ry; g.add(sign);
     }
   }
-  const glass = labGlass(); glass.side = THREE.DoubleSide;
-  const glassMesh = merged(panes, glass); glassMesh.renderOrder = 2; g.add(glassMesh);
+  if (panes.length > 0) {
+    const glass = labGlass(); glass.side = THREE.DoubleSide;
+    const glassMesh = merged(panes, glass); glassMesh.renderOrder = 2; g.add(glassMesh);
+  }
 
   // The frosted band. It is a second set of panes standing a centimetre inside the clear ones
   // rather than a shorter clear pane with a frosted one beside it: two transparent surfaces on one
@@ -237,7 +253,7 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
       const p = new THREE.PlaneGeometry(w, band); p.rotateY(ry);
       p.translate(x + inward[0] * 0.01, S + band / 2, z + inward[1] * 0.01); frost.push(p);
     };
-    lower(D, -hx, 0, Math.PI / 2, [1, 0]); lower(D, hx, 0, -Math.PI / 2, [-1, 0]);
+    for (const s of sides) lower(D, s.x, 0, s.side === 'west' ? Math.PI / 2 : -Math.PI / 2, [s.side === 'west' ? 1 : -1, 0]);
     for (const f of faces) {
       const inward: [number, number] = [0, f.z > 0 ? -1 : 1];
       if (!f.door) { lower(W, 0, f.z, f.ry, inward); continue; }
@@ -245,7 +261,7 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
       lower(leftLen, -hx + leftLen / 2, f.z, f.ry, inward); lower(rightLen, hx - rightLen / 2, f.z, f.ry, inward);
     }
     const frostMat = new THREE.MeshPhysicalMaterial({ color: 0xdfe8ec, transparent: true, opacity: 0.55, roughness: 0.7, transmission: 0, side: THREE.DoubleSide, depthWrite: false });
-    const frostMesh = merged(frost, frostMat); frostMesh.renderOrder = 1; g.add(frostMesh);
+    if (frost.length > 0) { const frostMesh = merged(frost, frostMat); frostMesh.renderOrder = 1; g.add(frostMesh); }
   }
 
   return g;

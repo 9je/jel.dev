@@ -98,4 +98,33 @@ describe('the break room kit', () => {
     expect(doors(4)).toBe(4);
     expect(doors(6)).toBe(6);
   });
+
+  it('props a file open on the form it carries', () => {
+    const folder = kit.openFile();
+    expect(folder.getObjectByName('page')).toBeTruthy();
+    const box = new THREE.Box3().setFromObject(folder);
+    // One leaf flat on the desk, one propped on the fold: the folder stands up off the top rather
+    // than lying in it, and the fold itself never drops below the surface it is standing on.
+    expect(box.min.y).toBeGreaterThan(-0.001);
+    expect(box.max.y).toBeGreaterThan(0.15);
+    expect(box.max.z - box.min.z).toBeGreaterThan(0.4);
+  });
+
+  it('puts a dead monitor face out', () => {
+    const face = (alive: boolean) => (kit.monitor({ alive }).getObjectByName('face') as T.Mesh).material as T.MeshStandardMaterial;
+    expect(face(false).emissiveIntensity).toBe(0);
+    expect(face(true).emissiveIntensity).toBeGreaterThan(1);
+  });
+
+  it('pins six sheets to a board the size it was asked for', () => {
+    const box = new THREE.Box3().setFromObject(kit.pinboard(1.6, 1.0));
+    expect(box.max.x - box.min.x).toBeCloseTo(1.66, 2);
+    expect(box.max.y - box.min.y).toBeCloseTo(1.06, 2);
+  });
+
+  it('rakes the console face back over its carcass', () => {
+    const keys = kit.controlConsole(new THREE.Texture()).getObjectByName('keys') as T.Mesh;
+    expect(keys.rotation.x).toBeLessThan(-Math.PI / 2);
+    expect(keys.position.y).toBeGreaterThan(0.16);
+  });
 });

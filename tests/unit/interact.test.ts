@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Mesh, BoxGeometry, MeshStandardMaterial, Raycaster, Vector3, Group } from 'three';
-import { pickHotspot, ndc, createHover } from '../../src/scenes/walk/interact';
+import { pickHotspot, ndc, createHover, targetFor } from '../../src/scenes/walk/interact';
 import type { Hotspot } from '../../src/scenes/walk/stages/types';
 
 const box = (x: number) => { const m = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ emissive: 0xffffff, emissiveIntensity: 1 })); m.position.set(x, 0, 0); m.updateMatrixWorld(); return m; };
@@ -50,5 +50,27 @@ describe('hotspots', () => {
     expect(mb.emissiveIntensity).toBeGreaterThan(0.5);
     hover.dispose();
     expect(mb.emissiveIntensity).toBe(0.5);
+  });
+});
+
+/** A stand-in for the page's stop sections, so targetFor's DOM walk can be read without a browser.
+ *  Only `querySelector` is exercised, and only with the four selectors the function builds. */
+const page = (html: Record<string, string | null>): ParentNode => ({
+  querySelector: (sel: string) => (html[sel] ?? null) as unknown as Element | null,
+}) as unknown as ParentNode;
+
+describe('the panel an exhibit opens', () => {
+  it('prefers a flagship bay, then a project row, then a certification badge', () => {
+    const bay = {} as HTMLElement, row = {} as HTMLElement;
+    expect(targetFor('torn-bet', 'project', page({ '[data-flagship="torn-bet"]': bay as never, '[data-project="torn-bet"]': row as never }))).toBe(bay);
+    expect(targetFor('torn-bet', 'project', page({ '[data-project="torn-bet"]': row as never }))).toBe(row);
+  });
+
+  it('falls back to the body of the stop the id names', () => {
+    const body = {} as HTMLElement;
+    // The open file on the control desk is an exhibit with no plate of its own: what it opens is the
+    // copy of the stop it stands in, matched on the stop's own id.
+    expect(targetFor('file', 'project', page({ 'section[data-stop="file"] .stop-body': body as never }))).toBe(body);
+    expect(targetFor('file', 'project', page({}))).toBeNull();
   });
 });
