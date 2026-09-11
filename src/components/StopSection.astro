@@ -5,7 +5,7 @@ interface Props { id: StopId; title: string; lead: string; wing?: Wing; level?: 
 const { id, title, lead, wing, level = 2, light } = Astro.props;
 const Heading = level === 1 ? 'h1' : 'h2';
 ---
-<section class="stop" id={id} data-stop={id} data-wing={wing} aria-labelledby={`${id}-title`} style={`--wing-light:${light}; --still:url(/stills/${id}.webp)`}>
+<section class="stop" id={id} data-stop={id} data-wing={wing} aria-labelledby={`${id}-title`} style={`--wing-light:${light}; --still:url(/stills/${id}.webp); --still-portrait:url(/stills/${id}-portrait.webp)`}>
   <div class="stop-inner">
     <Heading id={`${id}-title`} class="display stop-title">{title}</Heading>
     <p class="stop-lead">{lead}</p>

@@ -1,6 +1,9 @@
 // Enforces spec §4 budgets from the generated runtime manifests and the built JS.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
+
+const STILLS_SET_LIMIT = 1.6 * 1048576;
+const STILLS_FILE_LIMIT = 220 * 1024;
 
 const src = JSON.parse(readFileSync('scripts/assets/manifest.json', 'utf8'));
 const mb = (n) => (n / 1048576).toFixed(2) + ' MB';
@@ -21,4 +24,16 @@ for (const tier of ['desktop', 'phone']) {
     for (const [id, g] of Object.entries(m.groups)) if (id !== 'booth' && !id.startsWith('fabrication')) check(`desktop group ${id}`, g.bytes, b.group);
   }
 }
+// Lite path stills, outside the desktop/phone budgets above: capped as their own set.
+try {
+  const files = readdirSync('public/stills').filter((f) => f.endsWith('.webp'));
+  let stillsTotal = 0;
+  for (const f of files) {
+    const size = statSync(`public/stills/${f}`).size;
+    stillsTotal += size;
+    check(`still ${f}`, size, STILLS_FILE_LIMIT);
+  }
+  check('stills total', stillsTotal, STILLS_SET_LIMIT);
+} catch { console.log('public/stills missing, run npm run stills first'); }
+
 if (fail) { console.error('asset budget exceeded'); process.exit(1); }

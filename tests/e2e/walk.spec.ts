@@ -14,6 +14,22 @@ test('lite path renders every stop in order with a dock', async ({ page }) => {
   // Every project, the flagship included, is open on the stacked page.
   await expect(page.locator('section[data-stop="fabrication"] details[data-flagship]')).toHaveAttribute('open', '');
   await expect(page.locator('section[data-stop="operations"] details[data-project]')).toHaveCount(3);
+  // Each stop paints its own still behind its copy, and the file it names is really there.
+  for (const id of STOPS) {
+    const bg = await page.locator(`section[data-stop="${id}"]`).evaluate((el) => getComputedStyle(el, '::before').backgroundImage);
+    expect(bg).toContain(`/stills/${id}.webp`);
+    const res = await page.request.get(`/stills/${id}.webp`);
+    expect(res.status()).toBe(200);
+  }
+});
+
+test('the full path never requests a still', async ({ page }) => {
+  const stillRequests: string[] = [];
+  page.on('request', (req) => { if (req.url().includes('/stills/')) stillRequests.push(req.url()); });
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-walk]')).toHaveAttribute('data-mode', 'full', { timeout: 30_000 });
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
+  expect(stillRequests).toEqual([]);
 });
 
 test('dock anchors reach their sections on the lite path', async ({ page }) => {

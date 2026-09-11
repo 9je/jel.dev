@@ -23,7 +23,7 @@ const { title, description, tickerLines } = Astro.props;
     <div class="walk-spacer" data-spacer aria-hidden="true"></div>
     <Dock />
     <Ticker lines={tickerLines} />
-    <noscript><style>.walk [data-preloader]{display:none}.walk{--mode:lite}</style></noscript>
+    <noscript><style>.walk [data-preloader]{display:none}.walk{--mode:lite}.stop::before{background-image:var(--still)}@media (orientation: portrait){.stop::before{background-image:var(--still-portrait)}}</style></noscript>
   </div>
   <script src="../scenes/walk/index.ts"></script>
 </Base>

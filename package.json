@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "typeface": "node scripts/make-typeface.mjs",
     "still": "node scripts/render-still.mjs",
-    "budget": "node scripts/bundle-size.mjs",
+    "budget": "node scripts/bundle-size.mjs && node scripts/assets/budget.mjs",
     "assets:fetch": "node scripts/assets/fetch.mjs",
     "assets:build": "node scripts/assets/build.mjs",
     "assets:budget": "node scripts/assets/budget.mjs",
