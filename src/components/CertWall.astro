@@ -9,7 +9,10 @@ const certs = await getCollection('certs');
     is hidden wherever the wall is simply there, so the stacked page reads as it always did. */}
 <details class="wall" data-cert-wall data-size={size} open>
   <summary class="wall-head"><h3 id="certs-h" class="wall-title">Certifications</h3></summary>
-  <ul class="wall-list">
+  {/* On the walk the summary is the control and the heading is its label. On the stacked page and
+      with no JS the heading is clipped to a pixel, so the grid names itself from it rather than
+      standing as six badges with no group. */}
+  <ul class="wall-list" aria-labelledby="certs-h">
     {certs.map(({ data: c }) => (
       <li class="badge" data-cert={c.id}>
         <img src={c.badgeImage} alt="" width="96" height="96" loading="lazy" />
