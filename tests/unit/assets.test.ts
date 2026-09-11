@@ -45,7 +45,10 @@ describe('AssetStore.loadGroup', () => {
     const store = new AssetStore(stubManifest('fail.webp'));
     let calls = 0;
     (store as unknown as { texLoader: { load: unknown } }).texLoader.load = (...args: Parameters<ReturnType<typeof stubTexLoad>>) => { calls++; return stubTexLoad(true)(...args); };
-    (store as unknown as { gltf: { loadAsync: unknown } }).gltf.loadAsync = async () => ({ scene: { clone: () => ({}) } });
+    // A real Group, because the store marks a loaded model's geometry and materials as its own.
+    (store as unknown as { gltf: { loadAsync: unknown } }).gltf.loadAsync = async () => {
+      const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial())); return { scene: g };
+    };
 
     // (a) a failing texture URL rejects, clears `pending`, and neither texture() nor model() can succeed.
     await expect(store.loadGroup('g')).rejects.toThrow();
