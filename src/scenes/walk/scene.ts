@@ -110,10 +110,6 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // room runs on the greybox for the rest of the session, so it is as ready as it will ever be and
   // the dock must land on it rather than showing the tube again on every jump.
   const settled = new Set<string>();
-  // True while the background loop still has rooms in flight. The build spends up to the pacer's
-  // budget in every frame, and that cost belongs to the build rather than to the scene, so the
-  // governor is not fed while it runs.
-  let building = later.length > 0;
   const progress = new Map<string, [number, number]>();
   const report = () => {
     let l = 0, t = 0; for (const [a, b] of progress.values()) { l += a; t += b; }
@@ -230,12 +226,15 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     // them, and the buffer would then be drawn at the old size and scaled into the new box. The
     // call is two reads and a comparison unless the frame actually changed.
     resize();
+    // Read before the reset: this is what the build spent in the frame that just ended, which is
+    // the span `getDelta()` is about to measure. The governor is fed the frame time the scene
+    // itself cost, so it keeps judging the machine through the build instead of going blind for
+    // the ten seconds the rooms take, while a marginal machine is never trimmed, or handed to the
+    // lite path, over frames the build was paying for and the walk will never render again.
+    const paced = pacer.spent();
     pacer.frame();
     const dt = Math.min(clock.getDelta(), 0.05);
-    // The pacer charges up to its whole budget to every frame a room is building in, and the
-    // governor's first window is only two seconds wide: a marginal machine judged during the build
-    // would be trimmed, or handed to the lite path, for frames it will never render again.
-    if (!building) sample(dt);
+    sample(Math.max(0.001, dt - paced / 1000));
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
     rig.update(current, dt);
@@ -282,9 +281,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
         readiness.get(d.stop)?.resolve();
       }
     } finally {
-      // The scene the machine actually has to run starts here. Judge it on those frames alone, with
-      // the governor's warmup and windows starting fresh rather than half full of build frames.
-      building = false; governor.reset();
+      // The scene the machine actually has to run starts here. The discounted frames through the
+      // build were still evidence, but they were evidence about a scene with rooms missing, so the
+      // governor starts its warmup and its windows again on the finished one.
+      governor.reset();
     }
   })();
 

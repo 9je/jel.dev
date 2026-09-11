@@ -37,6 +37,34 @@ describe('pacer', () => {
     await Promise.resolve();
     expect(done).toBe(false);
   });
+  it('reports the milliseconds paced work spent in the frame', async () => {
+    const c = fakeClock(); const p = createPacer(4, c.now, c.nextFrame);
+    p.frame();
+    expect(p.spent()).toBe(0);
+    c.advance(2);
+    await p.pace();
+    // 2 ms of work behind it, whatever the frame does with the rest of its time.
+    expect(p.spent()).toBe(2);
+    c.advance(9);
+    expect(p.spent()).toBe(2);
+  });
+  it('counts the run it waited out, and starts the next frame count from the resume', async () => {
+    const c = fakeClock(); const p = createPacer(4, c.now, c.nextFrame);
+    p.frame(); c.advance(5);
+    void p.pace();
+    // Over budget: the work still ran for those 5 ms and this frame is charged for them.
+    expect(p.spent()).toBe(5);
+    c.advance(10);
+    // The render loop opens the next frame before the wait resumes, so the frame reads the run it
+    // is about to be charged for, then resets.
+    expect(p.spent()).toBe(5);
+    p.frame();
+    expect(p.spent()).toBe(0);
+    c.tick(); await Promise.resolve(); await Promise.resolve();
+    // The resumed run is measured from the resume, not from the top of the frame the draw owns.
+    c.advance(3); await p.pace();
+    expect(p.spent()).toBe(3);
+  });
   it('shares one wait across a burst of over-budget calls, then queues a fresh wait next frame', async () => {
     const c = fakeClock(); const p = createPacer(4, c.now, c.nextFrame);
     p.frame(); c.advance(5);
