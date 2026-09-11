@@ -35,6 +35,51 @@ function labelPlate(label: string): THREE.Group {
 const shell = (color: number, roughness = 0.5, metalness = 0.3) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
 /**
+ * A display plinth, 1.4 along the glass by 1.0 deep on a 1.045 m cap: a cast concrete body on a recessed steel kick,
+ * steel angles on its corners, a bevelled steel cap with the wing's orange lit in a line under its
+ * lip, and a numbered plate on the front. Origin at the floor under the centre of the body. Seven
+ * draw calls, all of them part of the exhibit the pointer picks, so the whole pedestal lifts with
+ * its product. The flat grey box it replaces was the one greybox thing left in the office.
+ */
+function plinth(store: StageContext['store'], n: number): THREE.Group {
+  const g = new THREE.Group();
+  // Local x runs along the glass and local z toward the camera: the office turns it a quarter.
+  const W = 1.4, D = 1.0, TOP = 1.045, CAP = 0.05, KICK = 0.12;
+  const kick = new THREE.Mesh(new THREE.BoxGeometry(W - 0.1, KICK, D - 0.1), labSteel(0x1b2129)); kick.position.y = KICK / 2; g.add(kick);
+  const concrete = surface(store.texture('concrete_wall'), W, TOP - KICK, 1.2); concrete.color.setHex(0xd6dde1); concrete.roughness = 0.8;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(W, TOP - CAP - KICK, D), concrete); body.position.y = KICK + (TOP - CAP - KICK) / 2; g.add(body);
+  // Corner angles: two flanges per corner, standing a millimetre proud of the concrete.
+  const angles: THREE.BufferGeometry[] = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    angles.push(new THREE.BoxGeometry(0.05, TOP - CAP - KICK, 0.008).translate(sx * (W / 2 - 0.025), body.position.y, sz * (D / 2 + 0.001)));
+    angles.push(new THREE.BoxGeometry(0.008, TOP - CAP - KICK, 0.05).translate(sx * (W / 2 + 0.001), body.position.y, sz * (D / 2 - 0.025)));
+  }
+  g.add(merged(angles, labSteel(0x6d7a84)));
+  // The cap: a rounded rectangle with a bevelled edge, 5 cm proud of the body all round.
+  const cw = W + 0.1, cd = D + 0.1, r = 0.04;
+  const rr = new THREE.Shape();
+  rr.moveTo(-cw / 2 + r, -cd / 2); rr.lineTo(cw / 2 - r, -cd / 2); rr.quadraticCurveTo(cw / 2, -cd / 2, cw / 2, -cd / 2 + r);
+  rr.lineTo(cw / 2, cd / 2 - r); rr.quadraticCurveTo(cw / 2, cd / 2, cw / 2 - r, cd / 2); rr.lineTo(-cw / 2 + r, cd / 2);
+  rr.quadraticCurveTo(-cw / 2, cd / 2, -cw / 2, cd / 2 - r); rr.lineTo(-cw / 2, -cd / 2 + r); rr.quadraticCurveTo(-cw / 2, -cd / 2, -cw / 2 + r, -cd / 2);
+  const capGeo = new THREE.ExtrudeGeometry(rr, { depth: CAP - 0.016, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 4 });
+  capGeo.translate(0, 0, 0.008); capGeo.rotateX(-Math.PI / 2); capGeo.translate(0, TOP - CAP, 0);
+  const cap = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({ color: 0x2b3740, metalness: 0.6, roughness: 0.4 })); g.add(cap);
+  // The light line: a strip under the cap's lip on all four sides, in the wing's orange.
+  const lip: THREE.BufferGeometry[] = [];
+  const ly = TOP - CAP - 0.012;
+  lip.push(new THREE.BoxGeometry(W + 0.06, 0.012, 0.02).translate(0, ly, D / 2 + 0.02));
+  lip.push(new THREE.BoxGeometry(W + 0.06, 0.012, 0.02).translate(0, ly, -D / 2 - 0.02));
+  lip.push(new THREE.BoxGeometry(0.02, 0.012, D + 0.06).translate(W / 2 + 0.02, ly, 0));
+  lip.push(new THREE.BoxGeometry(0.02, 0.012, D + 0.06).translate(-W / 2 - 0.02, ly, 0));
+  g.add(merged(lip, new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: SODIUM, emissiveIntensity: 1.8 })));
+  // The plate: brushed steel on the front face at eye level for a standing visitor, numbered.
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.09, 0.006), labSteel(0xaab3ba)); plate.position.set(0, 0.72, D / 2 + 0.004); g.add(plate);
+  const num = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.064), new THREE.MeshBasicMaterial({ map: stencilTexture(`0${n}`, { width: 256, height: 102, color: '#2455A4', font: '600 72px Michroma, system-ui, sans-serif', alpha: 1, flecks: false }), transparent: true, depthWrite: false }));
+  num.position.set(0, 0.72, D / 2 + 0.0075); g.add(num);
+  return g;
+}
+
+/**
  * The dispatch office: glass above a white sill on all four sides, a door in the front and back
  * face on the walked line, a lit ceiling grid, a working counter under blinds on the front glass,
  * the three products on lit plinths along the west glass, and a desk with its stool on its side.
@@ -137,22 +182,20 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   ];
   const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;
-  for (const [key, label, dz, make] of exhibits) {
+  exhibits.forEach(([key, label, dz, make], i) => {
     // One group per exhibit, and it is what the pointer picks: plinth, product, plate and its light
     // strip all belong to the one product, so the whole thing lifts together under the cursor. The
-    // plinths are three meshes rather than one instanced batch for exactly that reason.
+    // plinths are built per exhibit rather than as one instanced batch for exactly that reason.
+    // The plinth's long side faces the camera, so its front plate turns with it.
     const exhibit = new THREE.Group(); exhibit.name = key;
-    const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.4), shell(0x9aacb4, 0.5, 0.1));
-    plinth.position.set(ex, 0.5, dz); exhibit.add(plinth);
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 1.5), labSteel(0x46525a));
-    cap.position.set(ex, 1.02, dz); exhibit.add(cap);
+    exhibit.add(place(plinth(store, i + 1), ex, 0, dz, Math.PI / 2));
     exhibit.add(place(labelPlate(label), ex - 0.34, 1.045, dz, Math.PI / 2));
     exhibit.add(place(make(), ex + 0.14, 1.045, dz, Math.PI / 2 + 0.35));
     g.add(exhibit);
     hotspots.push({ id: key, kind: 'project', label, object: exhibit, stop: 'fabrication' });
     // The plate hangs to the right of its anchor, so the anchor sits past the product's right edge.
     anchors.set(key, new THREE.Vector3(OX + ex + 0.6, 1.7, OZ + dz - 0.9));
-  }
+  });
 
   // The desk on the east side, its stool on its side.
   const desk = store.model('desk'); desk.position.set(hx - 1.3, 0, -1.2); desk.rotation.y = Math.PI / 2; g.add(desk);
