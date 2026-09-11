@@ -197,8 +197,9 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
   const steel = labSteel();
   const posts: Spot[] = [[-hx, H / 2, -hz], [hx, H / 2, -hz], [-hx, H / 2, hz], [hx, H / 2, hz]];
   for (const f of faces) if (f.door) posts.push([f.door.x - f.door.w / 2, H / 2, f.z], [f.door.x + f.door.w / 2, H / 2, f.z]);
-  // Mullions skip the door span on each face, so nothing stands in a doorway.
-  const inDoor = (x: number, f: (typeof faces)[number]) => !!f.door && Math.abs(x - f.door.x) < f.door.w / 2 + 0.05;
+  // Mullions skip the door span on each face, with enough margin that one just past the door post
+  // does not double up with it as a doubled bar.
+  const inDoor = (x: number, f: (typeof faces)[number]) => !!f.door && Math.abs(x - f.door.x) < f.door.w / 2 + 0.3;
   for (let x = -hx + 2.5; x < hx - 0.5; x += 2.5) for (const f of faces) if (!inDoor(x, f)) posts.push([x, H / 2, f.z]);
   for (let z = -hz + 2.6; z < hz - 0.5; z += 2.6) posts.push([-hx, H / 2, z], [hx, H / 2, z]);
   g.add(instances(new THREE.BoxGeometry(0.1, H, 0.1), steel, posts));
