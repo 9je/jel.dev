@@ -4,15 +4,16 @@ import { cameraAt, stopAt, STOPS, type StopId } from './path';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
-import type { Stage, StageDef, StageContext } from './stages/types';
+import type { Hotspot, Stage, StageDef, StageContext } from './stages/types';
 import { greybox } from './stages/greybox';
 import { STAGE_LOADERS } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
+import { createHover, pickHotspot } from './interact';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
 export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean; pixelRatioCap: number }
-export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void }
+export interface WalkHandle { setProgress(t: number): void; anchors: Map<string, THREE.Vector3>; camera: THREE.PerspectiveCamera; store: AssetStore; hotspots(): Hotspot[]; pick(nx: number, ny: number): Hotspot | null; hover(h: Hotspot | null): void; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void }
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 
@@ -173,6 +174,24 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     for (const d of defs) { const s = built.get(d.id); if (s) s.root.visible = d.near.some((n) => near.has(n)); }
   }
 
+  // Picking and the hover light. One raycaster for the session, and only the rooms the streamer has
+  // left visible are candidates, so a cursor never lands on a cabinet three rooms away.
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const hoverFx = createHover();
+  // Only the room the camera is standing in. The streamer keeps a stop's neighbours visible, and a
+  // ray has no idea a wall is in the way: without this the cert plates in the credentials hall were
+  // pickable from the break room, forty metres off and through two rooms of geometry.
+  const hotspots = () => {
+    const here = stopAt(current).id;
+    const out: Hotspot[] = [];
+    for (const s of built.values()) {
+      if (!s.root.visible || !s.hotspots) continue;
+      for (const h of s.hotspots) if (h.stop === here) out.push(h);
+    }
+    return out;
+  };
+
   function frame() {
     if (disposed) return;
     raf = requestAnimationFrame(frame);
@@ -186,6 +205,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
     rig.update(current, dt);
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
+    hoverFx.update(dt);
     if (post) post.render(dt); else renderer.render(scene, camera);
   }
   resize(); window.addEventListener('resize', resize);
@@ -236,10 +256,18 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   return {
     setProgress(t) { target = t; stream(t); },
     anchors, camera, store,
+    hotspots,
+    pick(nx, ny) {
+      if (disposed) return null;
+      raycaster.setFromCamera(pointer.set(nx, ny), camera);
+      return pickHotspot(raycaster, hotspots());
+    },
+    hover(h) { hoverFx.set(h); },
     ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id) || settled.has(d.id); },
     whenReady: (id) => readiness.get(id)?.promise ?? Promise.resolve(),
     dispose() {
       disposed = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); canvas.removeEventListener('webglcontextlost', onContextLost);
+      hoverFx.dispose();
       for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); post?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
       settleReadiness();

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { StageContext } from '../types';
+import type { Hotspot, StageContext } from '../types';
 import { grounded, place } from '../../merge';
 import { papers, tapeLine } from '../../labs/props';
 import { labSteel, LABS } from '../../labs/materials';
@@ -9,7 +9,7 @@ import certs from '../../../../content/certs.json';
 
 /** Whatever the dressing has to clean up itself. The badge textures load out of band, so the stage
  *  has to be able to tell the dressing it is gone. */
-export interface Dressing { dispose(): void }
+export interface Dressing { hotspots: Hotspot[]; dispose(): void }
 
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Dressing> {
   const { store, pace } = ctx;
@@ -19,6 +19,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // late callback throws its texture away instead.
   let disposed = false;
   const badges: THREE.Texture[] = [];
+  const hotspots: Hotspot[] = [];
 
   // The six certifications, three per side, backlit on the lab's glass with the badge image and
   // name and issuer beneath. A failed image load leaves the plate lit with its name only.
@@ -27,20 +28,25 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   certList.forEach((c, i) => {
     const side = i < 3 ? 'west' : 'east'; const z = PLATE_Z[side][i % 3]; const x = PLATE_X[side];
     const ry = side === 'west' ? Math.PI / 2 : -Math.PI / 2;
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.9, 0.08), labSteel(0xcfd8dd)); frame.position.set(x, 1.75, z); frame.rotation.y = ry; root.add(frame);
+    // One group per plate so the pointer can pick a single certification: the frame, its backlit
+    // face, the badge image and the two lines of text. Grouping changes no transform and adds no
+    // draw call, the meshes are the same meshes, one level further down.
+    const plate = new THREE.Group(); root.add(plate);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.9, 0.08), labSteel(0xcfd8dd)); frame.position.set(x, 1.75, z); frame.rotation.y = ry; plate.add(frame);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 1.76), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 }));
-    face.position.set(x + (side === 'west' ? 0.05 : -0.05), 1.75, z); face.rotation.y = ry; root.add(face);
+    face.position.set(x + (side === 'west' ? 0.05 : -0.05), 1.75, z); face.rotation.y = ry; plate.add(face);
     const badge = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-    badge.position.set(x + (side === 'west' ? 0.06 : -0.06), 2.05, z); badge.rotation.y = ry; root.add(badge);
+    badge.position.set(x + (side === 'west' ? 0.06 : -0.06), 2.05, z); badge.rotation.y = ry; plate.add(badge);
+    hotspots.push({ id: c.id, kind: 'cert', label: c.name, object: plate, stop: 'credentials' });
     loader.load(c.badgeImage, (t) => {
       if (disposed) { t.dispose(); return; }
       t.colorSpace = THREE.SRGBColorSpace; t.userData.owned = true; badges.push(t);
       const m = badge.material as THREE.MeshBasicMaterial; m.map = t; m.opacity = 1; m.needsUpdate = true;
     }, undefined, () => { /* name only */ });
     const label = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.4), new THREE.MeshBasicMaterial({ map: stencilTexture(c.name, { width: 768, height: 200, color: '#2A3B4A', font: '600 64px Michroma, system-ui, sans-serif', alpha: 1, flecks: false }), transparent: true, depthWrite: false }));
-    label.position.set(x + (side === 'west' ? 0.07 : -0.07), 1.15, z); label.rotation.y = ry; root.add(label);
+    label.position.set(x + (side === 'west' ? 0.07 : -0.07), 1.15, z); label.rotation.y = ry; plate.add(label);
     const issuer = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.2), new THREE.MeshBasicMaterial({ map: stencilTexture(c.issuer, { width: 512, height: 100, color: '#2A3B4A', font: '400 44px Michroma, system-ui, sans-serif', alpha: 0.8, flecks: false }), transparent: true, depthWrite: false }));
-    issuer.position.set(x + (side === 'west' ? 0.07 : -0.07), 0.95, z); issuer.rotation.y = ry; root.add(issuer);
+    issuer.position.set(x + (side === 'west' ? 0.07 : -0.07), 0.95, z); issuer.rotation.y = ry; plate.add(issuer);
   });
   await pace();
 
@@ -69,5 +75,5 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // disposeObject() reaches the badge textures through their materials, so this is belt and braces
   // for the ones already assigned and the only cleanup for one still in flight.
-  return { dispose() { disposed = true; for (const t of badges) t.dispose(); badges.length = 0; } };
+  return { hotspots, dispose() { disposed = true; for (const t of badges) t.dispose(); badges.length = 0; } };
 }

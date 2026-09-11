@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import type { StageContext } from '../types';
+import type { Hotspot, StageContext } from '../types';
 import type { PointPlacement } from '../../rig';
 import { stencilTexture } from '../../textures';
 import { surface } from '../../materials';
 import { instances, place, type Spot } from '../../merge';
 import { LABS, labSteel } from '../../labs/materials';
-import { papers, glassRoom } from '../../labs/props';
+import { papers, glassRoom, pickBox } from '../../labs/props';
 import { OFFICE } from './layout';
 
 /**
@@ -13,7 +13,7 @@ import { OFFICE } from './layout';
  * face on the walked line, a lit ceiling grid, the three products on pedestals along the west
  * glass with their plates pinned beside, and a desk with its stool on its side.
  */
-export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacement {
+export function buildOffice(ctx: StageContext, root: THREE.Group): { light: PointPlacement; hotspots: Hotspot[] } {
   const { store, anchors } = ctx;
   const { x: OX, z: OZ, w: W, d: D, h: H, sill: S, frontDoorX, backDoorX, doorW } = OFFICE;
   const hx = W / 2;
@@ -37,11 +37,20 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacemen
   // rather than over a neighbour. Positive z is to the camera's left.
   const exhibits: [string, string, number][] = [['conch', 'conch.gg', 3.0], ['ezkey', 'ezkey.io', 0], ['gc-bridge', 'gc-bridge', -3.0]];
   const pedestals: Spot[] = [], tops: Spot[] = [];
+  const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;
   for (const [key, label, dz] of exhibits) {
     pedestals.push([ex, 0.5, dz]); tops.push([ex, 1.02, dz]);
+    // One group per exhibit, and it is what the pointer picks: the lit screen, which is the part
+    // that brightens under the cursor, plus a box over the pedestal that is never drawn and exists
+    // only so the whole plinth is pickable. The pedestals themselves are one instanced batch across
+    // all three, so brightening their material would light the row rather than the exhibit.
+    const exhibit = new THREE.Group();
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x05080b, emissive: 0xffffff, emissiveIntensity: 1.2, emissiveMap: stencilTexture(label, { width: 512, height: 180, color: '#CFE6EE', font: '600 96px Michroma, system-ui, sans-serif' }) }));
-    g.add(place(screen, ex + 0.05, 1.45, dz, Math.PI / 2));
+    exhibit.add(place(screen, ex + 0.05, 1.45, dz, Math.PI / 2));
+    exhibit.add(pickBox(1.2, 1.2, 1.6, ex, 0.6, dz));
+    g.add(exhibit);
+    hotspots.push({ id: key, kind: 'project', label, object: exhibit, stop: 'fabrication' });
     // The plate hangs to the right of its anchor, so the anchor sits past the screen's right edge.
     anchors.set(key, new THREE.Vector3(OX + ex + 0.6, 1.7, OZ + dz - 0.9));
   }
@@ -53,5 +62,5 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): PointPlacemen
   const stool = store.model('stool'); stool.position.set(hx - 2.2, 0.28, -0.4); stool.rotation.set(Math.PI / 2, 0, 0.5); g.add(stool);
   g.add(papers([[hx - 2.6, 0, 0.3, 0.4], [hx - 2.0, 0, 0.9, 1.2], [hx - 3.1, 0, -0.2, 2.3], [-1.2, 0, 2.4, 0.8]]));
 
-  return { kind: 'point', position: [OX, H - 0.4, OZ], color: LABS.cold, intensity: 6, distance: 12, decay: 1.8 };
+  return { light: { kind: 'point', position: [OX, H - 0.4, OZ], color: LABS.cold, intensity: 6, distance: 12, decay: 1.8 }, hotspots };
 }

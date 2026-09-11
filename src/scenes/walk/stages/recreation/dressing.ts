@@ -1,17 +1,22 @@
 import * as THREE from 'three';
-import type { StageContext } from '../types';
+import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { arcadeCabinet, vendingMachine, wallScreen, papers, tapeLine } from '../../labs/props';
 import { X0, Z0, Z1, CABINETS, ACCENT } from './layout';
 
-export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<void> {
+export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Hotspot[]> {
   const { store, anchors, pace } = ctx;
   const prop = (key: string) => grounded(store.model(key));
   const add = async (o: THREE.Object3D) => { root.add(o); await pace(); };
+  const hotspots: Hotspot[] = [];
 
   // South wall: the four cabinets the hold looks at, one per recreation project, two screens above.
+  // Each cabinet is its own group with its own materials, so it is the hotspot as it stands: the
+  // pointer lights that cabinet's screen and marquee and nothing else in the row.
   for (const [key, title, x] of CABINETS) {
-    await add(place(arcadeCabinet(title, ACCENT), x, 0, Z0 + 0.5));
+    const cabinet = place(arcadeCabinet(title, ACCENT), x, 0, Z0 + 0.5);
+    await add(cabinet);
+    hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
     if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(x, 1.9, Z0 + 1.6));
   }
   await add(place(wallScreen(2.2, 1.2, ['torn.bet', 'operational'], ACCENT), -32.6, 3.4, Z0 + 0.05));
@@ -44,4 +49,6 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('trashbag'), -27.4, 0, Z1 - 0.7, 0.6));
   await add(papers([[-30, 0, -29.5, 0.3], [-31.2, 0, -29.9, 1.6], [-47, 0, -30.2, 2.1], [-55, 0, -32.4, 0.9]]));
   await add(tapeLine([X0 + 0.5, Z0 + 0.6], [X0 + 0.5, Z1 - 3.2], 1.0));
+
+  return hotspots;
 }

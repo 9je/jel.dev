@@ -17,7 +17,7 @@ async function build(ctx: StageContext): Promise<Stage> {
     o.receiveShadow = !translucent;
   });
   return {
-    id: 'credentials', root, lights: lights(),
+    id: 'credentials', root, lights: lights(), hotspots: dressing.hotspots,
     update() {},
     dispose() { dressing.dispose(); root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
   };

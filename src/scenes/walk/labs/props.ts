@@ -19,6 +19,15 @@ export function cagePosts(len: number, pitch = 2): number[] {
 
 const dark = () => new THREE.MeshStandardMaterial({ color: 0x0b1117, roughness: 0.6, metalness: 0.4 });
 
+/** A box the pointer can hit and the renderer never draws: `visible` is off so it costs no draw
+ *  call, and its material is flagged transparent so a room's shadow pass skips it too. Used to make
+ *  a prop that is part of an instanced batch pickable on its own. */
+export function pickBox(w: number, h: number, d: number, x: number, y: number, z: number): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  m.position.set(x, y, z); m.visible = false;
+  return m;
+}
+
 /** A 42U rack: dark box with a lit front. 0.6 wide, 2.1 tall, 1.0 deep, origin at floor centre. */
 export function serverRack(seed = 1): THREE.Group {
   const g = new THREE.Group();

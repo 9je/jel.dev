@@ -14,13 +14,13 @@ async function build(ctx: StageContext): Promise<Stage> {
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
   const shell = buildShell(ctx, root);
   await ctx.pace();
-  const officeLight = buildOffice(ctx, root);
+  const office = buildOffice(ctx, root);
   await ctx.pace();
   await buildDressing(ctx, root);
   await ctx.pace();
   const lighting = buildLighting(ctx, root);
   await ctx.pace();
-  const lights = [...lighting.lights, officeLight];
+  const lights = [...lighting.lights, office.light];
   anchors.set('fabrication', new THREE.Vector3(0, 2, 6));
 
   // Only the props cast. The shell planes are the room the shadows land on, and a floor or a wall
@@ -34,7 +34,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   await ctx.pace();
 
   return {
-    id: 'fabrication', root, lights,
+    id: 'fabrication', root, lights, hotspots: office.hotspots,
     update(_t, dt) { lighting.update(dt); },
     dispose() {
       lighting.dispose();

@@ -8,7 +8,7 @@ const certs = await getCollection('certs');
   <h3 id="certs-h" class="wall-title">Certifications</h3>
   <ul class="wall-list">
     {certs.map(({ data: c }) => (
-      <li class="badge">
+      <li class="badge" data-cert={c.id}>
         <img src={c.badgeImage} alt="" width="96" height="96" loading="lazy" />
         <span class="badge-name">{c.verifyUrl ? <a href={c.verifyUrl} rel="noopener">{c.name}</a> : c.name}</span>
         <span class="badge-issuer">{c.issuer}</span>

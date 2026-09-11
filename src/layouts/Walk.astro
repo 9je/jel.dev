@@ -13,6 +13,7 @@ const { title, description, tickerLines } = Astro.props;
     <Preloader />
     <canvas class="walk-canvas" data-walk-canvas aria-hidden="true"></canvas>
     <main class="stops" id="top"><slot /></main>
+    <div class="hotspot-label" data-hotspot-label hidden aria-hidden="true"></div>
     <div class="walk-spacer" data-spacer aria-hidden="true"></div>
     <Dock />
     <Ticker lines={tickerLines} />
