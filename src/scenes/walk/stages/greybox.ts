@@ -4,8 +4,15 @@ import { disposeObject } from '../materials';
 import type { GreyboxSpace, Stage, StageContext } from './types';
 
 const WALL = 0x3a4a58, FLOOR = 0x2c3944;
-/** Floor patches at the corners the spline turns through, so the greybox reads past the corridor width. */
-const CORNERS: [number, number][] = [[-12, -30], [-77.5, -30.5], [-77, 25.5]];
+/** Floor patches at the corners the spline turns through, so the greybox reads past the corridor
+ *  width. Each belongs to the space of the later of the two rooms that meet at its corner: it has to
+ *  stand until both of them are dressed, and it has to go when they are. Added to the root instead,
+ *  they outlived every room, and the one at the operations to credentials turn is 12 m square across
+ *  the whole of the credentials floor that the operations hold sees through the doorway. */
+const CORNERS: [number, number, GreyboxSpace][] = [[-12, -30, 'corridor'], [-77.5, -30.5, 'hall'], [-77, 25.5, 'office']];
+/** The patches sit below every dressed floor and below the greybox corridors' own floor slabs, whose
+ *  top face is y 0, so a patch never ties with a plane it is only there to stand in for. */
+const CORNER_Y = -0.02;
 /** A dressed stage hides its greybox space, so the greybox marker standing in for that stop goes with it. */
 const MARKER_SPACE: Partial<Record<StopId, GreyboxSpace>> = {
   booth: 'booth', fabrication: 'hangar', recreation: 'corridor', operations: 'lab',
@@ -75,11 +82,11 @@ export function greybox({ scene }: StageContext): Stage & { hide(space: GreyboxS
 
   // The scene's rig owns the ambient fill now: a fixed light count is what keeps every material's
   // program compiled once, and a hemisphere here would move the count when the greybox is disposed.
-  for (const [x, z] of CORNERS) {
+  for (const [x, z, owner] of CORNERS) {
     const patch = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: FLOOR, roughness: 0.9 }));
     patch.rotation.x = -Math.PI / 2;
-    patch.position.set(x, 0, z);
-    root.add(patch);
+    patch.position.set(x, CORNER_Y, z);
+    spaces[owner].add(patch);
   }
   // A space replaced by a dressed stage is gone for good. A space that is simply far away is only
   // switched off, and comes back when the camera does.

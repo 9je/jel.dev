@@ -101,18 +101,25 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // ---- The floor ------------------------------------------------------------------------------
   // Grating strips across the aisle every three metres. The first pass alpha tested a white lattice
   // over a near black recess, which gave a hard black and white mat rather than steel over a trench:
-  // in the hold's frame it was the loudest thing in the room after the lamp. Now the recess is a dark
-  // steel frame rather than a hole, and the grating is a half opaque sheet sunk 4 mm inside it, so
-  // the diamonds sit close in value to what shows between them.
+  // in the hold's frame it was the loudest thing in the room after the lamp. Now it is a dark steel
+  // tray with a half opaque lattice laid on it, so the diamonds sit close in value to what shows
+  // between them: measured on the near strip in the hold's frame, the lattice against its recess went
+  // from 13:1 to 2:1. The lattice is a duller, rougher steel than the brief's 0x6c757c for the same
+  // reason, which is that it sits under the desk lamp and a shinier one puts the highlight back.
+  //
+  // `instances()` places a box by its centre, so the two heights are picked to stack rather than to
+  // nest: the tray spans y 0 to 0.02 and the lattice sheet spans 0.020 to 0.022, one millimetre of
+  // depth clear of the tray's top face. Centring the lattice inside the tray, which is what the first
+  // attempt at this did, leaves it enclosed and it never draws at all.
   const gratingZ: Spot[] = [];
-  for (let z = Z0 + 1; z <= Z1 - 1; z += 3) gratingZ.push([HALL_DOOR.x, 0.011, z]);
+  for (let z = Z0 + 1; z <= Z1 - 1; z += 3) gratingZ.push([HALL_DOOR.x, 0.01, z]);
   root.add(instances(new THREE.BoxGeometry(1.3, 0.02, 0.46), new THREE.MeshStandardMaterial({
     color: 0x2b3740, metalness: 0.5, roughness: 0.7,
-  }), gratingZ.map(([x, , z]) => [x, 0.01, z] as Spot)));
+  }), gratingZ));
   const alpha = chainlink(128); alpha.repeat.set(3, 1);
-  root.add(instances(new THREE.BoxGeometry(1.2, 0.01, 0.4), new THREE.MeshStandardMaterial({
-    color: 0x6c757c, alphaMap: alpha, transparent: true, opacity: 0.45, depthWrite: false, metalness: 0.7, roughness: 0.45,
-  }), gratingZ.map(([x, , z]) => [x, 0.011, z] as Spot)));
+  root.add(instances(new THREE.BoxGeometry(1.2, 0.002, 0.4), new THREE.MeshStandardMaterial({
+    color: 0x555d64, alphaMap: alpha, transparent: true, opacity: 0.45, depthWrite: false, metalness: 0.4, roughness: 0.65,
+  }), gratingZ.map(([x, , z]) => [x, 0.021, z] as Spot)));
 
   return { planes };
 }

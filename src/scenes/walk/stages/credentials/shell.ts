@@ -31,14 +31,17 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   // This hall and the server hall overlap by the metre their shared doorway is cut through, and both
-  // lay a floor across it at y 0: x -76 to -75, z -30 to -24, which is the strip beside the flagship
-  // desk at the server hall's west end. Two coplanar planes there tore into thin stripes of this
-  // room's paler, cooler tile across the server hall's greyer one, in the frame the walk leaves
-  // operations on. The overlap sits behind this room's own hold, so this floor is the one that gives
-  // way: a polygon offset settles the tie in depth without moving the plane the room stands on.
-  const floorMat = labFloor(store, W, D, 0xb7c4cb);
-  floorMat.polygonOffset = true; floorMat.polygonOffsetFactor = 1; floorMat.polygonOffsetUnits = 1;
-  const floor = plane(W, D, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
+  // lay a floor across it: x -76 to -75, z -30 to -24, the strip beside the flagship desk at the
+  // server hall's west end. Coplanar at y 0 they tore into thin stripes of this room's paler tile
+  // across the server hall's greyer one, in the frame the walk leaves operations on. Trimming either
+  // plane leaves a hole (this hall runs on to z 6 where the server hall stops at -24, and the server
+  // hall runs back to z -38 where this one stops at -30), so the tie is settled in height instead:
+  // 6 mm, which is a pixel at the distance the strip is ever seen from and beats the depth buffer's
+  // resolution there by a factor of fifty. A polygon offset was tried first and is the wrong tool for
+  // a ground plane read at a grazing angle: it scales with the depth slope, and at the angle the
+  // operations hold looks through the doorway it pushed this whole floor behind the greybox's corner
+  // patch. Props stand at y 0 and sink 6 mm into the tile, which is nothing at floor level.
+  const floor = plane(W, D, labFloor(store, W, D, 0xb7c4cb)); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0.006, ZC);
 
   // The long walls run full length and full height on both sides: the lab's glass is inset 0.4 m
   // from them, so there is always a solid wall (and a sliver of hall floor) behind every pane. The
