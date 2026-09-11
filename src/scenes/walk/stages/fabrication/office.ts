@@ -212,13 +212,19 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   hands.position.z = 0.019; clock.add(hands);
   g.add(place(clock, 2.5, 2.4, -hz + 0.1));
 
-  // Exhibits along the west glass, 3 m apart, facing the camera at the hold. The flagship sits in
+  // Exhibits along the west glass, evenly spaced, facing the camera at the hold. The flagship sits in
   // the centre so its plate, which pins to the right of its anchor, lands in the gap beside it
   // rather than over a neighbour. Positive z is to the camera's left.
+  //
+  // Spaced 2.6 m rather than 3 m and carried 0.4 m to the camera's left, which walks the far exhibit
+  // 0.8 m out from under the dock. The dock holds a strip down the right of the frame that the page's
+  // own cards already keep out of, and nothing kept the room's props out of it. conch stays where it
+  // was: the office is 8 m deep, so its plinth is already close to the south glass, and any further
+  // left would put it under the copy column.
   const exhibits: [string, string, number, () => THREE.Group][] = [
     ['conch', 'conch.gg', 3.0, controller],
-    ['ezkey', 'ezkey.io', 0, padlock],
-    ['gc-bridge', 'gc-bridge', -3.0, adapter],
+    ['ezkey', 'ezkey.io', 0.4, padlock],
+    ['gc-bridge', 'gc-bridge', -2.2, adapter],
   ];
   const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;
