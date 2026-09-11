@@ -14,7 +14,7 @@ export function hazardTexture(): THREE.CanvasTexture {
 }
 
 /** Stencilled lettering with a transparent background, for decals on doors and walls. */
-export function stencilTexture(text: string, opts: { width: number; height: number; color: string; font: string; alpha?: number }): THREE.CanvasTexture {
+export function stencilTexture(text: string, opts: { width: number; height: number; color: string; font: string; alpha?: number; flecks?: boolean }): THREE.CanvasTexture {
   const [c, ctx] = canvas(opts.width, opts.height);
   ctx.clearRect(0, 0, opts.width, opts.height);
   ctx.fillStyle = opts.color; ctx.font = opts.font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -25,8 +25,9 @@ export function stencilTexture(text: string, opts: { width: number; height: numb
   const room = opts.width * 0.9;
   if (wide > room) ctx.font = opts.font.replace(/(\d+(?:\.\d+)?)px/, `${Math.max(8, Math.floor(px * room / wide))}px`);
   ctx.globalAlpha = opts.alpha ?? 0.88; ctx.fillText(text, opts.width / 2, opts.height / 2);
-  // Punch out flecks so the paint reads worn rather than printed.
-  for (let i = 0; i < 400; i++) { ctx.clearRect(Math.random() * opts.width, Math.random() * opts.height, 2, 2); }
+  // Punch out flecks so the paint reads worn rather than printed. A clean room's lettering skips
+  // this: on white glass the punched flecks read as damage rather than wear.
+  if (opts.flecks ?? true) for (let i = 0; i < 400; i++) { ctx.clearRect(Math.random() * opts.width, Math.random() * opts.height, 2, 2); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   t.userData.owned = true;  // built here, so disposeObject() may free it
   return t;

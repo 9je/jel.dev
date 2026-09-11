@@ -11,4 +11,5 @@ export const STAGE_LOADERS: (() => Promise<StageDef>)[] = [
   () => import('./fabrication').then((m) => m.FABRICATION_DEF),
   () => import('./recreation').then((m) => m.RECREATION_DEF),
   () => import('./operations').then((m) => m.OPERATIONS_DEF),
+  () => import('./credentials').then((m) => m.CREDENTIALS_DEF),
 ];

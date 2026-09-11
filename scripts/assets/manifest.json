@@ -42,7 +42,9 @@
     "bin":               { "id": "metal_trash_can",                "group": "recreation" },
     "trashbag":          { "id": "trashbag",                       "group": "recreation" },
     "office_chair":      { "id": "modern_arm_chair_01",            "group": "operations" },
-    "laptop":            { "id": "classic_laptop",                 "group": "operations" }
+    "laptop":            { "id": "classic_laptop",                 "group": "operations" },
+    "medical_box":       { "id": "medical_box",                    "group": "credentials" },
+    "tote":              { "id": "industrial_pastic_container",    "group": "credentials" }
   },
   "sizes": { "desktop": { "texture": 1024, "model": 384 }, "phone": { "texture": 512, "model": 256 } },
   "budgets": { "desktop": { "total": 15728640, "firstFrame": 5242880, "group": 2621440 }, "phone": { "total": 8388608 } }

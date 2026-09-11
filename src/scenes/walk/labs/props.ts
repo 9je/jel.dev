@@ -1,6 +1,8 @@
 import * as THREE from 'three';
+import type { AssetStore } from '../assets';
 import { instances, merged, type Spot } from '../merge';
-import { LABS, labSteel } from './materials';
+import { LABS, labSteel, labGlass, ceilingGrid } from './materials';
+import { stencilTexture } from '../textures';
 import { rackFace, screenFace, paperSheet, tapeStripe, hazardPlate, chainlink, rng } from './textures';
 
 export function rackSlots(levels: number, height: number): number[] { return Array.from({ length: levels }, (_, i) => +(((i + 1) * height) / levels).toFixed(4)); }
@@ -139,5 +141,97 @@ export function cage(len: number, h = 2.6): THREE.Group {
   // depth, so the racks behind it read through the diamonds without sorting artefacts.
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ color: 0xb0b8bd, alphaMap: mesh, alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 }));
   panel.position.y = h / 2; g.add(panel);
+  return g;
+}
+
+export interface GlassRoomDoor { face: 'north' | 'south'; x: number; w: number }
+export interface GlassRoomSpec {
+  w: number; d: number; h: number; sill: number;
+  doors: GlassRoomDoor[];
+  sign?: string;
+  litEvery?: number;
+  panelIntensity?: number;
+  floor?: THREE.Material;
+}
+
+/**
+ * A glass-walled room, the shape shared by the dispatch office and the credentials lab: a white
+ * sill band round all four sides split at any door, corner and door posts, mullions that skip a
+ * door's span, top rails, sill rails split at the doors, panes merged and rendered last so they
+ * sort over everything inside, a head panel (and an optional sign) over each door, a lit ceiling
+ * grid and a steel lid clear of the ceiling plane. Doors sit only on the north (+z) and south
+ * (-z) faces; a door's `x` is local to the room's own centre. Origin at floor centre; the caller
+ * positions the returned group in the world.
+ */
+export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.Group {
+  const { w: W, d: D, h: H, sill: S, doors } = spec;
+  const g = new THREE.Group();
+  const hx = W / 2, hz = D / 2;
+
+  if (spec.floor) {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.2, D - 0.2), spec.floor);
+    floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; g.add(floor);
+  }
+  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9 });
+  g.add(ceiling);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.12, D + 0.2), labSteel(0x2b3740)); lid.position.y = H + 0.12; g.add(lid); // clear of the ceiling plane, or the two fight for the pixel
+
+  const faces: { z: number; ry: number; door?: GlassRoomDoor }[] = [
+    { z: hz, ry: 0, door: doors.find((d) => d.face === 'north') },
+    { z: -hz, ry: Math.PI, door: doors.find((d) => d.face === 'south') },
+  ];
+
+  // Sill: a white panel band round the room, split at each door.
+  const sillMat = new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.7 });
+  const sills: THREE.BufferGeometry[] = [];
+  const band = (len: number, x: number, z: number, ry: number) => { const b = new THREE.BoxGeometry(len, S, 0.12); b.rotateY(ry); b.translate(x, S / 2, z); sills.push(b); };
+  band(D, -hx, 0, Math.PI / 2); band(D, hx, 0, Math.PI / 2);
+  for (const f of faces) {
+    if (!f.door) { band(W, 0, f.z, 0); continue; }
+    const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
+    band(leftLen, -hx + leftLen / 2, f.z, 0); band(rightLen, hx - rightLen / 2, f.z, 0);
+  }
+  g.add(merged(sills, sillMat));
+
+  // Glazing bars: corner posts, door posts, mullions, top and sill rails. Three draw calls.
+  const steel = labSteel();
+  const posts: Spot[] = [[-hx, H / 2, -hz], [hx, H / 2, -hz], [-hx, H / 2, hz], [hx, H / 2, hz]];
+  for (const f of faces) if (f.door) posts.push([f.door.x - f.door.w / 2, H / 2, f.z], [f.door.x + f.door.w / 2, H / 2, f.z]);
+  // Mullions skip the door span on each face, so nothing stands in a doorway.
+  const inDoor = (x: number, f: (typeof faces)[number]) => !!f.door && Math.abs(x - f.door.x) < f.door.w / 2 + 0.05;
+  for (let x = -hx + 2.5; x < hx - 0.5; x += 2.5) for (const f of faces) if (!inDoor(x, f)) posts.push([x, H / 2, f.z]);
+  for (let z = -hz + 2.6; z < hz - 0.5; z += 2.6) posts.push([-hx, H / 2, z], [hx, H / 2, z]);
+  g.add(instances(new THREE.BoxGeometry(0.1, H, 0.1), steel, posts));
+  g.add(instances(new THREE.BoxGeometry(W, 0.1, 0.1), steel, [[0, H, -hz], [0, H, hz]]));
+  // The sill rail on a door face stops at the opening, like the sill band under it.
+  const rails: THREE.BufferGeometry[] = [];
+  for (const f of faces) {
+    if (!f.door) { const r = new THREE.BoxGeometry(W, 0.1, 0.1); r.translate(0, S, f.z); rails.push(r); continue; }
+    const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
+    for (const [len, x] of [[leftLen, -hx + leftLen / 2], [rightLen, hx - rightLen / 2]] as [number, number][]) { const r = new THREE.BoxGeometry(len, 0.1, 0.1); r.translate(x, S, f.z); rails.push(r); }
+  }
+  g.add(merged(rails, steel));
+  g.add(instances(new THREE.BoxGeometry(0.1, 0.1, D), steel, [[-hx, H, 0], [hx, H, 0], [-hx, S, 0], [hx, S, 0]]));
+
+  // Glass: panes above the sill, a door face split around its opening, a named panel over each
+  // door. Rendered last so it sorts over everything inside.
+  const panes: THREE.BufferGeometry[] = [];
+  const pane = (w: number, x: number, z: number, ry: number) => { const p = new THREE.PlaneGeometry(w, H - S); p.rotateY(ry); p.translate(x, S + (H - S) / 2, z); panes.push(p); };
+  pane(D, -hx, 0, Math.PI / 2); pane(D, hx, 0, -Math.PI / 2);
+  for (const f of faces) {
+    if (!f.door) { pane(W, 0, f.z, f.ry); continue; }
+    const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
+    pane(leftLen, -hx + leftLen / 2, f.z, f.ry); pane(rightLen, hx - rightLen / 2, f.z, f.ry);
+    const out = f.z > 0 ? 0.01 : -0.01;
+    const head = new THREE.Mesh(new THREE.PlaneGeometry(f.door.w, 0.5), new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.7 }));
+    head.position.set(f.door.x, H - 0.25, f.z + out); head.rotation.y = f.ry; g.add(head);
+    if (spec.sign) {
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.32), new THREE.MeshBasicMaterial({ map: stencilTexture(spec.sign, { width: 512, height: 96, color: '#2455A4', font: '600 60px Michroma, system-ui, sans-serif', alpha: 0.9 }), transparent: true, depthWrite: false }));
+      sign.position.set(f.door.x, H - 0.25, f.z + out * 3); sign.rotation.y = f.ry; g.add(sign);
+    }
+  }
+  const glass = labGlass(); glass.side = THREE.DoubleSide;
+  const glassMesh = merged(panes, glass); glassMesh.renderOrder = 2; g.add(glassMesh);
+
   return g;
 }

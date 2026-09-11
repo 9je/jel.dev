@@ -3,9 +3,10 @@ import { BOOTH_DEF } from '../../src/scenes/walk/stages/booth';
 import { FABRICATION_DEF } from '../../src/scenes/walk/stages/fabrication';
 import { RECREATION_DEF } from '../../src/scenes/walk/stages/recreation';
 import { OPERATIONS_DEF } from '../../src/scenes/walk/stages/operations';
+import { CREDENTIALS_DEF } from '../../src/scenes/walk/stages/credentials';
 import { STOPS } from '../../src/scenes/walk/path';
 
-const DEFS = [BOOTH_DEF, FABRICATION_DEF, RECREATION_DEF, OPERATIONS_DEF];
+const DEFS = [BOOTH_DEF, FABRICATION_DEF, RECREATION_DEF, OPERATIONS_DEF, CREDENTIALS_DEF];
 
 describe('stage definitions', () => {
   it('each names a real stop and is near it', () => {
