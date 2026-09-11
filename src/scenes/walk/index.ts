@@ -63,10 +63,10 @@ let hashchangeListener: (() => void) | null = null;
 
 export function startLite(els: WalkElements) {
   els.root.dataset.mode = 'lite';
-  // The stacked page has no toggle: the sheet styling that the toggle belongs to is scoped to the
-  // full walk. So every body is open here, including on a phone that got this far through a
-  // fallback after startFull had already closed them.
-  for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.setAttribute('open', '');
+  // The stacked page has no toggle and no compact column: the styling both of those belong to is
+  // scoped to the full walk. So every body and every flagship is open here, including on a browser
+  // that got this far through a fallback after startFull had already closed them.
+  for (const d of els.root.querySelectorAll('details[data-stop-more], details[data-flagship]')) d.setAttribute('open', '');
   els.preloader.dataset.state = 'hidden';
   markCurrentFromHash(els);
   hashchangeListener = () => markCurrentFromHash(els);
@@ -329,6 +329,9 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
   // full walk closes them, and only on a phone, where an open body would be a fixed sheet over the
   // room. Doing it here rather than in init() means the lite path never loses its in-flow copy.
   if (coarse) { for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open'); wireSheets(els); }
+  // And on a fine pointer the flagship is one line of the compact column rather than a card over
+  // the room: its exhibit's card is what carries the copy. The phone sheet keeps the card.
+  else for (const d of els.root.querySelectorAll('details[data-flagship]')) d.removeAttribute('open');
   els.root.dataset.mode = 'full';
   els.preloader.dataset.state = 'loading';
   els.preloader.setAttribute('aria-busy', 'true');

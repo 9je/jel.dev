@@ -86,16 +86,26 @@
 .walk[data-mode='full'] .stop[data-active] { opacity: 1; visibility: visible; transform: none; transition: opacity 320ms ease 200ms, transform 320ms ease 200ms, visibility 0s; }
 /* The copy takes the pointer, the rest of the stop does not. The active section is `inset: 0`, so
    turning events back on for the whole of it put an invisible sheet over the canvas and the room
-   underneath could never be clicked. Everything a stop holds lives inside `.stop-inner`, and the
-   panels pinned to an anchor turn their own events on once they have settled. */
+   underneath could never be clicked. Everything a stop holds lives inside `.stop-inner`. */
 .walk[data-mode='full'] .stop[data-active] .stop-inner { pointer-events: auto; }
-.walk[data-mode='full'] .stop-inner { max-width: 40ch; }
-/* The stop name is the one thing that must always read whole. Nothing clips its overflow, and it is
-   sized to fit the copy column the panel placement reserves: at 6vw the widest stop name needs about
-   9.5 times its own font size, which is wider than 40ch, and the panel would then cover its last
-   letter. The cap keeps the whole word inside the column at every viewport width. */
-.walk[data-mode='full'] .stop-title { white-space: nowrap; font-size: clamp(1.8rem, 4.6vw, 2.8rem); }
-.walk[data-mode='full'] .stop-body { max-width: 40ch; max-height: 55vh; overflow: auto; }
+/* The copy column is signage: the stop's name, its one line, and one line for each project in the
+   room. Nothing else. Jordan's "on screen ui is getting in the way of visualization" was a column
+   of open cards down the left third of the frame, and the detail belongs to the exhibits now: the
+   pointer names one, a click opens its card beside it. Thirty four characters wide, and low in the
+   frame, so the room's middle band is clear. */
+.walk[data-mode='full'] .stop-inner { max-width: 34ch; }
+/* The stop name is the one thing that must always read whole. Nothing clips its overflow: at 4.6vw
+   the widest stop name needs about nine times its own font size, which is wider than the column,
+   and it is allowed to run past it the way a sign on a wall does. */
+/* Both of these sit straight on the room with no plate behind them, so each carries its own: a
+   tight dark shadow that reads as depth rather than as a box, over a lit wall as well as a dark one.
+   The name keeps the wing's glow on top of it. */
+.walk[data-mode='full'] .stop-title { white-space: nowrap; font-size: clamp(1.8rem, 4.6vw, 2.8rem); text-shadow: 0 1px 3px rgb(5 8 11 / 0.85), 0 0 24px color-mix(in srgb, var(--wing-light) 45%, transparent); }
+.walk[data-mode='full'] .stop-lead { margin: 0.75rem 0 1rem; font-size: 1rem; text-shadow: 0 1px 3px rgb(5 8 11 / 0.9); }
+/* The column is bottom aligned in a frame with 8vh of padding under it, so a body capped at 24vh
+   under a name and a line of about 14vh puts the column's top at about 55vh: the room's middle
+   band, where the exhibits are, stays clear of it at every stop. */
+.walk[data-mode='full'] .stop-body { max-width: none; max-height: 24vh; overflow: auto; overscroll-behavior: contain; }
 
 /* On fine pointers the disclosure is invisible: the body is simply there, open, as it was. */
 .stop-more > summary { display: none; }
@@ -111,7 +121,7 @@
      A sheet left open on a stop the camera then leaves needs no closing: the stop it lives in is
      `visibility: hidden` in the full walk, and visibility inherits into a fixed child. */
   .walk[data-mode='full'] .stop-inner {
-    position: fixed; left: 0; right: 0; bottom: 3.2rem; max-width: none;
+    position: fixed; left: 0; right: 0; bottom: 3.2rem; max-width: none; max-height: none;
     display: grid; align-content: end;
     padding: 0.35rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
     background: color-mix(in srgb, var(--surface) 92%, transparent);
@@ -143,15 +153,41 @@
   @media (prefers-reduced-motion: reduce) { .walk[data-mode='full'] .stop-body { transition: none; } }
 }
 
-/* The project rows are a three column table in the stacked layout. Over the walk they live in a
-   column barely 30 characters wide, so the title and its status plate take one line and the summary
-   drops underneath at the full width of the panel. The list gets a solid ground of its own: rows
-   sitting transparent over the room were unreadable. */
-.walk[data-mode='full'] .stop [data-project-list] { background: var(--surface); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0 0.75rem; }
-.walk[data-mode='full'] .stop .row-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.7rem 0.25rem; align-items: baseline; }
-.walk[data-mode='full'] .stop .row-title { min-width: 0; overflow-wrap: anywhere; }
-.walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
-.walk[data-mode='full'] .stop .row-body { padding: 0 0.25rem 1rem; }
+/* The compact column, and everything in it, belongs to the walk as a pointer reads it. A thumb gets
+   the sheet instead, where the copy is the whole point of what the reader just opened, so these are
+   scoped away from a coarse pointer rather than undone one property at a time inside it. */
+@media (pointer: fine), (pointer: none) {
+  /* The project list. A three column table in the stacked layout, and on the walk one line for each
+     project: its name and the plate saying where it stands. The summary line and the body are behind
+     the disclosure the row already was, so a reader with no pointer on the room can still open one.
+     The list gets a solid ground of its own: rows sitting transparent over the room were unreadable. */
+  .walk[data-mode='full'] .stop [data-project-list] { background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0 0.75rem; }
+  .walk[data-mode='full'] .stop .row-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; align-items: baseline; }
+  .walk[data-mode='full'] .stop .row-title { min-width: 0; overflow-wrap: anywhere; font-size: 1rem; }
+  .walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
+  .walk[data-mode='full'] .stop .row:not([open]) .row-line { display: none; }
+  .walk[data-mode='full'] .stop .row-body { padding: 0 0.25rem 1rem; }
+  /* The booth and the personnel file are the two stops whose copy is prose rather than a list of
+     projects. They get the list's ground for the same reason the list has one: a paragraph over a
+     lit room is unreadable without it. */
+  .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body,
+  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body { background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
+  .walk[data-mode='full'] .stop[data-stop='file'] .timeline { grid-template-columns: 4rem 1fr; }
+  /* The flagship is the first row of that list, not a card: same line, same plate, its picture and
+     its copy behind the same disclosure. */
+  .walk[data-mode='full'] .stop .bay { display: block; margin: 0; padding: 0; background: none; background-image: none; border: 0; border-bottom: 1px solid var(--surface-edge); border-radius: 0; }
+  .walk[data-mode='full'] .stop .bay[data-sealed] { border-image: none; }
+  .walk[data-mode='full'] .stop .bay-head { justify-content: space-between; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; }
+  .walk[data-mode='full'] .stop .bay-head:hover, .walk[data-mode='full'] .stop .bay[open] > .bay-head { background: var(--surface); }
+  .walk[data-mode='full'] .stop .bay-title { font-size: 1rem; font-weight: 600; }
+  .walk[data-mode='full'] .stop .bay-visual { display: none; }
+  .walk[data-mode='full'] .stop .bay-body { padding: 0 0.25rem 1rem; }
+  .walk[data-mode='full'] .stop .bay-summary { font-size: 1rem; }
+  /* The certification wall is six plates on a wall in the room, and six cards over them was half of
+     what Jordan meant by the UI getting in the way. The plates carry it on the walk, one card at a
+     time. The stacked page and the phone sheet keep the wall. */
+  .walk[data-mode='full'] [data-cert-wall] { display: none; }
+}
 @media (max-width: 900px) { .walk[data-mode='full'] .stop-title { white-space: normal; } }
 
 /* The exhibit card. One for the whole walk: a click on any exhibit fills it with that exhibit's own

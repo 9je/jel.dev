@@ -86,6 +86,30 @@ export function createHover(): Hover {
 }
 
 /**
+ * The copy an exhibit card carries, cloned out of the panel the walk already ships in its markup so
+ * there is one source for it. A project row and a flagship bay are both disclosures, so both hand
+ * over the head the summary holds and then their body, unfolded. Anything else hands over its own
+ * children, which is what a certification badge is.
+ *
+ * Cloned, never moved: the panel it came from stays in the copy column, where the reader clicked.
+ */
+export function exhibitContent(el: HTMLElement, doc: Document): DocumentFragment {
+  const frag = doc.createDocumentFragment();
+  const copy = (from: Element | null, into: Node) => { for (const n of from?.children ?? []) into.appendChild(n.cloneNode(true)); };
+  const summary = el.querySelector('summary');
+  if (summary) {
+    const head = doc.createElement('div');
+    head.className = 'exhibit-head';
+    copy(summary, head);
+    frag.appendChild(head);
+    copy(el.querySelector('.row-body, .bay-body'), frag);
+    return frag;
+  }
+  copy(el, frag);
+  return frag;
+}
+
+/**
  * The panel an exhibit opens: a flagship bay first, then a project row, then a certification badge,
  * and failing all three the body of the stop the id names.
  *
@@ -94,34 +118,8 @@ export function createHover(): Hover {
  * desk stands for the stop itself, and what it has to open is the copy of that stop. Matching on
  * the stop rather than on a plate keeps that case out of the content schema.
  *
- * The one DOM function in the module, and it only reads.
+ * One of the two DOM functions in the module, and both of them only read.
  */
-/**
- * The copy an exhibit card carries, cloned out of the panel the walk already ships in its markup so
- * there is one source for it. A flagship hands over the text half of its bay, a project row hands
- * over its summary line and its body with the disclosure already unfolded, and anything else hands
- * over its children, which is what a certification badge is.
- *
- * Cloned, never moved: the panel it came from stays in the copy column, where the reader clicked.
- */
-export function exhibitContent(el: HTMLElement, doc: Document): DocumentFragment {
-  const frag = doc.createDocumentFragment();
-  const copy = (from: Element | null, into: Node) => { for (const n of from?.children ?? []) into.appendChild(n.cloneNode(true)); };
-  const bay = el.querySelector('.bay-text');
-  if (bay) { copy(bay, frag); return frag; }
-  const summary = el.querySelector('summary');
-  if (summary) {
-    const head = doc.createElement('div');
-    head.className = 'exhibit-head';
-    copy(summary, head);
-    frag.appendChild(head);
-    copy(el.querySelector('.row-body'), frag);
-    return frag;
-  }
-  copy(el, frag);
-  return frag;
-}
-
 export function targetFor(id: string, _kind: Hotspot['kind'], root: ParentNode): HTMLElement | null {
   // Every id here is a content slug, but a stray quote would break out of the attribute selector.
   const safe = id.replace(/["\\]/g, '\\$&');

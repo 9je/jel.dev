@@ -9,15 +9,17 @@ const { Content } = await render(entry);
 const d = entry.data;
 const sealed = d.status === 'pending-release';
 ---
-<section class="bay" data-flagship={entry.id} data-sealed={sealed || undefined}>
+{/* A disclosure, like every other project in the list: open it is the wing's flagship card, and
+    closed it is one line of the walk's copy column, where the exhibit's card carries the copy. */}
+<details class="bay" data-flagship={entry.id} data-sealed={sealed || undefined} open>
+  <summary class="bay-head">
+    <h3 class="bay-title">{d.title}</h3>
+    <StatusPlate status={d.status} />
+  </summary>
   <div class="bay-visual" aria-hidden="true">
     {d.image && !sealed ? <Image src={d.image} alt="" width={960} height={540} loading="eager" /> : <div class="bay-hex"></div>}
   </div>
   <div class="bay-text">
-    <div class="bay-head">
-      <h3 class="bay-title">{d.title}</h3>
-      <StatusPlate status={d.status} />
-    </div>
     {sealed ? (
       <div class="bay-body">
         <p data-redacted>
@@ -39,7 +41,7 @@ const sealed = d.status === 'pending-release';
       </div>
     )}
   </div>
-</section>
+</details>
 
 <style>
   .bay {
@@ -64,7 +66,9 @@ const sealed = d.status === 'pending-release';
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 1l26 15v30L28 61 2 46V16z M28 49l26 15v30L28 109 2 94V64z' fill='none' stroke='%232455A4' stroke-width='1.5'/%3E%3C/svg%3E");
     background-size: 56px 97px;
   }
-  .bay-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin-bottom: 1rem; }
+  /* The summary spans the card, so the picture and the copy keep their two columns under it. */
+  .bay-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; list-style: none; cursor: pointer; }
+  .bay-head::-webkit-details-marker { display: none; }
   .bay-title { font-size: 1.6rem; }
   .bay-summary { font-size: 1.1rem; }
   .bay-warning, .bay-stack, .bay-unlocks { color: var(--text-dim); font-size: 0.95rem; }

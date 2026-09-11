@@ -34,8 +34,10 @@ const containmentRest = containmentList.filter((p) => p !== containmentFlagship)
 
   {wingStops.map(({ w, flagship, rest }) => (
     <StopSection id={w} title={site.stops[w].title} lead={site.stops[w].lead} wing={w} light={stop(w).light}>
-      {flagship && <FlagshipBay entry={flagship} />}
-      <div data-project-list>{rest.map((e) => <ProjectPlate entry={e} />)}</div>
+      <div data-project-list>
+        {flagship && <FlagshipBay entry={flagship} />}
+        {rest.map((e) => <ProjectPlate entry={e} />)}
+      </div>
     </StopSection>
   ))}
 
@@ -44,8 +46,10 @@ const containmentRest = containmentList.filter((p) => p !== containmentFlagship)
   </StopSection>
 
   <StopSection id="containment" title={site.stops.containment.title} lead={site.stops.containment.lead} wing="containment" light={stop('containment').light}>
-    {containmentFlagship && <FlagshipBay entry={containmentFlagship} />}
-    <div data-project-list>{containmentRest.map((e) => <ProjectPlate entry={e} />)}</div>
+    <div data-project-list>
+      {containmentFlagship && <FlagshipBay entry={containmentFlagship} />}
+      {containmentRest.map((e) => <ProjectPlate entry={e} />)}
+    </div>
   </StopSection>
 
   <StopSection id="file" title={site.stops.file.title} lead={a.line} light={stop('file').light}>

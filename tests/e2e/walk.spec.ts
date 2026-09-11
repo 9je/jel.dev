@@ -9,7 +9,10 @@ test('lite path renders every stop in order with a dock', async ({ page }) => {
   expect(ids).toEqual(STOPS);
   await expect(page.locator('[data-dock] a[data-stop-link]')).toHaveCount(7);
   await expect(page.locator('h1')).toHaveText(/Jordan Eldridge Labs/);
+  await expect(page.locator('section[data-stop="credentials"] [data-cert-wall]')).toBeVisible();
   await expect(page.locator('section[data-stop="credentials"] [data-cert-wall] li')).toHaveCount(6);
+  // Every project, the flagship included, is open on the stacked page.
+  await expect(page.locator('section[data-stop="fabrication"] details[data-flagship]')).toHaveAttribute('open', '');
   await expect(page.locator('section[data-stop="operations"] details[data-project]')).toHaveCount(3);
 });
 
@@ -119,6 +122,31 @@ test('every exhibit in the bay answers a click with the same card', async ({ pag
   await expect(card).toBeVisible();
   await page.mouse.click(2, 2);
   await expect(card).toBeHidden();
+});
+
+test('the copy column on the walk is one line for each project in the room', async ({ page }) => {
+  await page.goto('/?quality=low#fabrication');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+  const section = page.locator('section[data-stop="fabrication"]');
+  await expect(section).toHaveAttribute('data-active', '', { timeout: 30_000 });
+  // The flagship is the first row of the same list, closed, wearing its status plate.
+  const bay = section.locator('[data-flagship]');
+  await expect(bay).not.toHaveAttribute('open', '');
+  expect(await bay.evaluate((el) => el.parentElement?.hasAttribute('data-project-list'))).toBe(true);
+  await expect(bay.locator('.bay-head .plate')).toBeVisible();
+  await expect(bay.locator('.bay-body')).toBeHidden();
+  // A project row is one line until it is opened: the summary line and the body wait behind it.
+  const row = section.locator('details[data-project]').first();
+  await expect(row.locator('.row-line')).toBeHidden();
+  await row.locator('summary').click();
+  await expect(row.locator('.row-line')).toBeVisible();
+  // Narrow, and low enough to leave the room's middle band clear.
+  const frame = page.viewportSize()!;
+  const box = (await section.locator('.stop-inner').boundingBox())!;
+  expect(box.width).toBeLessThanOrEqual(400);
+  expect(box.y).toBeGreaterThan(frame.height * 0.4);
+  // The certification wall is six plates in a room of its own now, not six cards over them.
+  await expect(page.locator('[data-cert-wall]')).toBeHidden();
 });
 
 test('the flagship bay sits in the copy column and is never pinned', async ({ page }) => {
