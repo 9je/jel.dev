@@ -83,6 +83,23 @@ describe('FrameGovernor', () => {
     expect(run(g, 1.5, 8)).toBe('keep');
     expect(run(g, 2.5, 8)).toBe('trim');
   });
+  it('per room resets keep a background build from adding up to a verdict', () => {
+    // What scene.ts does around the background build loop: each later room's loadGroup decode and
+    // its compileAsync stall frames the pacer never saw, so they reach the governor undiscounted.
+    // Six rooms of that, each stall on its own too short to decide anything, used to add up to a
+    // trim and then to a bail, which hands the page to the lite path for the session.
+    const stall = (g: FrameGovernor) => { let seen = 'keep'; for (let t = 0; t < 1.5; t += 1 / 8) { const v = g.push(1 / 8); if (v !== 'keep') seen = v; } return seen; };
+
+    const without = new FrameGovernor();
+    let verdict = 'keep';
+    for (let room = 0; room < 6; room++) { const v = stall(without); if (v !== 'keep') verdict = v; }
+    expect(verdict).not.toBe('keep');
+
+    const withReset = new FrameGovernor();
+    for (let room = 0; room < 6; room++) { expect(stall(withReset)).toBe('keep'); withReset.reset(); }
+    // The finished scene is still judged normally.
+    expect(run(withReset, 3.5, 8)).toBe('trim');
+  });
   it('settles after a trim that worked', () => {
     const g = new FrameGovernor();
     expect(run(g, 3.5, 8)).toBe('trim');

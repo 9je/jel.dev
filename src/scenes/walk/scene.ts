@@ -284,6 +284,13 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
           if (stage && !disposed) { await renderer.compileAsync(stage.root, camera, scene); stream(target); }
         } catch (err) { console.warn(`background build of ${d.id} failed, running on the greybox`, err); opts.onDegraded?.(); }
         settled.add(d.id);
+        // loadGroup's decode and upload and compileAsync's shader work both sit outside the pacer,
+        // so the frames they stall arrive at sample() reading as 20 fps with nothing paced to
+        // discount. Forty of those in a row are enough to trim, and a second run is enough to bail
+        // the page to the lite path for the session, on a machine that would run the finished scene
+        // fine. Starting the governor's windows again per room means no window can span a room's
+        // unpaced cost.
+        governor.reset();
         readiness.get(d.stop)?.resolve();
       }
     } finally {
