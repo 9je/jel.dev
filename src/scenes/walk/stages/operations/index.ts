@@ -9,16 +9,24 @@ async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'operations'; scene.add(root);
   const shell = buildShell(ctx, root); await ctx.pace();
-  await buildDressing(ctx, root);
+  const { hotspots, blink } = await buildDressing(ctx, root);
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.Points) return;
     const translucent = (o.material as THREE.Material).transparent;
     o.castShadow = tier === 'high' && !shell.planes.has(o) && !translucent && !(o.geometry instanceof THREE.PlaneGeometry);
     o.receiveShadow = !translucent;
   });
+  // The rows breathe. Every rack's units are one batch over one material, so a whole rack pulses on
+  // a single write and the room costs fifteen of them a frame rather than one per unit. The period
+  // comes off the rack's own seed, so no two racks are ever in step and the rows read as a lot of
+  // machines each doing its own work instead of one animation playing sixteen times.
+  let clock = 0;
   return {
-    id: 'operations', root, lights: lights(),
-    update() {},
+    id: 'operations', root, lights: lights(), hotspots,
+    update(_t, dt) {
+      clock += dt;
+      for (const { material, seed } of blink) material.emissiveIntensity = 1.1 + 0.15 * Math.sin(clock * (3 + (seed % 5)) + seed);
+    },
     dispose() { root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
   };
 }

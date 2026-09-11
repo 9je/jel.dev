@@ -12,21 +12,39 @@ export function own(c: HTMLCanvasElement, srgb = true): THREE.CanvasTexture {
 /** Deterministic noise so a room looks the same on every load and every screenshot. */
 export function rng(seed: number): () => number { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
-/** A server rack front: dark panels with rows of status LEDs, a few dark. Emissive map. */
-export function rackFace(w = 256, h = 768, rows = 18, seed = 1): THREE.CanvasTexture {
+/**
+ * The face of one rack unit, 0.52 by 0.09 in the world: two drive handles with their own activity
+ * lights, a vent grille, and a pair of status LEDs on the right. Emissive map, so only the lit parts
+ * of it glow and the bezel itself stays lit by the room.
+ *
+ * The v1 rack painted a whole 2 m front as one 256 by 768 canvas, and at hall distance that reads as
+ * a smear of coloured dots. One canvas per unit at its own aspect keeps the handles and the grille
+ * legible instead, and the unit is what a person counts when they read a rack.
+ */
+export function unitFace(seed = 1): THREE.CanvasTexture {
+  const w = 320, h = 56;
   const [c, ctx] = canvas(w, h); const r = rng(seed);
-  ctx.fillStyle = '#05080b'; ctx.fillRect(0, 0, w, h);
-  const pitch = h / rows;
-  for (let i = 0; i < rows; i++) {
-    const y = i * pitch;
-    ctx.fillStyle = i % 3 === 0 ? '#0b1117' : '#080d12'; ctx.fillRect(8, y + 2, w - 16, pitch - 4);
-    const leds = 2 + Math.floor(r() * 4);
-    for (let j = 0; j < leds; j++) {
-      const on = r() > 0.15; const green = r() > 0.3;
-      ctx.fillStyle = !on ? '#141a1f' : green ? '#3fd47a' : '#6ec1d6';
-      ctx.fillRect(16 + j * 14, y + pitch / 2 - 3, 6, 6);
-    }
-    if (r() > 0.6) { ctx.fillStyle = '#1a2530'; ctx.fillRect(w - 70, y + pitch / 2 - 5, 50, 10); }
+  ctx.fillStyle = '#0b1219'; ctx.fillRect(0, 0, w, h);
+  // Two drive carriers on the left, each a lit face with a handle bar and its own activity lights.
+  // The carriers glow rather than sit dark with a pinprick on them: at hall distance a unit is five
+  // pixels tall, and a lit bezel is the only part of it anybody can actually read.
+  for (let i = 0; i < 2; i++) {
+    const x = 10 + i * 74;
+    ctx.fillStyle = '#4a5f70'; ctx.fillRect(x, 8, 66, h - 16);
+    ctx.fillStyle = '#8ba4b4'; ctx.fillRect(x + 6, 14, 46, 7);
+    ctx.fillStyle = '#2b3946'; ctx.fillRect(x + 6, 28, 46, 12);
+    ctx.fillStyle = r() > 0.25 ? '#5fe89a' : '#16242e'; ctx.fillRect(x + 55, 14, 7, 7);
+    ctx.fillStyle = r() > 0.6 ? '#ffd24a' : '#16242e'; ctx.fillRect(x + 55, 33, 7, 7);
+  }
+  // The grille: hairlines, not a texture of holes. At this size holes fill in and go grey.
+  ctx.fillStyle = '#1a2630'; ctx.fillRect(166, 8, 106, h - 16);
+  ctx.fillStyle = '#44596b';
+  for (let x = 170; x < 268; x += 6) ctx.fillRect(x, 12, 3, h - 24);
+  // Two status LEDs on the right, sometimes amber, occasionally out.
+  for (let i = 0; i < 2; i++) {
+    const on = r() > 0.18;
+    ctx.fillStyle = !on ? '#16242e' : r() > 0.35 ? '#9be6f6' : '#ffd24a';
+    ctx.fillRect(284, 12 + i * 22, 10, 10);
   }
   return own(c);
 }
@@ -78,11 +96,13 @@ export function chainlink(size = 256): THREE.CanvasTexture {
   // Line width 4, not the thinner 3: at cage viewing distance the thinner line breaks into a
   // speckle of sub-pixel dots instead of a clean diamond crossing, which reads as shimmer as the
   // camera moves.
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
   const cell = size / 4;
   for (let i = -1; i <= 4; i++) {
     ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell + size, size); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(i * cell + size, 0); ctx.lineTo(i * cell, size); ctx.stroke();
   }
-  const t = own(c, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  // Anisotropy 16, not the kit default of 4: a cage run tiles this twenty times along its length and
+  // an alpha tested wire at a grazing angle sparkles into speckle without it.
+  const t = own(c, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 16; return t;
 }

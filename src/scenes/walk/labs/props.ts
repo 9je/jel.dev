@@ -3,7 +3,7 @@ import type { AssetStore } from '../assets';
 import { instances, merged, type Spot } from '../merge';
 import { LABS, labSteel, labGlass, ceilingGrid } from './materials';
 import { stencilTexture } from '../textures';
-import { rackFace, screenFace, paperSheet, hazardPlate, chainlink, rng } from './textures';
+import { screenFace, paperSheet, hazardPlate, chainlink, rng } from './textures';
 
 export function rackSlots(levels: number, height: number): number[] { return Array.from({ length: levels }, (_, i) => +(((i + 1) * height) / levels).toFixed(4)); }
 export { gridPitch } from './materials';
@@ -29,15 +29,6 @@ export function pickBox(w: number, h: number, d: number, x: number, y: number, z
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
   m.position.set(x, y, z); m.visible = false;
   return m;
-}
-
-/** A 42U rack: dark box with a lit front. 0.6 wide, 2.1 tall, 1.0 deep, origin at floor centre. */
-export function serverRack(seed = 1): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.1, 1.0), dark()); body.position.y = 1.05; g.add(body);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 2.0), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.2, emissiveMap: rackFace(256, 768, 18, seed) }));
-  face.position.set(0, 1.05, 0.501); g.add(face);
-  return g;
 }
 
 /** A switchgear cabinet: grey green box, hazard plate on the door, origin at floor centre. */
@@ -146,21 +137,6 @@ export function cableTray(len: number): THREE.Group {
   const rungs: Spot[] = []; for (let x = -len / 2 + 0.15; x < len / 2; x += 0.3) rungs.push([x, -0.03, 0]);
   g.add(instances(new THREE.BoxGeometry(0.03, 0.02, 0.4), steel, rungs));
   const cables = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.3), new THREE.MeshStandardMaterial({ color: 0x1c2a44, roughness: 0.9 })); cables.position.y = 0.01; g.add(cables);
-  return g;
-}
-
-/** A chain-link cage wall along x: posts every 2 m, a top rail, and the mesh as an alpha-tested
- *  plane. Origin at the centre of the run at floor level. */
-export function cage(len: number, h = 2.6): THREE.Group {
-  const g = new THREE.Group(); const steel = labSteel(0x7a2a24);
-  const posts: Spot[] = cagePosts(len).map((x) => [x, h / 2, 0]);
-  g.add(instances(new THREE.BoxGeometry(0.06, h, 0.06), steel, posts));
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.05), steel); rail.position.y = h; g.add(rail);
-  const mesh = chainlink(); mesh.repeat.set(len / 0.5, h / 0.5);
-  // alphaTest without transparency keeps the mesh out of the transparent sort and lets it write
-  // depth, so the racks behind it read through the diamonds without sorting artefacts.
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ color: 0xb0b8bd, alphaMap: mesh, alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 }));
-  panel.position.y = h / 2; g.add(panel);
   return g;
 }
 
