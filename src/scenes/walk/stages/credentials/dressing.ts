@@ -3,7 +3,7 @@ import type { Hotspot, StageContext } from '../types';
 import { grounded, place } from '../../merge';
 import { papers } from '../../labs/props';
 import { gurney, tripodCamera, hardCase, cableCoil, tarpWall } from '../../labs/furniture';
-import { labSteel, LABS } from '../../labs/materials';
+import { labSteel } from '../../labs/materials';
 import { stencilTexture } from '../../textures';
 import { X0, X1, H, PLATE_X, PLATE_Z, PLATE_TURN } from './layout';
 import certs from '../../../../content/certs.json';
@@ -14,6 +14,10 @@ export interface Dressing { hotspots: Hotspot[]; dispose(): void }
 
 /** The ink on a plate: dark enough to read as print on a lit panel rather than as a second light. */
 const INK = '#1e2c3a';
+
+/** The bench sits north of the near cert plates, far enough up the hall that its far end does not
+ *  cut across the bottom of a plate frame in the hold's frame at t 0.70. */
+const BENCH_Z = -7.4;
 
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Dressing> {
   const { store, pace } = ctx;
@@ -82,20 +86,28 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(cableCoil(), -76.4, H - 1.8, -9, 0));
   await add(place(tarpWall(8, 3.2), X1 - 0.1, 1.9, -8, -Math.PI / 2));
 
-  // A bench along the east wall, painted the lab white, with the lab's own instruments on it.
+  // A bench along the east wall, with the lab's own instruments on it. The first pass forced every
+  // material to LABS.panel, which is a hair off white: that washed the model's own map out and left
+  // the second brightest object in the brightest room on the walk reading as a greybox slab. A
+  // cooler, darker tint keeps the map and puts the bench back under the plates it stands beneath.
   const bench = store.model('desk');
+  const BENCH = 0xb9c8d0;
   bench.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
-    const tint = (m: THREE.Material) => { const c = m.clone(); if ('color' in c) (c as THREE.MeshStandardMaterial).color.setHex(LABS.panel); return c; };
+    const tint = (m: THREE.Material) => {
+      const c = m.clone() as THREE.MeshStandardMaterial;
+      if ('color' in c) { c.color.setHex(BENCH); c.roughness = 0.55; c.metalness = 0.1; }
+      return c;
+    };
     o.material = Array.isArray(o.material) ? o.material.map(tint) : tint(o.material);
   });
-  bench.position.set(X1 - 1.2, 0, -8); bench.rotation.y = Math.PI / 2;
+  bench.position.set(X1 - 1.2, 0, BENCH_Z); bench.rotation.y = Math.PI / 2;
   await add(bench);
 
   const onBench = (name: string, z: number, ry: number) => place(grounded(store.model(name)), X1 - 1.2, 0.76, z, ry);
-  await add(onBench('microscope', -9.0, 0.5));
-  await add(onBench('chemistry_set', -6.9, -0.4));
-  await add(place(grounded(store.model('medical_box')), X1 - 1.0, 0.76, -8.3, 0.4));
+  await add(onBench('microscope', BENCH_Z - 1.0, 0.5));
+  await add(onBench('chemistry_set', BENCH_Z + 1.1, -0.4));
+  await add(place(grounded(store.model('medical_box')), X1 - 1.0, 0.76, BENCH_Z - 0.3, 0.4));
 
   // A stool knocked over beside the bench, a wheelchair parked up the hall and a stripped bed frame
   // stood on its edge against the west wall: the room was cleared out in a hurry.
