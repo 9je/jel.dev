@@ -16,6 +16,11 @@ const FIXTURE_Z = [-12, -6, 0, 4];
  *  owns the doorway that fills this gate and the vestibule behind it; this room closes the gate's
  *  head and its own south end so no frame in the transition shows an unbuilt edge. */
 const GATE_Z1 = -27, GATE_H = 3.2;
+/** The server hall cuts the doorway through the metre of wall where the two shells overlap (its X0
+ *  back to this room's X1), so that metre of the south end at floor level is the vestibule's own
+ *  south reveal. This room's south wall is built around it: a second plane in the same place facing
+ *  the same way would be two front faces on one plane, which is what fights for depth. */
+const VESTIBULE_W = 1;
 
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const planes = new Set<THREE.Object3D>();
@@ -37,8 +42,12 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   root.add(merged(bandGeoms, dadoMaterial()), merged(lineGeoms, dadoLineMaterial()));
 
   // The south end, closed. It was open, which is the black wall beside the desk in Jordan's shot of
-  // the server hall's far end: the gate is a doorway, and the rest of this end is wall.
-  const south = plane(W, H, labWall(store, W, H)); south.position.set(XC, H / 2, Z0);
+  // the server hall's far end: the gate is a doorway, and the rest of this end is wall. Two pieces:
+  // the run up to the vestibule, and the strip above it, so nothing is drawn twice.
+  const southW = W - VESTIBULE_W;
+  const south = plane(southW, H, labWall(store, southW, H)); south.position.set(X0 + southW / 2, H / 2, Z0);
+  const overDoor = plane(VESTIBULE_W, H - GATE_H, labWall(store, VESTIBULE_W, H - GATE_H));
+  overDoor.position.set(X1 - VESTIBULE_W / 2, (H + GATE_H) / 2, Z0);
   const head = plane(GATE_Z1 - Z0, H - GATE_H, labWall(store, GATE_Z1 - Z0, H - GATE_H));
   head.rotation.y = -Math.PI / 2; head.position.set(X1, (H + GATE_H) / 2, (Z0 + GATE_Z1) / 2);
 

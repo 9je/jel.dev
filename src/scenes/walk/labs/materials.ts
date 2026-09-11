@@ -13,10 +13,18 @@ export function labFloor(store: AssetStore, w: number, d: number, tint: number =
 export function labWall(store: AssetStore, w: number, h: number, tint: number = LABS.panel): THREE.MeshStandardMaterial {
   const m = surface(store.texture('wall_panel'), w, h, 3); m.color.setHex(tint); return m;
 }
-/** A dado band to 1.2 m with a thin line on top, as two geometries already placed. Merge many. */
+/**
+ * A dado band to 1.2 m with a thin line on top, as two geometries already placed. Merge many.
+ *
+ * The run is inset three centimetres at each end of `len`. A band flush with the end of its wall
+ * puts its end cap on whatever plane closes the wall there, facing the same way, and where that is
+ * a doorway's reveal the two are coplanar front faces the depth buffer cannot separate: a flicker
+ * down the jamb as the camera turns through the opening. Three centimetres is invisible and cannot.
+ */
 export function dadoBands(len: number, x: number, z: number, ry: number): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
-  const band = new THREE.BoxGeometry(len, 1.2, 0.03); band.rotateY(ry); band.translate(x, 0.6, z);
-  const line = new THREE.BoxGeometry(len, 0.07, 0.035); line.rotateY(ry); line.translate(x, 1.25, z);
+  const run = Math.max(0.1, len - 0.06);
+  const band = new THREE.BoxGeometry(run, 1.2, 0.03); band.rotateY(ry); band.translate(x, 0.6, z);
+  const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, 1.25, z);
   return { band, line };
 }
 export const dadoMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.8 });

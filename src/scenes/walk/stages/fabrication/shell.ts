@@ -85,9 +85,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // The opening's own steel frame, standing proud of the wall into the bay. The RECREATION stencil
   // that used to float on the blockwork above it is gone: the lit sign now hangs on the doorway
   // itself, two rooms' worth of wall further on, where the walk actually turns through it.
-  const section = 0.25, frameGeoms: THREE.BufferGeometry[] = [];
-  for (const x of [EXIT_X0, EXIT_X1]) { const post = new THREE.BoxGeometry(section, EXIT_H + section, section); post.translate(x, (EXIT_H + section) / 2, Z0 + section / 2); frameGeoms.push(post); }
-  const lintel = new THREE.BoxGeometry(EXIT_X1 - EXIT_X0 + section * 2, section, section); lintel.translate((EXIT_X0 + EXIT_X1) / 2, EXIT_H + section / 2, Z0 + section / 2); frameGeoms.push(lintel);
+  // It stands two centimetres clear of the wall plane, not on it: the break room's vestibule reveal
+  // is that plane, facing the same way as the frame's own back, and two coplanar front faces are a
+  // flicker on the jamb as the camera turns through the opening.
+  const section = 0.25, clear = 0.02, frameZ = Z0 + clear + section / 2;
+  const frameGeoms: THREE.BufferGeometry[] = [];
+  for (const x of [EXIT_X0, EXIT_X1]) { const post = new THREE.BoxGeometry(section, EXIT_H + section, section); post.translate(x, (EXIT_H + section) / 2, frameZ); frameGeoms.push(post); }
+  const lintel = new THREE.BoxGeometry(EXIT_X1 - EXIT_X0 + section * 2, section, section); lintel.translate((EXIT_X0 + EXIT_X1) / 2, EXIT_H + section / 2, frameZ); frameGeoms.push(lintel);
   root.add(merged(frameGeoms, new THREE.MeshStandardMaterial({ color: GIRT_TINT, roughness: 0.5, metalness: 0.6 })));
   // Front wall either side of the booth door and the header above it. The door is the booth's.
   for (const [x, w] of [[(X0 - 4) / 2, -4 - X0], [(X1 + 4) / 2, X1 - 4]] as [number, number][]) run(w, x, Z1 - 0.01, Math.PI);
@@ -97,9 +101,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // Dado: a band of dark machinery paint to 1.2 m with a safety line on top, along every wall. It
   // breaks the tile repeat at eye level and is the first thing that says "shop" rather than "box".
   const dado: THREE.BufferGeometry[] = [], line: THREE.BufferGeometry[] = [];
+  // Inset three centimetres at each end of the run, as the Labs kit's `dadoBands` is: a band flush
+  // with the end of its wall lands its end cap on the plane that closes the wall there, and at the
+  // exit that plane is the break room's doorway reveal, facing the same way.
   const band = (len: number, x: number, z: number, ry: number) => {
-    const b = new THREE.BoxGeometry(len, 1.2, 0.03); b.rotateY(ry); b.translate(x, 0.6, z); dado.push(b);
-    const l = new THREE.BoxGeometry(len, 0.07, 0.035); l.rotateY(ry); l.translate(x, 1.25, z); line.push(l);
+    const run = len - 0.06;
+    const b = new THREE.BoxGeometry(run, 1.2, 0.03); b.rotateY(ry); b.translate(x, 0.6, z); dado.push(b);
+    const l = new THREE.BoxGeometry(run, 0.07, 0.035); l.rotateY(ry); l.translate(x, 1.25, z); line.push(l);
   };
   band(D, X0 + 0.02, ZC, Math.PI / 2); band(D, X1 - 0.02, ZC, -Math.PI / 2);
   band(X1 - EXIT_X1, (EXIT_X1 + X1) / 2, Z0 + 0.02, 0);

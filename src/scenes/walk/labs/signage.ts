@@ -206,11 +206,16 @@ export function doorway(spec: DoorwaySpec): THREE.Group {
   }
   const shellMesh = merged(shell, spec.wall); shellMesh.name = 'shell'; g.add(shellMesh);
 
-  // The frame: two posts and a header on a 0.25 m section, standing in the wall plane.
-  const section = 0.25;
+  // The frame: two posts and a header on a 0.25 m section, standing in the wall plane. Each stands a
+  // centimetre clear of the opening rather than flush with it, for the reason the sign box's carcass
+  // does: flush, a post's inner face is the reveal's own plane and the header's underside is the
+  // ceiling's, both pairs facing the same way, and the depth buffer cannot separate them. The jambs
+  // then break into bands of frame and reveal as the camera moves through the doorway. A centimetre
+  // of daylight behind the frame is a centimetre of the reveal, which is what is drawn there anyway.
+  const section = 0.25, clear = 0.01;
   const frame: THREE.BufferGeometry[] = [];
-  for (const side of [-1, 1]) { const post = new THREE.BoxGeometry(section, h + section, section); post.translate((side * (w + section)) / 2, (h + section) / 2, 0); frame.push(post); }
-  const header = new THREE.BoxGeometry(w + section * 2, section, section); header.translate(0, h + section / 2, 0); frame.push(header);
+  for (const side of [-1, 1]) { const post = new THREE.BoxGeometry(section, h + section, section); post.translate(side * ((w + section) / 2 + clear), (h + section) / 2 + clear, 0); frame.push(post); }
+  const header = new THREE.BoxGeometry(w + section * 2 + clear * 2, section, section); header.translate(0, h + section / 2 + clear, 0); frame.push(header);
   const frameMesh = merged(frame, labSteel(0x2b3740)); frameMesh.name = 'frame'; g.add(frameMesh);
 
   const strip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, depth - 0.2), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: 1.5 }));
