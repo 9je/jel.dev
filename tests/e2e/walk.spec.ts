@@ -158,8 +158,11 @@ test('the flagship bay sits in the copy column and is never pinned', async ({ pa
 });
 
 test('every room builds in the background and a far dock jump lands', async ({ page }) => {
+  // The preloader and the flight share the test's budget, and under SwiftShader the first can take
+  // a minute on its own, so this one is not run against the file's default.
+  test.setTimeout(240_000);
   await page.goto('/?quality=low');
-  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   // credentials now has a real room, so this click waits on its background build, not just the
   // dock click and preloader states.
   await page.locator('a[data-stop-link="credentials"]').click();
@@ -244,10 +247,12 @@ test('one stop is readable at a time, and the leaving one is gone inside 450 ms'
   // Every stop and every transition between them: the camera never has two panels of copy up.
   for (const t of [0, 0.05, 0.13, 0.2, 0.3, 0.4, 0.48, 0.56, 0.63, 0.7, 0.77, 0.84, 0.92, 1]) {
     await page.evaluate((v) => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, v * max); }, t);
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(800);
     await expect(page.locator('section[data-stop][data-active]')).toHaveCount(1);
-    const opacities = await page.locator('section[data-stop]:not([data-active])').evaluateAll((els) => els.map((e) => Number(getComputedStyle(e).opacity)));
-    expect(Math.max(...opacities)).toBe(0);
+    // Polled rather than sampled once: Lenis is still easing toward this point, so the stop can
+    // change again a moment after the wait, and what has to hold is that nothing but the stop the
+    // camera settles on is ever left readable. How fast the leaving one goes is asserted below.
+    await expect.poll(async () => page.locator('section[data-stop]:not([data-active])').evaluateAll((els) => Math.max(...els.map((e) => Number(getComputedStyle(e).opacity)))), { timeout: 8_000 }).toBe(0);
   }
   // The crossfade itself: the leaving stop's opacity transition runs at once and is short, and the
   // arriving stop's does not start until after it has finished.

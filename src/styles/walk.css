@@ -95,11 +95,10 @@
    frame, so the room's middle band is clear. */
 .walk[data-mode='full'] .stop-inner { max-width: 34ch; }
 /* The stop name is the one thing that must always read whole. Nothing clips its overflow: at 4.6vw
-   the widest stop name needs about nine times its own font size, which is wider than the column,
-   and it is allowed to run past it the way a sign on a wall does. */
-/* Both of these sit straight on the room with no plate behind them, so each carries its own: a
-   tight dark shadow that reads as depth rather than as a box, over a lit wall as well as a dark one.
-   The name keeps the wing's glow on top of it. */
+   the widest name needs about nine times its own font size, which is wider than the column, and it
+   is allowed to run past it the way a sign on a wall does. The name and the lead both sit straight
+   on the room with no plate behind them, so each carries a tight dark shadow of its own, which
+   reads as depth rather than as a box over a lit wall and a dark one alike. */
 .walk[data-mode='full'] .stop-title { white-space: nowrap; font-size: clamp(1.8rem, 4.6vw, 2.8rem); text-shadow: 0 1px 3px rgb(5 8 11 / 0.85), 0 0 24px color-mix(in srgb, var(--wing-light) 45%, transparent); }
 .walk[data-mode='full'] .stop-lead { margin: 0.75rem 0 1rem; font-size: 1rem; text-shadow: 0 1px 3px rgb(5 8 11 / 0.9); }
 /* The column is bottom aligned in a frame with 8vh of padding under it, so a body capped at 24vh
@@ -124,8 +123,7 @@
     position: fixed; left: 0; right: 0; bottom: 3.2rem; max-width: none; max-height: none;
     display: grid; align-content: end;
     padding: 0.35rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
-    background: color-mix(in srgb, var(--surface) 92%, transparent);
-    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
     border-top: 1px solid var(--surface-edge);
     border-radius: 18px 18px 0 0;
   }
@@ -161,7 +159,7 @@
      project: its name and the plate saying where it stands. The summary line and the body are behind
      the disclosure the row already was, so a reader with no pointer on the room can still open one.
      The list gets a solid ground of its own: rows sitting transparent over the room were unreadable. */
-  .walk[data-mode='full'] .stop [data-project-list] { background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0 0.75rem; }
+  .walk[data-mode='full'] .stop [data-project-list] { background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0 0.75rem; }
   .walk[data-mode='full'] .stop .row-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; align-items: baseline; }
   .walk[data-mode='full'] .stop .row-title { min-width: 0; overflow-wrap: anywhere; font-size: 1rem; }
   .walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
@@ -171,7 +169,7 @@
      projects. They get the list's ground for the same reason the list has one: a paragraph over a
      lit room is unreadable without it. */
   .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body,
-  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body { background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
+  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body { background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
   .walk[data-mode='full'] .stop[data-stop='file'] .timeline { grid-template-columns: 4rem 1fr; }
   /* The flagship is the first row of that list, not a card: same line, same plate, its picture and
      its copy behind the same disclosure. */
@@ -200,12 +198,16 @@
   top: var(--cy, 50vh);
   transform: translateY(-50%);
   z-index: 4;
-  width: min(34ch, calc(100vw - 2rem));
+  /* Wide enough to read prose at, and no wider than what it holds: a certification is a plate, a
+     name and an issuer, and a card of empty ground beside it reads as a panel that failed to load. */
+  width: fit-content;
+  min-width: 20ch;
+  max-width: min(34ch, calc(100vw - 2rem));
   max-height: 62vh;
   overflow: auto;
   padding: 0.9rem 1.1rem 1rem;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
+  /* Solid: this one hangs over the lit plate it describes, and the room read through it. */
+  background: var(--surface);
   border: 1px solid var(--surface-edge);
   /* The wing's own colour, on the edge facing the exhibit's side of the room. */
   border-left: 2px solid var(--wing-light);
