@@ -111,3 +111,54 @@ describe('the suspended ceiling', () => {
     expect(kit.nearestLitPanel(16, 8, 4.5, 1.8, { tile: 0.6, lit })).toBe(11);
   });
 });
+
+/**
+ * The fit rule the break room's ceiling turns on: a 1.2 m troffer hung in a 0.6 m tile grid is wider
+ * than the tile it replaces, so a lit tile on the edge of a run carries a fitting that hangs half of
+ * itself out over the wall below or through a doorway header. Those tiles go dark.
+ *
+ * It is shared kit logic now, and the two functions that apply it enumerate the grid separately:
+ * `ceilingGrid` builds the panels and `nearestLitPanel` counts them to answer with an index. They
+ * agree only because they walk the same tiles in the same order under the same rule, so what is
+ * pinned here is that agreement, not just the count.
+ */
+describe('the troffer fit rule', () => {
+  type Materials = typeof import('../../src/scenes/walk/labs/materials');
+  let kit: Materials;
+  // A 6 by 3 m ceiling on a 0.6 m tile is 10 by 5 tiles. Column 0 sits at local x -2.7, so a 1.2 m
+  // troffer in it reaches -3.3 and the ceiling stops at -3. Column 4, at -0.3, is nowhere near an
+  // edge. One lit tile in each, in the same row.
+  const lit = (i: number, j: number) => (i === 0 || i === 4) && j === 2;
+  const W = 6, D = 3, TILE = 0.6, WIDE: [number, number] = [1.2, 0.28];
+
+  beforeAll(async () => { kit = await import('../../src/scenes/walk/labs/materials'); });
+
+  it('leaves a tile dark when its troffer would hang past the edge', () => {
+    expect(kit.ceilingGrid(null, W, D, 3, { tile: TILE, lit, panel: WIDE }).panels.count).toBe(1);
+    // The same two tiles with a fitting that fits inside its own tile: both are lit, so it is the
+    // panel's size that excluded the first one and not the pattern.
+    expect(kit.ceilingGrid(null, W, D, 3, { tile: TILE, lit }).panels.count).toBe(2);
+  });
+
+  it('drops the last panel in a run rather than hanging it off the end', () => {
+    const edge = (i: number, j: number) => i === 0 && j === 2;
+    expect(kit.ceilingGrid(null, W, D, 3, { tile: TILE, lit: edge, panel: WIDE }).panels.count).toBe(0);
+    expect(kit.nearestLitPanel(W, D, -2.7, 0, { tile: TILE, lit: edge, panel: WIDE })).toBe(-1);
+    expect(kit.nearestLitPanel(W, D, -2.7, 0, { tile: TILE, lit: edge })).toBe(0);
+  });
+
+  it('counts the panels a room can drive the same way the grid builds them', () => {
+    // Asked for the panel over the edge tile, which the rule has taken away, both functions have to
+    // land on the surviving one: the index has to name a panel that exists.
+    const index = kit.nearestLitPanel(W, D, -2.7, 0, { tile: TILE, lit, panel: WIDE });
+    expect(index).toBe(0);
+    const driven = kit.ceilingGrid(null, W, D, 3, { tile: TILE, lit, panel: WIDE, flickerIndex: index });
+    expect(driven.flicker).toHaveLength(1);
+    expect(driven.panels.count).toBe(0);
+    // Without the rule biting, the same point names the edge tile and the interior one is index 1,
+    // which is what makes the agreement worth pinning: the indices move when the rule applies.
+    expect(kit.nearestLitPanel(W, D, -2.7, 0, { tile: TILE, lit })).toBe(0);
+    expect(kit.nearestLitPanel(W, D, -0.3, 0, { tile: TILE, lit })).toBe(1);
+    expect(kit.nearestLitPanel(W, D, -0.3, 0, { tile: TILE, lit, panel: WIDE })).toBe(0);
+  });
+});
