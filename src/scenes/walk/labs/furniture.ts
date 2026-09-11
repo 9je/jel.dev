@@ -560,3 +560,38 @@ export function openFile(page?: THREE.Texture): THREE.Group {
   hinge.add(sheet);
   return g;
 }
+
+/**
+ * A task chair: five star base on casters, gas column, a fabric seat and a tilted back with the
+ * lumbar bar and two armrests. Origin on the floor at the column, facing +z. Three draw calls.
+ * The rooms that need a desk chair used a wooden armchair off Poly Haven, which has no office
+ * chair, and Jordan read it as a weak model. A server hall and a control room get this instead.
+ */
+export function taskChair(): THREE.Group {
+  const g = new THREE.Group();
+  const chrome = new THREE.MeshStandardMaterial({ color: 0x9aa3aa, metalness: 0.85, roughness: 0.3 });
+  const fabric = new THREE.MeshStandardMaterial({ color: 0x1c2126, roughness: 0.92, metalness: 0 });
+  const plastic = new THREE.MeshStandardMaterial({ color: 0x0f1215, roughness: 0.6, metalness: 0.1 });
+  const SEAT = 0.47;
+  const metal: THREE.BufferGeometry[] = [new THREE.CylinderGeometry(0.03, 0.035, SEAT - 0.09, 12).translate(0, (SEAT - 0.09) / 2 + 0.04, 0)];
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + Math.PI / 10;
+    const spoke = new THREE.BoxGeometry(0.32, 0.03, 0.04).translate(0.16, 0.05, 0);
+    spoke.rotateY(a); metal.push(spoke);
+    metal.push(new THREE.SphereGeometry(0.028, 10, 8).translate(Math.cos(a) * 0.31, 0.028, -Math.sin(a) * 0.31));
+  }
+  g.add(merged(metal, chrome));
+  const back = new THREE.BoxGeometry(0.46, 0.5, 0.06).translate(0, SEAT + 0.35, -0.24);
+  back.rotateX(-0.12);
+  g.add(merged([new THREE.BoxGeometry(0.5, 0.08, 0.48).translate(0, SEAT, 0.01), back], fabric));
+  const trim: THREE.BufferGeometry[] = [
+    new THREE.BoxGeometry(0.42, 0.04, 0.05).translate(0, SEAT + 0.12, -0.245),
+    new THREE.BoxGeometry(0.5, 0.05, 0.5).translate(0, SEAT - 0.06, 0.01),
+  ];
+  for (const sx of [-1, 1]) {
+    trim.push(new THREE.BoxGeometry(0.03, 0.2, 0.05).translate(sx * 0.27, SEAT + 0.08, 0.04));
+    trim.push(new THREE.BoxGeometry(0.06, 0.025, 0.26).translate(sx * 0.27, SEAT + 0.19, 0.0));
+  }
+  g.add(merged(trim, plastic));
+  return g;
+}

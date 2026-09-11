@@ -42,7 +42,6 @@ Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](
 | table | [dining_table](https://polyhaven.com/a/dining_table) | model |
 | bin | [metal_trash_can](https://polyhaven.com/a/metal_trash_can) | model |
 | trashbag | [trashbag](https://polyhaven.com/a/trashbag) | model |
-| office_chair | [modern_arm_chair_01](https://polyhaven.com/a/modern_arm_chair_01) | model |
 | laptop | [classic_laptop](https://polyhaven.com/a/classic_laptop) | model |
 | medical_box | [medical_box](https://polyhaven.com/a/medical_box) | model |
 | tote | [industrial_pastic_container](https://polyhaven.com/a/industrial_pastic_container) | model |

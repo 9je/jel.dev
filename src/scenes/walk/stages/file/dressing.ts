@@ -4,7 +4,7 @@ import { site } from '../../../../content/site';
 import { grounded, instances, merged, place, repeat, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
 import { labSteel } from '../../labs/materials';
-import { controlConsole, monitor, openFile, pinboard } from '../../labs/furniture';
+import { controlConsole, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
 import { consoleFace, personnelSheet, timelineScreen } from '../../labs/textures';
 import { DESK, FILE, X1, Z1 } from './layout';
 
@@ -151,8 +151,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The chair, pushed back from the console and swung north, which is the last thing a person does
   // before they leave a desk. It stands clear of the folder in the settled frame on purpose: a
   // 0.8 m chair a metre nearer the lens covers a 0.3 m file completely.
-  const chair = store.model('office_chair');
-  await add(place(chair, -68.6, 0, 32.55, 1.25));
+  await add(place(taskChair(), -68.6, 0, 32.55, 1.25));
 
   // ---- The walls -------------------------------------------------------------------------------
   // The board of paperwork on the north wall, which is the only warm surface in the room that is

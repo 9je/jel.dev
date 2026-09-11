@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, instances, merged, once, place, type Spot } from '../../merge';
 import { papers, wallScreen } from '../../labs/props';
+import { taskChair } from '../../labs/furniture';
 import { cage, cageGate, cableBundle, serverRack, trunkPipe, wallPanel } from '../../labs/plant';
 import { labSteel } from '../../labs/materials';
 import { tapeStrip } from '../../labs/signage';
@@ -110,7 +111,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // Each loose thing is somewhere a person left it for a reason: the chair pushed back from the
   // desk, the boxes dropped at the cage gate waiting to go in, the ladder up at the wall panels.
   // Spread down the aisle they read as scatter, and Jordan's note was "model position feels random".
-  await add(once(prop('office_chair'), X0 + 2.2, 0, -31.7, -Math.PI / 2 + 0.3));
+  await add(place(taskChair(), X0 + 2.2, 0, -31.7, -Math.PI / 2 + 0.3));
   await add(boxes([[GATE_X + 0.9, 0.2, -33.5, 0.3], [GATE_X + 1.28, 0.6, -33.64, -0.45]]));
   await add(place(stepladder(), -64.6, 0, Z1 - 0.75, 0.15));
   await add(papers([

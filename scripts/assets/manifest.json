@@ -193,10 +193,6 @@
       "id": "trashbag",
       "group": "recreation"
     },
-    "office_chair": {
-      "id": "modern_arm_chair_01",
-      "group": "operations"
-    },
     "laptop": {
       "id": "classic_laptop",
       "group": "operations"

@@ -57,6 +57,15 @@ describe('the break room kit', () => {
     expect(box.min.y).toBeLessThan(0.6);
   });
 
+  it('stands a task chair at desk height on five casters, in three draw calls', () => {
+    const chair = kit.taskChair();
+    let meshes = 0; chair.traverse((o) => { if ((o as T.Mesh).isMesh) meshes++; });
+    expect(meshes).toBe(3);
+    const box = new THREE.Box3().setFromObject(chair);
+    expect(box.min.y).toBeGreaterThanOrEqual(-0.001);
+    expect(box.max.y).toBeGreaterThan(0.95); expect(box.max.y).toBeLessThan(1.15);
+    expect(box.max.x - box.min.x).toBeLessThan(0.75);
+  });
   it('builds a flight case the size a room stacks two of', () => {
     const box = new THREE.Box3().setFromObject(kit.hardCase());
     expect(box.min.y).toBeCloseTo(0, 2);
