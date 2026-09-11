@@ -30,13 +30,13 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(cableTray(12), -30, 2.72, Z0 + 0.28));
 
   // ---- South wall, east to west: the kitchen ----------------------------------------------------
-  await add(place(fridge(), -26.55, 0, Z0 + 0.37));
-  await add(place(kitchenette(3.2), -28.6, 0, Z0 + 0.33));
-  await add(place(splashback(3.2, 0.62), -28.6, 1.19, Z0 + 0.05));
-  await add(once(prop('microwave'), -27.5, 0.905, Z0 + 0.33, 0.15));
-  await add(once(prop('kettle'), -29.9, 0.905, Z0 + 0.28, -0.4));
-  await add(once(prop('tea_set'), -29.1, 0.905, Z0 + 0.24, 0.9));
-  await add(place(poster('WASH YOUR HANDS', 0.44, 0.62, 5), -30.0, 1.62, Z0 + 0.06));
+  await add(place(fridge(), -26.05, 0, Z0 + 0.37));
+  await add(place(kitchenette(3.2), -28.0, 0, Z0 + 0.33));
+  await add(place(splashback(3.2, 0.62), -28.0, 1.19, Z0 + 0.05));
+  await add(once(prop('microwave'), -27.2, 0.905, Z0 + 0.33, 0.15));
+  await add(once(prop('kettle'), -29.4, 0.905, Z0 + 0.28, -0.4));
+  await add(once(prop('tea_set'), -29.0, 0.905, Z0 + 0.24, 0.9));
+  await add(place(poster('WASH YOUR HANDS', 0.44, 0.62, 5), -29.3, 1.6, Z0 + 0.06));
   // The clock hangs over the counter, not on the far wall: it is the one thing that fills the bare
   // metre of wall between the cupboards and the ceiling on the side of the frame the copy leaves.
   await add(once(prop('wall_clock'), -26.75, 2.3, Z0 + 0.07));
@@ -48,21 +48,24 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const machine = vendingMachine({ accent: ACCENT, lit: true, seed: 11 });
   const header = machine.getObjectByName('header') as THREE.Mesh;
   const litHeader = header.material as THREE.MeshStandardMaterial;
-  await add(place(machine, -31.1, 0, Z0 + 0.42));
+  await add(place(machine, -31.4, 0, Z0 + 0.42));
+  // Its dark twin stands beside it, between the lit machine and the counter. Two machines side by
+  // side, one out, is the whole abandonment beat in one object, and the dead one is the piece of
+  // wall the flagship plate hangs over at the hold.
+  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -30.35, 0, Z0 + 0.42));
 
   const hotspots: Hotspot[] = [];
   for (const [key, title, x, accent] of CABINETS) {
     const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7 }), x, 0, CABINET_Z, CABINET_RY);
     await add(cabinet);
     hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
-    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-28.2, 2.2, Z0 + 0.5));
+    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-30.35, 2.2, Z0 + 0.6));
   }
-  // The copy panel sits over the kitchen end of the run, on the right of the frame, so it never
-  // covers the row it is describing.
+  // The copy panel hangs on the dead machine beside the row, on the right of the frame, so it never
+  // covers the four cabinets it is describing.
   anchors.set('recreation', new THREE.Vector3(-27.4, 2.0, -33.6));
 
   // ---- North wall: the quiet side ---------------------------------------------------------------
-  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -23.6, 0, Z1 - 0.42, Math.PI));
   // The television is a status board, not a project: no hotspot. Its face is measured off the model
   // rather than guessed, and hung 5 mm proud of the front of its own bounding box.
   const tv = prop('tv');
