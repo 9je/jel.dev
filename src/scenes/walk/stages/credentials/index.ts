@@ -9,7 +9,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'credentials'; scene.add(root);
   const shell = buildShell(ctx, root); await ctx.pace();
-  await buildDressing(ctx, root);
+  const dressing = await buildDressing(ctx, root);
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.Points) return;
     const translucent = (o.material as THREE.Material).transparent;
@@ -19,7 +19,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   return {
     id: 'credentials', root, lights: lights(),
     update() {},
-    dispose() { root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
+    dispose() { dressing.dispose(); root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
   };
 }
 

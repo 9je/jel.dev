@@ -11,7 +11,6 @@
 export const X0 = -83, X1 = -75, Z0 = -30, Z1 = 6, H = 7;
 export const W = X1 - X0, D = Z1 - Z0, XC = (X0 + X1) / 2, ZC = (Z0 + Z1) / 2;
 export const LAB = { x: XC, z: -19, w: 7.2, d: 12, h: 3.2, sill: 0.6, doorX: -79.2, doorW: 2.4 };
-export const LAB_Z0 = LAB.z - LAB.d / 2, LAB_Z1 = LAB.z + LAB.d / 2;
 
 /** Plate centres, three per side, mounted just inside the lab's own glass. The hold looks west by
  *  spec, so the east three are never in frame there: they are dressing seen through the glass on

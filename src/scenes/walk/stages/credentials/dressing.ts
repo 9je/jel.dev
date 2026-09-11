@@ -7,9 +7,18 @@ import { stencilTexture } from '../../textures';
 import { X0, X1, PLATE_X, PLATE_Z } from './layout';
 import certs from '../../../../content/certs.json';
 
-export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<void> {
+/** Whatever the dressing has to clean up itself. The badge textures load out of band, so the stage
+ *  has to be able to tell the dressing it is gone. */
+export interface Dressing { dispose(): void }
+
+export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Dressing> {
   const { store, pace } = ctx;
   const add = async (o: THREE.Object3D) => { root.add(o); await pace(); };
+  // A badge image can land after the stage was disposed (a page swap, or a fallback, mid load).
+  // Assigning it then would hang a live texture off a material nobody will ever dispose again, so a
+  // late callback throws its texture away instead.
+  let disposed = false;
+  const badges: THREE.Texture[] = [];
 
   // The six certifications, three per side, backlit on the lab's glass with the badge image and
   // name and issuer beneath. A failed image load leaves the plate lit with its name only.
@@ -23,7 +32,11 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     face.position.set(x + (side === 'west' ? 0.05 : -0.05), 1.75, z); face.rotation.y = ry; root.add(face);
     const badge = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
     badge.position.set(x + (side === 'west' ? 0.06 : -0.06), 2.05, z); badge.rotation.y = ry; root.add(badge);
-    loader.load(c.badgeImage, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.userData.owned = true; const m = badge.material as THREE.MeshBasicMaterial; m.map = t; m.opacity = 1; m.needsUpdate = true; }, undefined, () => { /* name only */ });
+    loader.load(c.badgeImage, (t) => {
+      if (disposed) { t.dispose(); return; }
+      t.colorSpace = THREE.SRGBColorSpace; t.userData.owned = true; badges.push(t);
+      const m = badge.material as THREE.MeshBasicMaterial; m.map = t; m.opacity = 1; m.needsUpdate = true;
+    }, undefined, () => { /* name only */ });
     const label = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.4), new THREE.MeshBasicMaterial({ map: stencilTexture(c.name, { width: 768, height: 200, color: '#2A3B4A', font: '600 64px Michroma, system-ui, sans-serif', alpha: 1, flecks: false }), transparent: true, depthWrite: false }));
     label.position.set(x + (side === 'west' ? 0.07 : -0.07), 1.15, z); label.rotation.y = ry; root.add(label);
     const issuer = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.2), new THREE.MeshBasicMaterial({ map: stencilTexture(c.issuer, { width: 512, height: 100, color: '#2A3B4A', font: '400 44px Michroma, system-ui, sans-serif', alpha: 0.8, flecks: false }), transparent: true, depthWrite: false }));
@@ -53,4 +66,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   await add(papers([[X1 - 2.4, 0, -9.2, 0.5], [X1 - 2.0, 0, -6.4, 1.3], [X1 - 3.0, 0, 1.2, 2.1], [X1 - 2.2, 0, -11.6, 0.9]]));
   await add(tapeLine([X0 + 0.4, 4], [X1 - 0.4, 4], 1.0));
+
+  // disposeObject() reaches the badge textures through their materials, so this is belt and braces
+  // for the ones already assigned and the only cleanup for one still in flight.
+  return { dispose() { disposed = true; for (const t of badges) t.dispose(); badges.length = 0; } };
 }
