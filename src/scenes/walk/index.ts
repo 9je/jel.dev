@@ -294,6 +294,10 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
   const onMove = (e: PointerEvent) => { at = { x: e.clientX, y: e.clientY }; if (!raf) raf = requestAnimationFrame(pickFrame); };
   const onLeave = () => { at = null; if (raf) { cancelAnimationFrame(raf); raf = 0; } setHover(null); hideLabel(); };
   const open = (x: number, y: number) => {
+    // A move queued a pick for the next frame, and it would paint the hover label back over the
+    // cursor after the click cleared it. The click is the newer answer, so the pick is dropped.
+    at = null; if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    hideLabel();
     const h = pickAt(x, y);
     // A click on the room and not on an exhibit is the reader putting the card away.
     if (!h) { closeCard(els); return; }
