@@ -23,7 +23,12 @@ export const STOPS: Stop[] = [
   { id: 'fabrication', t: 0.2, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], wing: 'fabrication', light: '#E0813A' },
   { id: 'recreation', t: 0.4, hold: [0.37, 0.44], lookAt: [-33.7, 1.5, -35], wing: 'recreation', light: '#3D7BE0' },
   { id: 'operations', t: 0.56, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
-  { id: 'credentials', t: 0.7, hold: [0.67, 0.74], lookAt: [-82.4, 2.2, -18], light: '#D9E8EE' },
+  // The credentials hold stands inside the glass lab and looks north up it, so the three plates on
+  // each side of the aisle are both in frame. Looking west put one wall in shot and the other three
+  // plates behind the camera, which is what Jordan saw. The aim sits a little east of the hold's
+  // own x: the spline parks at -79.83 and the lab runs on -79, so a straight north aim leans the
+  // frame toward the west row and crowds the east one against the edge.
+  { id: 'credentials', t: 0.7, hold: [0.67, 0.74], lookAt: [-79.2, 1.75, -12], light: '#D9E8EE' },
   { id: 'containment', t: 0.84, hold: [0.81, 0.88], lookAt: [-79, 1.2, 22], wing: 'containment', light: '#D7383A' },
   { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];

@@ -46,6 +46,49 @@ describe('the break room kit', () => {
     }
   });
 
+  it('stands a gurney at trolley height with the sheet hanging off one end', () => {
+    const box = new THREE.Box3().setFromObject(kit.gurney());
+    expect(box.min.y).toBeCloseTo(0, 2);
+    expect(box.max.y).toBeCloseTo(0.93, 2);
+    // 0.8 by 2.0 on plan, which is what the lab's clearance from the walked line is measured against.
+    expect(box.max.x - box.min.x).toBeCloseTo(0.8, 2);
+    expect(box.max.z - box.min.z).toBeCloseTo(2.0, 2);
+    // The hanging edge reaches below the deck, or the sheet is just a white box on a trolley.
+    expect(box.min.y).toBeLessThan(0.6);
+  });
+
+  it('builds a flight case the size a room stacks two of', () => {
+    const box = new THREE.Box3().setFromObject(kit.hardCase());
+    expect(box.min.y).toBeCloseTo(0, 2);
+    // The shell is 0.45 tall, so a case placed at y 0.45 lands on the lid of the one below it.
+    expect(box.max.y).toBeCloseTo(0.45, 2);
+    expect(box.max.x - box.min.x).toBeCloseTo(0.61, 2);
+  });
+
+  it('hangs a cable coil the full drop below its fixing', () => {
+    const box = new THREE.Box3().setFromObject(kit.cableCoil());
+    // The origin is the top of the coil and the cord runs up from it to the ceiling.
+    expect(box.max.y).toBeCloseTo(1.8, 2);
+    expect(box.min.y).toBeLessThan(0);
+    expect(box.min.y).toBeGreaterThan(-0.4);
+  });
+
+  it('stands a camera on a tripod at eye height', () => {
+    const box = new THREE.Box3().setFromObject(kit.tripodCamera());
+    expect(box.min.y).toBeCloseTo(0, 2);
+    expect(box.max.y).toBeGreaterThan(1.45);
+    expect(box.max.y).toBeLessThan(1.7);
+    // Splayed legs, or it is a stick: the feet spread wider than the head is deep.
+    expect(box.max.x - box.min.x).toBeGreaterThan(0.6);
+  });
+
+  it('slings a tarp the size it was asked for with a rail over it', () => {
+    const box = new THREE.Box3().setFromObject(kit.tarpWall(8, 3.2));
+    expect(box.max.x - box.min.x).toBeCloseTo(8, 2);
+    expect(box.max.y).toBeGreaterThan(1.6);
+    expect(box.min.y).toBeCloseTo(-1.6, 1);
+  });
+
   it('gives every locker bay a door', () => {
     const doors = (bays: number) => {
       let n = 0;

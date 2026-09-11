@@ -66,7 +66,11 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
       { face: 'south', x: doorLocalX, w: LAB.doorW },
       { face: 'north', x: doorLocalX, w: LAB.doorW },
     ],
-    litEvery: 1, panelIntensity: 0.9, floor: labFloor(store, LAB.w, LAB.d, LABS.panel),
+    // Every tile lit at 0.9 was the ceiling Jordan called crazy: a continuous sheet of light with
+    // no ceiling left between the panels, and the plates washed out under it. One tile in three at
+    // 0.55 leaves the grid reading as a grid and hands the glow back to the plates.
+    litEvery: 3, panelIntensity: 0.55, panel: [1.1, 1.1], frosted: true,
+    floor: labFloor(store, LAB.w, LAB.d, LABS.panel),
   });
   lab.position.set(LAB.x, 0, LAB.z); root.add(lab);
 

@@ -5,8 +5,9 @@ import { stencilTexture } from '../textures';
 import { canvas, own, paperSheet, rng } from './textures';
 
 /**
- * The break room kit. Everything here has its origin on the floor at its own centre and faces +z,
- * so a room places one with `place(piece, x, 0, z, ry)` and never has to know how tall it is.
+ * The break room kit and the clean lab's, in that order. Everything here has its origin on the
+ * floor at its own centre and faces +z, so a room places one with `place(piece, x, 0, z, ry)` and
+ * never has to know how tall it is.
  *
  * These are the pieces that have to carry a room on their own: Jordan's read of the first pass was
  * "idk what any of these things are", and the fix is not more props but more of the few details
@@ -360,4 +361,93 @@ export function tileGrid(size = 128): THREE.CanvasTexture {
   ctx.fillStyle = '#ffffff';
   for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) ctx.fillRect(i * cell + grout, j * cell + grout, cell - grout * 2, cell - grout * 2);
   const t = own(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The clean lab's kit. Terragroup's lab reference is a white glass box with a shoot set up around
+// it: a sheeted gurney inside, a camera on a tripod outside the glass, orange flight cases on the
+// floor, a coiled yellow cable off the ceiling and a blue tarp slung along the wall. These are the
+// five pieces that turn an empty white box into a room somebody was working in this morning.
+
+/** A hospital gurney with a sheet thrown over it, one edge hanging off the end. 0.8 by 2.0 on plan,
+ *  origin at floor centre, long axis along z. Three draw calls. */
+export function gurney(): THREE.Group {
+  const g = new THREE.Group();
+  const steel = labSteel(0x9aa5ad);
+  g.add(instances(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8), steel, [[-0.3, 0.3, -0.85], [0.3, 0.3, -0.85], [-0.3, 0.3, 0.85], [0.3, 0.3, 0.85]]));
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 1.9), steel); deck.position.y = 0.64; g.add(deck);
+  // The sheet is a slab rather than cloth, and the one thing that sells it as cloth is the piece
+  // hanging off the foot: a flat white box on a trolley reads as a box, a box with a fall does not.
+  const linen = new THREE.MeshStandardMaterial({ color: 0xeef2f4, roughness: 0.9, side: THREE.DoubleSide });
+  g.add(merged([
+    new THREE.BoxGeometry(0.8, 0.25, 2.0).translate(0, 0.805, 0),
+    new THREE.PlaneGeometry(0.8, 0.5).translate(0, 0.43, 1.0),
+  ], linen));
+  return g;
+}
+
+/** A cinema camera on a tripod: three splayed legs, a body and a lens, facing +z. 1.5 m to the top
+ *  of the head, origin at floor centre. Three draw calls. */
+export function tripodCamera(): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.MeshStandardMaterial({ color: 0x1b242c, roughness: 0.5, metalness: 0.4 });
+  const lean = 0.28, apex = 1.4 * Math.cos(lean);
+  const legs: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 3; i++) {
+    const a = (i * Math.PI * 2) / 3;
+    // Each leg is built leaning back, then swung round the apex: the lean is about x and the
+    // spacing about y, and baking both into the geometry keeps the three of them one mesh.
+    const leg = new THREE.CylinderGeometry(0.012, 0.012, 1.4, 6);
+    leg.rotateX(lean); leg.translate(0, apex / 2, -0.7 * Math.sin(lean)); leg.rotateY(a);
+    legs.push(leg);
+  }
+  legs.push(new THREE.CylinderGeometry(0.022, 0.022, 0.12, 8).translate(0, apex + 0.06, 0));
+  g.add(merged(legs, labSteel(0x39434b)));
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.32), body); head.position.set(0, apex + 0.19, 0); g.add(head);
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.16, 12).rotateX(Math.PI / 2), body);
+  lens.position.set(0, apex + 0.19, 0.24); g.add(lens);
+  return g;
+}
+
+/** A moulded flight case: coloured shell, a lid seam, two latches and a handle. 0.6 by 0.4 on plan,
+ *  origin at floor centre, latches facing +z. Three draw calls. */
+export function hardCase(color = 0xe07a2a): THREE.Group {
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.4), new THREE.MeshStandardMaterial({ color, roughness: 0.55 }));
+  shell.position.y = 0.225; g.add(shell);
+  const seam = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.02, 0.41), new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.7), roughness: 0.6 }));
+  seam.position.y = 0.31; g.add(seam);
+  g.add(merged([
+    new THREE.BoxGeometry(0.08, 0.05, 0.02).translate(-0.18, 0.27, 0.21),
+    new THREE.BoxGeometry(0.08, 0.05, 0.02).translate(0.18, 0.27, 0.21),
+    new THREE.BoxGeometry(0.22, 0.03, 0.03).translate(0, 0.14, 0.215),
+  ], new THREE.MeshStandardMaterial({ color: 0x14191d, roughness: 0.5 })));
+  return g;
+}
+
+/** A yellow cable hung off the ceiling with its slack coiled at the bottom. The origin is the top
+ *  of the coil and the cord runs 1.8 m up from it, so a room places it 1.8 m below its ceiling.
+ *  Two draw calls. */
+export function cableCoil(): THREE.Group {
+  const g = new THREE.Group();
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xe8b923, roughness: 0.6 });
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.8, 6), yellow); cord.position.y = 0.9; g.add(cord);
+  g.add(instances(new THREE.TorusGeometry(0.22, 0.02, 8, 24).rotateX(Math.PI / 2), yellow, Array.from({ length: 6 }, (_, i) => [0, -i * 0.05, 0] as Spot)));
+  return g;
+}
+
+/** A polythene tarp slung off a rail, `w` by `h`, origin at the centre of the sheet, facing +z. The
+ *  sheet's vertices are pushed off the plane by a few centimetres, which is all it takes for the
+ *  light to break up across it instead of laying one flat blue rectangle on the wall. Two calls. */
+export function tarpWall(w: number, h: number, seed = 1): THREE.Group {
+  const g = new THREE.Group();
+  const geo = new THREE.PlaneGeometry(w, h, 12, 6);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const r = rng(seed);
+  for (let i = 0; i < pos.count; i++) pos.setZ(i, (r() - 0.5) * 0.06);
+  pos.needsUpdate = true; geo.computeVertexNormals();
+  g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x2a5aa0, roughness: 0.95, side: THREE.DoubleSide })));
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.05), labSteel(0x9aa5ad));
+  rail.position.y = h / 2 + 0.04; g.add(rail);
+  return g;
 }

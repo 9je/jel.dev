@@ -147,7 +147,13 @@ export interface GlassRoomSpec {
   sign?: string;
   litEvery?: number;
   panelIntensity?: number;
+  /** Fitting size of one lit ceiling panel, `[along x, along z]`. See `ceilingGrid`. */
+  panel?: [number, number];
   floor?: THREE.Material;
+  /** A second, frosted pane set over the lower 1.2 m above the sill, the way a real clean room is
+   *  glazed (ref 02). It reads from outside as privacy glass and from inside as a soft band that
+   *  hides the floor clutter of the hall beyond. */
+  frosted?: boolean;
 }
 
 /**
@@ -168,7 +174,7 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.2, D - 0.2), spec.floor);
     floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; g.add(floor);
   }
-  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9 });
+  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9, panel: spec.panel });
   g.add(ceiling);
   const lid = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.12, D + 0.2), labSteel(0x2b3740)); lid.position.y = H + 0.12; g.add(lid); // clear of the ceiling plane, or the two fight for the pixel
 
@@ -229,6 +235,27 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
   }
   const glass = labGlass(); glass.side = THREE.DoubleSide;
   const glassMesh = merged(panes, glass); glassMesh.renderOrder = 2; g.add(glassMesh);
+
+  // The frosted band. It is a second set of panes standing a centimetre inside the clear ones
+  // rather than a shorter clear pane with a frosted one beside it: two transparent surfaces on one
+  // plane have no depth between them to sort by, and the pair flickers as the camera moves.
+  if (spec.frosted) {
+    const band = Math.min(1.2, H - S);
+    const frost: THREE.BufferGeometry[] = [];
+    const lower = (w: number, x: number, z: number, ry: number, inward: [number, number]) => {
+      const p = new THREE.PlaneGeometry(w, band); p.rotateY(ry);
+      p.translate(x + inward[0] * 0.01, S + band / 2, z + inward[1] * 0.01); frost.push(p);
+    };
+    lower(D, -hx, 0, Math.PI / 2, [1, 0]); lower(D, hx, 0, -Math.PI / 2, [-1, 0]);
+    for (const f of faces) {
+      const inward: [number, number] = [0, f.z > 0 ? -1 : 1];
+      if (!f.door) { lower(W, 0, f.z, f.ry, inward); continue; }
+      const leftLen = f.door.x - f.door.w / 2 + hx, rightLen = hx - (f.door.x + f.door.w / 2);
+      lower(leftLen, -hx + leftLen / 2, f.z, f.ry, inward); lower(rightLen, hx - rightLen / 2, f.z, f.ry, inward);
+    }
+    const frostMat = new THREE.MeshPhysicalMaterial({ color: 0xdfe8ec, transparent: true, opacity: 0.55, roughness: 0.7, transmission: 0, side: THREE.DoubleSide, depthWrite: false });
+    const frostMesh = merged(frost, frostMat); frostMesh.renderOrder = 1; g.add(frostMesh);
+  }
 
   return g;
 }
