@@ -41,14 +41,15 @@ export function gridPitch(w: number, d: number, tile: number): { cols: number; r
  *  position (local to the grid's own centre, before the caller offsets the returned group into the
  *  room). Pass the result as `opts.flickerIndex` to pull that panel out on its own. `opts.lit` must
  *  be the same predicate the grid itself is given, or the two enumerations disagree. */
-export function nearestLitPanel(w: number, d: number, localX: number, localZ: number, opts: { tile?: number; litEvery?: number; lit?: (i: number, j: number) => boolean } = {}): number {
+export function nearestLitPanel(w: number, d: number, localX: number, localZ: number, opts: { tile?: number; litEvery?: number; lit?: (i: number, j: number) => boolean; panel?: [number, number] } = {}): number {
   const tile = opts.tile ?? 1.2;
   const lit = litPredicate(opts);
+  const whole = panelFits(w, d, tile, opts.panel);
   const { cols, rows } = gridPitch(w, d, tile);
   const ox = -cols * tile / 2, oz = -rows * tile / 2;
   let index = 0, best = -1, bestDist = Infinity;
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
-    if (!lit(i, j)) continue;
+    if (!lit(i, j) || !whole(i, j)) continue;
     const x = ox + (i + 0.5) * tile, z = oz + (j + 0.5) * tile;
     const dist = Math.hypot(x - localX, z - localZ);
     if (dist < bestDist) { bestDist = dist; best = index; }
@@ -56,6 +57,21 @@ export function nearestLitPanel(w: number, d: number, localX: number, localZ: nu
   }
   return best;
 }
+
+/**
+ * Whether the fitting in tile `i, j` lands whole inside the ceiling plane. A troffer is wider than
+ * the tile it replaces, so the tiles along an edge carry a fitting that hangs half of itself out
+ * over the wall below, through the doorway header, or into the room next door. Those tiles are left
+ * dark instead. Both the grid and `nearestLitPanel` apply it, or the two enumerations disagree and a
+ * room drives the wrong panel.
+ */
+const panelFits = (w: number, d: number, tile: number, panel?: [number, number]) => {
+  const [pw, pd] = panel ?? [tile - 0.1, tile * 0.5];
+  const { cols, rows } = gridPitch(w, d, tile);
+  const ox = -cols * tile / 2, oz = -rows * tile / 2;
+  return (i: number, j: number) => Math.abs(ox + (i + 0.5) * tile) + pw / 2 <= w / 2 + 1e-6
+    && Math.abs(oz + (j + 0.5) * tile) + pd / 2 <= d / 2 + 1e-6;
+};
 
 const litPredicate = (opts: { litEvery?: number; lit?: (i: number, j: number) => boolean }) => {
   if (opts.lit) return opts.lit;
@@ -74,6 +90,10 @@ export interface CeilingGridOptions {
    *  lab's own lights and wrong in a room lit cold: a ceiling is the largest surface in a low room
    *  and it is what sets the temperature of everything under it. */
   tint?: number;
+  /** How much the tile lights itself, 0.28 by default. A ceiling faces down, so nothing in the rig
+   *  reaches it and this is the only thing that keeps it off black. A room with a low ceiling and a
+   *  tall frame shows a lot of it and needs more than a room that shows a strip of it. */
+  tileGlow?: number;
   /** Fitting size of one lit panel, `[along x, along z]`. Defaults to a panel the size of a tile.
    *  A 0.6 m tile grid hung with 1.2 m troffers is the usual suspended ceiling, and it is what
    *  stops a sparse pattern reading as a scatter of glowing postage stamps. */
@@ -114,6 +134,7 @@ function tiledCeiling(w: number, d: number, cols: number, rows: number, missing:
 export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: number, opts: CeilingGridOptions = {}): { group: THREE.Group; panels: THREE.InstancedMesh; flicker: THREE.InstancedMesh[] } {
   const tile = opts.tile ?? 1.2;
   const lit = litPredicate(opts);
+  const whole = panelFits(w, d, tile, opts.panel);
   const wanted = opts.flickerIndex === undefined ? [] : [opts.flickerIndex].flat();
   const { cols, rows } = gridPitch(w, d, tile);
   const group = new THREE.Group();
@@ -125,7 +146,7 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   // The emissive follows the tile map rather than sitting flat over it: a flat emissive washes the
   // grid out and the ceiling reads as painted plaster instead of a suspended one.
   const tint = opts.tint ?? 0xc9d3d8;
-  tileMat.color.setHex(tint); tileMat.emissive.setHex(tint); tileMat.emissiveIntensity = 0.28;
+  tileMat.color.setHex(tint); tileMat.emissive.setHex(tint); tileMat.emissiveIntensity = opts.tileGlow ?? 0.28;
   if (tileMat.map) tileMat.emissiveMap = tileMat.map;
   const missing = opts.missing ?? [];
   const ceil = new THREE.Mesh(tiledCeiling(w, d, cols, rows, missing), tileMat); prepareAO(ceil.geometry); ceil.rotation.x = Math.PI / 2; ceil.position.y = y; group.add(ceil);
@@ -138,7 +159,7 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
     // A fitting in a tile that is on the floor is a fitting hanging in a hole.
     if (hole.has(`${i},${j}`)) continue;
-    if (!lit(i, j)) continue;
+    if (!lit(i, j) || !whole(i, j)) continue;
     const m = new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.02, oz + (j + 0.5) * tile);
     if (wanted.includes(litIndex)) driven.set(litIndex, m); else spots.push(m);
     litIndex++;

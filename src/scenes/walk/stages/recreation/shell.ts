@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
-import { merged, instances, type Spot } from '../../merge';
-import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, ceilingGrid, nearestLitPanel, LABS } from '../../labs/materials';
+import { merged } from '../../merge';
+import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, ceilingGrid, nearestLitPanel } from '../../labs/materials';
 import { doorway, tapeStrip } from '../../labs/signage';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, ROOM, ROOM_W, ROOM_XC, ROOM_OPEN, TILE, LIT, PANEL, LANDING, BAY_DOOR, HALL_DOOR } from './layout';
+import { X1, Z0, Z1, H, W, D, XC, ZC, ROOM, ROOM_W, ROOM_XC, TILE, LIT, PANEL, LANDING, BAY_DOOR, HALL_DOOR, HALL_FACE, HALL_HEAD } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D>; flicker: THREE.InstancedMesh[] }
 
@@ -18,45 +18,29 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const band = (len: number, x: number, z: number, ry: number) => { const b = dadoBands(len, x, z, ry); dado.push(b.band); lines.push(b.line); };
 
   const floor = plane(W, D, labFloor(store, W, D)); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
-  // The two long walls are built in two runs each, breaking at the room's west closure: the break
-  // room's are the kit's panel white, the passage's a dirtier grey. One 38 m plane painted one
-  // colour is what made the old room read as a single corridor from end to end.
-  const passW = ROOM.x0 - X0, passXC = (X0 + ROOM.x0) / 2;
+  // One run of paint end to end. The west half used to be a dirtier grey under the shell's own 5 m,
+  // which read as the detail running out rather than as contrast, so both long walls are one plane
+  // in the kit's panel white with one dado under them.
   for (const [z, ry] of [[Z0, 0], [Z1, Math.PI]] as [number, number][]) {
-    wall(ROOM_W, H, ROOM_XC, H / 2, z, ry);
-    wall(passW, H, passXC, H / 2, z, ry, 0x93a1a8);
-    const out = z === Z0 ? 0.02 : -0.02;
-    band(ROOM_W, ROOM_XC, z + out, 0); band(passW, passXC, z + out, 0);
+    wall(W, H, XC, H / 2, z, ry);
+    band(W, XC, z + (z === Z0 ? 0.02 : -0.02), 0);
   }
 
-  // ---- The dropped ceiling over the break room --------------------------------------------------
-  const grid = { tile: TILE, lit: LIT, panel: PANEL, intensity: 1.25 };
+  // ---- The dropped ceiling, the full length of the room ----------------------------------------
+  // One grid, so the troffer pattern is continuous from the landing door to the hall door and there
+  // is no seam where a low ceiling meets a high one. It stops on the west wall plane rather than the
+  // shell's own X0: past that is the hall doorway's vestibule, which carries its own ceiling at the
+  // same height, and two ceilings on one plane is a flicker down the whole west end.
+  const grid = { tile: TILE, lit: LIT, panel: PANEL, intensity: 1.25, tint: 0xd6e0e6, tileGlow: 0.6 };
   // Two panels come out of the batch so the room can drive them: one over the arcade row, one over
-  // the lit vending machine, which shares its fault with the machine's own header.
-  const flickerIndex = [[-34.3, -34.0], [-30.7, -34.0]].map(([x, z]) => nearestLitPanel(ROOM_W, D, x - ROOM_XC, z - ZC, grid));
+  // the drinks machines, whose lit header shares the second one's fault.
+  const flickerIndex = [[-33.1, -34.0], [-29.5, -34.0]].map(([x, z]) => nearestLitPanel(ROOM_W, D, x - ROOM_XC, z - ZC, grid));
   const room = ceilingGrid(store, ROOM_W, D, ROOM.ceiling, { ...grid, flickerIndex });
   if (room.flicker.length !== 2) throw new Error('recreation: the ceiling did not give up two panels to flicker');
   room.group.position.set(ROOM_XC, 0, ZC); root.add(room.group);
-  // The shell's own lid, above the dropped ceiling and over the passage, so neither space opens on
-  // a void. Plain dark paint: the only thing hung from it is the passage's two strip lights.
-  const lid = plane(W, D, new THREE.MeshStandardMaterial({ color: 0x2b343b, emissive: 0x2b343b, emissiveIntensity: 0.35, roughness: 0.95 }));
+  // The shell's own lid above the dropped ceiling, so the plenum is not a void at either end.
+  const lid = plane(W, D, new THREE.MeshStandardMaterial({ color: 0x2b343b, roughness: 0.95 }));
   lid.rotation.x = Math.PI / 2; lid.position.set(XC, H, ZC);
-  root.add(instances(new THREE.BoxGeometry(2.4, 0.07, 0.16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: 1.5 }), [[-42, H - 0.12, -31], [-48, H - 0.12, -31], [-54, H - 0.12, -31]] as Spot[]));
-
-  // ---- The west closure: where the low ceiling and the break room end ---------------------------
-  // A bulkhead alone would leave the room open to the passage for its whole width, and the dropped
-  // ceiling would read as a lid floating in a longer room. The closure is a wall with a 4 m way
-  // through it on the walked line, so the passage is something the room looks into.
-  const flanks: [number, number][] = [[Z0, ROOM_OPEN.z0], [ROOM_OPEN.z1, Z1]];
-  for (const [a, b] of flanks) {
-    const len = b - a, mid = (a + b) / 2;
-    wall(len, ROOM.ceiling, ROOM.x0, ROOM.ceiling / 2, mid, Math.PI / 2);
-    wall(len, H, ROOM.x0, H / 2, mid, -Math.PI / 2, 0x93a1a8);
-    band(len, ROOM.x0 + 0.02, mid, Math.PI / 2);
-  }
-  wall(ROOM_OPEN.z1 - ROOM_OPEN.z0, H - ROOM.ceiling, ROOM.x0, (H + ROOM.ceiling) / 2, (ROOM_OPEN.z0 + ROOM_OPEN.z1) / 2, -Math.PI / 2, 0x93a1a8);
-  const bulkhead = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, D), new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.7 }));
-  bulkhead.position.set(ROOM.x0 + 0.17, ROOM.ceiling + 0.15, ZC); root.add(bulkhead);
 
   // ---- The east end: the landing behind the bay's wall, and the doorway into this room ----------
   // The bay's exit gap at z -30 opens onto this landing, the walk turns west across it, and the
@@ -91,18 +75,25 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // ---- The west end: the doorway into the server hall -------------------------------------------
   // Its far mouth is the hall's own east wall plane (X0), which the hall closes around, and its near
   // mouth is this room's west closure at HALL_DOOR.x + depth / 2.
-  const hallFace = HALL_DOOR.x + HALL_DOOR.depth / 2;
+  const hallFace = HALL_FACE;
   const hallDoor = doorway({
     w: HALL_DOOR.w, h: HALL_DOOR.h, depth: HALL_DOOR.depth, axis: 'x', sign: 'OPERATIONS', tape: false,
     floor: labFloor(store, HALL_DOOR.w, HALL_DOOR.depth), wall: labWall(store, HALL_DOOR.depth, HALL_DOOR.h),
   });
   hallDoor.position.set(HALL_DOOR.x, 0, HALL_DOOR.z); hallDoor.name = 'hall-door'; root.add(hallDoor);
   const flankZ0 = HALL_DOOR.z - HALL_DOOR.w / 2, flankZ1 = HALL_DOOR.z + HALL_DOOR.w / 2;
-  wall(flankZ0 - Z0, H, hallFace, H / 2, (Z0 + flankZ0) / 2, Math.PI / 2, 0x93a1a8);
-  wall(Z1 - flankZ1, H, hallFace, H / 2, (flankZ1 + Z1) / 2, Math.PI / 2, 0x93a1a8);
-  wall(HALL_DOOR.w, H - HALL_DOOR.h, hallFace, (H + HALL_DOOR.h) / 2, HALL_DOOR.z, Math.PI / 2, 0x93a1a8);
+  wall(flankZ0 - Z0, H, hallFace, H / 2, (Z0 + flankZ0) / 2, Math.PI / 2);
+  wall(Z1 - flankZ1, H, hallFace, H / 2, (flankZ1 + Z1) / 2, Math.PI / 2);
+  wall(HALL_DOOR.w, H - HALL_DOOR.h, hallFace, (H + HALL_DOOR.h) / 2, HALL_DOOR.z, Math.PI / 2);
   band(flankZ0 - Z0, hallFace + 0.02, (Z0 + flankZ0) / 2, Math.PI / 2);
   band(Z1 - flankZ1, hallFace + 0.02, (flankZ1 + Z1) / 2, Math.PI / 2);
+  // The opening is as tall as the room's ceiling, so on this side there is no header to hang the
+  // sign on and the sign's own place is inside the plenum. A head panel brings the mouth down to
+  // 2.6 m, which is where the sign goes. The vestibule behind it stays 3.2, which reads as the
+  // recess over a doorway and not as a step.
+  wall(HALL_DOOR.w, ROOM.ceiling - HALL_HEAD, hallFace, (ROOM.ceiling + HALL_HEAD) / 2, HALL_DOOR.z, Math.PI / 2);
+  const sign = hallDoor.getObjectByName('sign');
+  if (sign) sign.position.y = HALL_HEAD + 0.35;
   // The tape that used to hang across this end ran down the walked line and the camera drove through
   // its lettering. This one hangs off the south flank beside the doorway, clear of the line.
   root.add(tapeStrip([hallFace, 1.3, flankZ0 - 0.1], [hallFace + 1.9, 0.06, flankZ0 - 1.1], 0.06));
