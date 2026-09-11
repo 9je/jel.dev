@@ -4,20 +4,26 @@ const v = new THREE.Vector3(), edge = new THREE.Vector3(), axis = new THREE.Vect
 
 /** The gap between an exhibit and the card describing it, and between the card and the frame. */
 const GAP = 16;
+/** The dock's strip down the right of the frame: its own inset plus the width its labels reserve. */
+const RAIL = 176;
+
+/** Which side of the exhibit the card hangs on: the outer one, away from the middle of the frame,
+ *  because the middle of the frame is the part of the room worth looking at. */
+export function cardSide(x: number, vw: number): 'left' | 'right' {
+  return x < vw / 2 ? 'left' : 'right';
+}
 
 /**
  * Where the card's left edge goes: clear of the exhibit, outward from the middle of the frame, and
  * never off it. `x` is the exhibit's anchor in screen pixels and `halfW` is how far its own geometry
- * reaches from that anchor, so a card never lands on the thing it is captioning.
+ * reaches from that anchor, so a card never lands on the thing it is captioning. `rail` is the strip
+ * the dock holds down the right of the frame, which the card is not allowed to slide under.
  *
  * Arithmetic only, so the placement can be read without a browser.
  */
-export function cardLeft(x: number, halfW: number, cardW: number, vw: number, gap = GAP): number {
-  // Outward, away from the middle of the frame, which is the part of the room worth looking at.
-  // Whichever half the exhibit is in always has more room on its outer side, so there is no second
-  // choice to make: an exhibit so wide that neither side fits is one the clamp settles.
-  const side = x < vw / 2 ? x + halfW + gap : x - halfW - gap - cardW;
-  return Math.max(gap, Math.min(side, vw - cardW - gap));
+export function cardLeft(x: number, halfW: number, cardW: number, vw: number, gap = GAP, rail = 0): number {
+  const side = cardSide(x, vw) === 'left' ? x - halfW - gap - cardW : x + halfW + gap;
+  return Math.max(gap, Math.min(side, vw - rail - cardW - gap));
 }
 
 /** The card's vertical centre, held inside the frame however tall the card is. */
@@ -47,6 +53,9 @@ export function pinOverlays(card: HTMLElement, anchors: Map<string, THREE.Vector
   axis.setFromMatrixColumn(camera.matrixWorld, 0);
   edge.copy(a).addScaledVector(axis, radii.get(id) ?? 0).project(camera);
   const halfW = Math.abs(((edge.x + 1) / 2) * vw - x);
-  card.style.setProperty('--cx', `${Math.round(cardLeft(x, halfW, card.offsetWidth, vw))}px`);
+  // The dock stands down the right of the frame above its own breakpoint, over the card's layer.
+  const rail = vw > 700 ? RAIL : 0;
+  card.dataset.side = cardSide(x, vw);
+  card.style.setProperty('--cx', `${Math.round(cardLeft(x, halfW, card.offsetWidth, vw, GAP, rail))}px`);
   card.style.setProperty('--cy', `${Math.round(cardTop(((1 - v.y) / 2) * vh, card.offsetHeight, vh))}px`);
 }

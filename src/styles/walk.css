@@ -115,9 +115,11 @@
    band, where the exhibits are, stays clear of it at every stop. */
 .walk[data-mode='full'] .stop-body { max-width: none; max-height: 24vh; overflow: auto; overscroll-behavior: contain; }
 
-/* On fine pointers the disclosure is invisible: the body is simply there, open, as it was. */
+/* Wherever a disclosure is simply there, open, its control is not: the stop body on a fine pointer,
+   and the certification wall on every path but the compact column. */
 .stop-more > summary { display: none; }
 .stop-more[open] > summary { display: none; }
+.wall > summary { display: none; }
 @media (pointer: coarse) {
   /* The phone sheet. A swipe anywhere on a phone must walk the camera, so the body never scrolls
      under the thumb: it is closed behind a handle, and open it is a sheet the reader asked for,
@@ -191,9 +193,23 @@
   .walk[data-mode='full'] .stop .bay-body { padding: 0 0.25rem 1rem; }
   .walk[data-mode='full'] .stop .bay-summary { font-size: 1rem; }
   /* The certification wall is six plates on a wall in the room, and six cards over them was half of
-     what Jordan meant by the UI getting in the way. The plates carry it on the walk, one card at a
-     time. The stacked page and the phone sheet keep the wall. */
-  .walk[data-mode='full'] [data-cert-wall] { display: none; }
+     what Jordan meant by the UI getting in the way. On the walk the wall is one more row of the
+     same list, closed, so the room stays clear and every badge is still a tab stop and a link away.
+     Opened it is the brief's compact grid: three columns, small plates, no issuer. The stacked page
+     and the phone sheet keep the full wall. */
+  /* `[data-stop]` and `[data-size]` carry no meaning in these selectors beyond weight. Astro scopes
+     a component's own rules by hanging its cid on every compound, so `.wall[data-size='hall']
+     .badge img` inside CertWall weighs six classes and an element and is injected after this sheet:
+     without the two attributes here the 160 px plates and the clipped title win the tie on order. */
+  .walk[data-mode='full'] .stop .wall { margin: 0; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] > summary { display: block; padding: 0.6rem 0.25rem; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] > summary:hover, .walk[data-mode='full'] .stop[data-stop] .wall[data-size][open] > summary { background: var(--surface); }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .wall-title { position: static; width: auto; height: auto; clip: auto; overflow: visible; margin: 0; font-size: 1rem; font-weight: 600; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .wall-list { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding: 0 0.25rem 0.75rem; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .badge { padding: 0.5rem 0.25rem; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .badge img { width: 40px; height: 40px; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .badge-name { font-size: 0.8rem; font-weight: 600; }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .badge-issuer { display: none; }
 }
 @media (max-width: 900px) { .walk[data-mode='full'] .stop-title { white-space: normal; } }
 
@@ -218,11 +234,13 @@
   /* Solid: this one hangs over the lit plate it describes, and the room read through it. */
   background: var(--surface);
   border: 1px solid var(--surface-edge);
-  /* The wing's own colour, on the edge facing the exhibit's side of the room. */
-  border-left: 2px solid var(--wing-light);
   border-radius: var(--radius);
   transition: opacity 160ms ease;
 }
+/* The wing's colour on the edge that faces the exhibit, so the card reads as hung off the thing it
+   describes rather than as a panel that happened to land there. */
+.exhibit-card[data-side='left'] { border-right: 2px solid var(--wing-light); }
+.exhibit-card[data-side='right'] { border-left: 2px solid var(--wing-light); }
 .exhibit-card[data-offscreen] { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .exhibit-card { transition: none; } }
 .exhibit-close { float: right; margin: -0.2rem -0.3rem 0 0.6rem; padding: 0.15rem 0.4rem; background: none; border: 1px solid var(--surface-edge); border-radius: var(--radius); color: var(--text-dim); font: inherit; font-size: 0.75rem; font-stretch: 75%; letter-spacing: 0.06em; cursor: pointer; }

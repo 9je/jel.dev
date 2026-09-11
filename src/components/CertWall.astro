@@ -4,8 +4,11 @@ interface Props { size?: 'wall' | 'hall' }
 const { size = 'wall' } = Astro.props;
 const certs = await getCollection('certs');
 ---
-<section class="wall" data-cert-wall data-size={size} aria-labelledby="certs-h">
-  <h3 id="certs-h" class="wall-title">Certifications</h3>
+{/* A disclosure, like the flagship and every project row: open it is the wall of badges, and closed
+    it is one line of the walk's copy column, where the room's own six plates carry it. The summary
+    is hidden wherever the wall is simply there, so the stacked page reads as it always did. */}
+<details class="wall" data-cert-wall data-size={size} open>
+  <summary class="wall-head"><h3 id="certs-h" class="wall-title">Certifications</h3></summary>
   <ul class="wall-list">
     {certs.map(({ data: c }) => (
       <li class="badge" data-cert={c.id}>
@@ -15,10 +18,16 @@ const certs = await getCollection('certs');
       </li>
     ))}
   </ul>
-</section>
+</details>
 
 <style>
   .wall { margin-top: 3rem; }
+  /* Same as the flagship bay, and scoped to the open state for the same reason: the UA's
+     `::details-content` box would otherwise sit between the wall and its grid of badges, and
+     giving it `display: contents` while it is shut would show the badges through a closed row. */
+  .wall[open]::details-content { display: contents; }
+  .wall-head { list-style: none; cursor: pointer; }
+  .wall-head::-webkit-details-marker { display: none; }
   .wall-title { font-size: 1.3rem; margin-bottom: 1rem; }
   .wall-list {
     list-style: none; margin: 0; padding: 0;

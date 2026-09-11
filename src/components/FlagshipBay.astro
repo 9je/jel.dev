@@ -66,6 +66,13 @@ const sealed = d.status === 'pending-release';
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 1l26 15v30L28 61 2 46V16z M28 49l26 15v30L28 109 2 94V64z' fill='none' stroke='%232455A4' stroke-width='1.5'/%3E%3C/svg%3E");
     background-size: 56px 97px;
   }
+  /* A details puts a `::details-content` box between itself and its children, which made the
+     picture and the copy two blocks inside the 3fr column instead of one grid item each. This
+     hands them back to the grid. Only while it is open: that box is what carries the UA's
+     `content-visibility: hidden` when it is shut, and a box with `display: contents` carries
+     nothing, so an unscoped rule here shows the whole card on a row that is supposed to be one
+     line. Engines that do not ship the pseudo element never had the box in the first place. */
+  .bay[open]::details-content { display: contents; }
   /* The summary spans the card, so the picture and the copy keep their two columns under it. */
   .bay-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; list-style: none; cursor: pointer; }
   .bay-head::-webkit-details-marker { display: none; }

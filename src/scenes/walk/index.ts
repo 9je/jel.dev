@@ -64,9 +64,9 @@ let hashchangeListener: (() => void) | null = null;
 export function startLite(els: WalkElements) {
   els.root.dataset.mode = 'lite';
   // The stacked page has no toggle and no compact column: the styling both of those belong to is
-  // scoped to the full walk. So every body and every flagship is open here, including on a browser
-  // that got this far through a fallback after startFull had already closed them.
-  for (const d of els.root.querySelectorAll('details[data-stop-more], details[data-flagship]')) d.setAttribute('open', '');
+  // scoped to the full walk. So every body, every flagship and the certification wall are open
+  // here, including on a browser that got this far through a fallback after startFull closed them.
+  for (const d of els.root.querySelectorAll('details[data-stop-more], details[data-flagship], details[data-cert-wall]')) d.setAttribute('open', '');
   els.preloader.dataset.state = 'hidden';
   markCurrentFromHash(els);
   hashchangeListener = () => markCurrentFromHash(els);
@@ -82,8 +82,10 @@ let pinRaf = 0;
 // same frame rather than leaving it at the default for one, and so teardown can drop it.
 let pinCard: (() => void) | null = null;
 // Everything the pointer wiring below added to the document, as one function, so teardown does not
-// have to know the shape of it.
+// have to know the shape of it. The sheet handles are wired before the scene mounts, and a mount
+// that never finishes still has to hand them back, so they keep their own.
 let unwire: (() => void) | null = null;
+let sheetOff: (() => void) | null = null;
 
 function setPreloader(els: WalkElements, ratio: number) {
   els.preloader.style.setProperty('--progress', String(Math.min(1, ratio)));
@@ -108,6 +110,8 @@ type Interact = typeof import('./interact');
 // How long a freshly opened row stays marked. The CSS animation runs for the same span.
 const FOCUS_MS = 2500;
 let focusTimer: ReturnType<typeof setTimeout> | null = null;
+// The panel the open card was cloned from, so closing it can hand the keyboard back there.
+let cardSource: HTMLElement | null = null;
 
 /** The outline a panel wears for a moment, so the reader can see which row the exhibit was. */
 function mark(el: HTMLElement, els: WalkElements) {
@@ -140,20 +144,29 @@ function openTarget(h: Hotspot, els: WalkElements, interact: Interact) {
   key.focus({ preventScroll: true });
 }
 
-/** Empties the exhibit card and puts it away. */
-function closeCard(els: WalkElements, restoreFocus = false) {
+/**
+ * Empties the exhibit card and puts it away, handing the keyboard back to the row the card came
+ * from, or to the stop's name when that row belongs to a stop the camera has already left. Opening
+ * a card puts focus on its close control and a canvas takes no focus, so every close path has to do
+ * this or the document is left focused on nothing at all.
+ */
+function closeCard(els: WalkElements) {
   const card = els.card;
   if (!card || card.hidden) return;
   const held = card.contains(document.activeElement);
   card.hidden = true;
   card.removeAttribute('data-anchor');
   card.querySelector('[data-exhibit-body]')?.replaceChildren();
-  // Only when the keyboard was inside the card: taking focus back on a click that closed it would
-  // scroll the stop title into view for a reader who never left the pointer.
-  if (restoreFocus && held) {
-    const title = els.root.querySelector<HTMLElement>('section[data-stop][data-active] .stop-title');
-    if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
-  }
+  const src = cardSource; cardSource = null;
+  if (!held) return;
+  const active = els.root.querySelector<HTMLElement>('section[data-stop][data-active]');
+  // A row in a stop the walk has moved on from is `visibility: hidden`, and focusing that is the
+  // same as focusing nothing, so it falls back to the name of the stop the camera is at.
+  const here = src && active?.contains(src) ? src.querySelector<HTMLElement>('summary') ?? src : null;
+  const back = here ?? active?.querySelector<HTMLElement>('.stop-title') ?? null;
+  if (!back) return;
+  if (back.tabIndex < 0) back.setAttribute('tabindex', '-1');
+  back.focus({ preventScroll: true });
 }
 
 /**
@@ -170,11 +183,15 @@ function openCard(h: Hotspot, els: WalkElements, interact: Interact) {
   // card would do here, so it is marked rather than duplicated.
   if (src.classList.contains('stop-body')) { mark(src, els); return; }
   card.querySelector('[data-exhibit-body]')?.replaceChildren(interact.exhibitContent(src, document));
+  // The card is what the screen reader lands in, so it is named after the exhibit rather than left
+  // as the word Exhibit next to a button called Close.
+  card.setAttribute('aria-label', card.querySelector('.row-title, .bay-title, .badge-name, h3')?.textContent?.trim() || h.label);
   // The card lives outside the stop sections, so it does not inherit the wing's colour. The section
   // carries it in its own style attribute, which is cheaper to read than a computed style.
   const wing = src.closest<HTMLElement>('section[data-stop]')?.style.getPropertyValue('--wing-light');
   if (wing) card.style.setProperty('--wing-light', wing);
   handle?.ensureAnchor(h);
+  cardSource = src;
   card.dataset.anchor = h.id;
   card.hidden = false;
   pinCard?.();
@@ -210,24 +227,31 @@ async function activateHotspot(h: Hotspot, els: WalkElements, coarse: boolean, i
  * disclosure handles itself. The click after a drag is cancelled, or the swipe would open the
  * sheet and the tap behind it would close it again in the same gesture.
  */
-function wireSheets(els: WalkElements): void {
+function wireSheets(els: WalkElements): () => void {
+  const undo: (() => void)[] = [];
+  const on = <K extends keyof HTMLElementEventMap>(el: HTMLElement, type: K, fn: (e: HTMLElementEventMap[K]) => void) => {
+    el.addEventListener(type, fn);
+    undo.push(() => el.removeEventListener(type, fn));
+  };
   for (const d of els.root.querySelectorAll<HTMLDetailsElement>('details[data-stop-more]')) {
     if (d.dataset.wired) continue;
     d.dataset.wired = '';
+    undo.push(() => { delete d.dataset.wired; });
     const label = d.querySelector<HTMLElement>('[data-stop-more-label]');
     const toggle = d.querySelector<HTMLElement>('.stop-more-toggle');
-    d.addEventListener('toggle', () => { if (label) label.textContent = d.open ? 'Less' : 'More'; });
+    on(d, 'toggle', () => { if (label) label.textContent = d.open ? 'Less' : 'More'; });
     if (!toggle) continue;
     let from = 0, dragged = false;
-    toggle.addEventListener('pointerdown', (e) => { from = e.clientY; dragged = false; });
-    toggle.addEventListener('pointerup', (e) => {
+    on(toggle, 'pointerdown', (e) => { from = e.clientY; dragged = false; });
+    on(toggle, 'pointerup', (e) => {
       const dy = e.clientY - from;
       if (Math.abs(dy) < 24) return;
       dragged = true;
       d.open = dy < 0;
     });
-    toggle.addEventListener('click', (e) => { if (dragged) { e.preventDefault(); dragged = false; } });
+    on(toggle, 'click', (e) => { if (dragged) { e.preventDefault(); dragged = false; } });
   }
+  return () => { for (const f of undo) f(); undo.length = 0; };
 }
 
 /** Pointer picking over the canvas. Returns the function that removes everything it added. */
@@ -285,8 +309,8 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     open(e.clientX, e.clientY);
   };
 
-  const onEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCard(els, true); };
-  const onClose = () => closeCard(els, true);
+  const onEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCard(els); };
+  const onClose = () => closeCard(els);
   const closeBtn = els.card?.querySelector<HTMLElement>('[data-exhibit-close]') ?? null;
 
   // A coarse pointer has no hover to give, so it gets the tap alone and the label never shows.
@@ -328,10 +352,11 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
   // The markup ships every stop body open so the stacked page reads with no JavaScript. Only the
   // full walk closes them, and only on a phone, where an open body would be a fixed sheet over the
   // room. Doing it here rather than in init() means the lite path never loses its in-flow copy.
-  if (coarse) { for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open'); wireSheets(els); }
-  // And on a fine pointer the flagship is one line of the compact column rather than a card over
-  // the room: its exhibit's card is what carries the copy. The phone sheet keeps the card.
-  else for (const d of els.root.querySelectorAll('details[data-flagship]')) d.removeAttribute('open');
+  if (coarse) { for (const d of els.root.querySelectorAll('details[data-stop-more]')) d.removeAttribute('open'); sheetOff = wireSheets(els); }
+  // And on a fine pointer the flagship and the certification wall are each one line of the compact
+  // column rather than a panel over the room: the exhibits' cards carry the copy, and the row keeps
+  // both of them a tab stop away for a reader with no pointer on the room. The sheet keeps them open.
+  else for (const d of els.root.querySelectorAll('details[data-flagship], details[data-cert-wall]')) d.removeAttribute('open');
   els.root.dataset.mode = 'full';
   els.preloader.dataset.state = 'loading';
   els.preloader.setAttribute('aria-busy', 'true');
@@ -424,7 +449,10 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
 function teardown() {
   generation++;
   unwire?.(); unwire = null;
+  sheetOff?.(); sheetOff = null;
   if (focusTimer) { clearTimeout(focusTimer); focusTimer = null; }
+  // The card's source row, so a swapped page does not hold the old one's DOM alive.
+  cardSource = null;
   scroll?.dispose(); scroll = null;
   handle?.dispose(); handle = null;
   if (pinRaf) { cancelAnimationFrame(pinRaf); pinRaf = 0; }

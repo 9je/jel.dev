@@ -103,9 +103,13 @@ export function exhibitContent(el: HTMLElement, doc: Document): DocumentFragment
     copy(summary, head);
     frag.appendChild(head);
     copy(el.querySelector('.row-body, .bay-body'), frag);
-    return frag;
+  } else {
+    copy(el, frag);
   }
-  copy(el, frag);
+  // A clone carries the ids of what it was cloned from, and the panel it came from is still in the
+  // page. Nothing in the collections emits one into a body today, and the first markdown heading
+  // added to a project would: two elements answering to one id, and every anchor to it broken.
+  for (const n of frag.querySelectorAll('[id]')) n.removeAttribute('id');
   return frag;
 }
 

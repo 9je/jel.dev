@@ -9,8 +9,13 @@ test('lite path renders every stop in order with a dock', async ({ page }) => {
   expect(ids).toEqual(STOPS);
   await expect(page.locator('[data-dock] a[data-stop-link]')).toHaveCount(7);
   await expect(page.locator('h1')).toHaveText(/Jordan Eldridge Labs/);
-  await expect(page.locator('section[data-stop="credentials"] [data-cert-wall]')).toBeVisible();
-  await expect(page.locator('section[data-stop="credentials"] [data-cert-wall] li')).toHaveCount(6);
+  const wall = page.locator('section[data-stop="credentials"] [data-cert-wall]');
+  await expect(wall).toBeVisible();
+  await expect(wall).toHaveAttribute('open', '');
+  await expect(wall.locator('li')).toHaveCount(6);
+  // The wall is a disclosure for the walk's sake. On the stacked page it is simply there, so its
+  // control is not: the page reads as it did before the walk had a compact column.
+  expect(await wall.locator('summary').evaluate((el) => getComputedStyle(el).display)).toBe('none');
   // Every project, the flagship included, is open on the stacked page.
   await expect(page.locator('section[data-stop="fabrication"] details[data-flagship]')).toHaveAttribute('open', '');
   await expect(page.locator('section[data-stop="operations"] details[data-project]')).toHaveCount(3);
@@ -30,6 +35,21 @@ test('the full path never requests a still', async ({ page }) => {
   await expect(page.locator('[data-walk]')).toHaveAttribute('data-mode', 'full', { timeout: 30_000 });
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
   expect(stillRequests).toEqual([]);
+});
+
+test('the lite path lays the flagship out in two columns', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto('/?effects=off');
+  const bay = page.locator('section[data-stop="fabrication"] [data-flagship]');
+  // A details puts a box between itself and its children, and the picture and the copy stopped
+  // being grid items: both ended up stacked in the first column with the second one empty.
+  const cols = await bay.evaluate((el) => {
+    const visual = el.querySelector('.bay-visual')!.getBoundingClientRect();
+    const text = el.querySelector('.bay-text')!.getBoundingClientRect();
+    return { visualLeft: visual.left, textLeft: text.left, sameRow: Math.abs(visual.top - text.top) < 2 };
+  });
+  expect(cols.textLeft).toBeGreaterThan(cols.visualLeft + 100);
+  expect(cols.sameRow).toBe(true);
 });
 
 test('dock anchors reach their sections on the lite path', async ({ page }) => {
@@ -160,8 +180,28 @@ test('the copy column on the walk is one line for each project in the room', asy
   const box = (await section.locator('.stop-inner').boundingBox())!;
   expect(box.width).toBeLessThanOrEqual(400);
   expect(box.y).toBeGreaterThan(frame.height * 0.4);
-  // The certification wall is six plates in a room of its own now, not six cards over them.
-  await expect(page.locator('[data-cert-wall]')).toBeHidden();
+});
+
+test('the certification wall is one row on the walk, with its badges a click behind it', async ({ page }) => {
+  await page.goto('/?quality=low#credentials');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
+  const wall = page.locator('[data-cert-wall]');
+  // One more row of the same list, closed, so the six plates in the room carry it.
+  expect(await wall.evaluate((el) => el.parentElement?.hasAttribute('data-project-list'))).toBe(true);
+  await expect(wall).not.toHaveAttribute('open', '');
+  await expect(wall.locator('.wall-list')).toBeHidden();
+  const summary = wall.locator('summary');
+  await expect(summary).toBeVisible();
+  await expect(summary).toHaveText('Certifications');
+  // And still a disclosure, so a reader with no pointer on the room reaches every badge and its
+  // verification link. Opened, it is the compact grid: small plates, no issuer.
+  await summary.click();
+  await expect(wall).toHaveAttribute('open', '');
+  await expect(wall.locator('li')).toHaveCount(6);
+  await expect(wall.locator('li').first()).toBeVisible();
+  expect(await wall.locator('.badge img').first().evaluate((el) => el.clientWidth)).toBe(40);
+  await expect(wall.locator('.badge-issuer').first()).toBeHidden();
 });
 
 test('the flagship bay sits in the copy column and is never pinned', async ({ page }) => {

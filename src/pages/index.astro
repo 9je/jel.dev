@@ -42,7 +42,7 @@ const containmentRest = containmentList.filter((p) => p !== containmentFlagship)
   ))}
 
   <StopSection id="credentials" title={site.stops.credentials.title} lead={site.stops.credentials.lead} light={stop('credentials').light}>
-    <CertWall size="hall" />
+    <div data-project-list><CertWall size="hall" /></div>
   </StopSection>
 
   <StopSection id="containment" title={site.stops.containment.title} lead={site.stops.containment.lead} wing="containment" light={stop('containment').light}>
