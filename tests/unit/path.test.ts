@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Vector3 } from 'three';
-import { STOPS, cameraAt, stopAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, EYE, TURN_LEAD } from '../../src/scenes/walk/path';
+import { STOPS, cameraAt, stopAt, roomAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, EYE, TURN_LEAD } from '../../src/scenes/walk/path';
 
 describe('stops', () => {
   it('are seven, in increasing t, from 0 to 1', () => {
@@ -66,6 +66,25 @@ describe('camera', () => {
       const target1 = cameraAt(t1).target;
       expect(target0.distanceTo(target1)).toBeLessThan(1.5);
     }
+  });
+});
+
+describe('rooms', () => {
+  it('enters each room after the previous hold and before its own, in order', () => {
+    for (let i = 1; i < STOPS.length; i++) {
+      expect(STOPS[i].enter).toBeGreaterThan(STOPS[i - 1].hold[1]);
+      expect(STOPS[i].enter).toBeLessThanOrEqual(STOPS[i].hold[0]);
+    }
+  });
+  it('crosses into operations at its doorway, not halfway down the break room', () => {
+    // The break room runs from x -20 to the hall door at x -57.2. The nearest-stop rule flipped at
+    // about x -45.
+    const at = cameraAt(STOPS.find((s) => s.id === 'operations')!.enter).position;
+    expect(at.x).toBeLessThan(-56); expect(at.x).toBeGreaterThan(-59);
+    expect(roomAt(0.48).id).toBe('recreation');
+    expect(roomAt(0.53).id).toBe('operations');
+    expect(roomAt(0.63).id).toBe('operations');
+    expect(roomAt(0.65).id).toBe('credentials');
   });
 });
 

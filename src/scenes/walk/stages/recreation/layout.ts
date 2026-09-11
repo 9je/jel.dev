@@ -47,13 +47,15 @@ export const PANEL: [number, number] = [1.2, 0.28];
 
 /** The row: four cabinets, each turned a little out of the wall so the hold sees its marquee and its
  *  screen rather than four dark flanks. `ry` and the offset off the wall are the same for all four,
- *  which puts every back corner on the wall plane. */
+ *  which puts every back corner on the wall plane. The row stands 1.2 m clear of the drinks
+ *  machines: butted up to them it read as one row of six where four answered the pointer and two
+ *  did not, and the lit machine's header hid the last marquee from the hold. */
 export const CABINET_RY = 0.2, CABINET_Z = Z0 + 0.4675;
 export const CABINETS: [string, string, number, string][] = [
-  ['torn-bet', 'torn.bet', -32.40, '#3D7BE0'],
-  ['faction-tools', 'faction.tools', -33.33, '#E8B923'],
-  ['kayou-bot', 'Kayou', -34.26, '#D7383A'],
-  ['character-bot', 'character bot', -35.19, '#3FD47A'],
+  ['torn-bet', 'torn.bet', -33.60, '#3D7BE0'],
+  ['faction-tools', 'faction.tools', -34.53, '#E8B923'],
+  ['kayou-bot', 'Kayou', -35.46, '#D7383A'],
+  ['character-bot', 'character bot', -36.39, '#3FD47A'],
 ];
 export const ACCENT = '#3D7BE0';
 

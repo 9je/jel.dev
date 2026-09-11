@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { STOPS, stopAt, type StopId } from './path';
+import { STOPS, roomAt, type StopId } from './path';
 import type { Tier } from './quality';
 
 export interface SpotPlacement { kind: 'spot'; position: [number, number, number]; target: [number, number, number]; color: number; intensity: number; distance: number; angle: number; penumbra: number; decay?: number; shadow?: boolean }
@@ -118,7 +118,7 @@ export class LightRig {
   unregister(stop: StopId): void { this.rooms.delete(stop); this.stop = null; }
 
   update(t: number, dt: number): void {
-    const stop = stopAt(t).id;
+    const stop = roomAt(t).id;
     if (stop !== this.stop) {
       this.stop = stop;
       const assigned = assignSlots(this.slots.map((s) => s.target), composeSet(this.rooms, stop), this.size, this.shadows);

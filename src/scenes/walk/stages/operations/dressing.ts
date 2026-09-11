@@ -107,9 +107,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(wallScreen(1.6, 0.9, ['RACK STATUS', 'row A  ok', 'row B  degraded'], '#CFE6EE'), X0 + 0.1, 2.4, -33.5, Math.PI / 2));
 
   // ---- The aisle ------------------------------------------------------------------------------
-  await add(once(prop('office_chair'), -66, 0, -32.5, 1.1));
-  await add(boxes([[-69, 0.2, -33.6, 0.3], [-68.62, 0.6, -33.74, -0.45]]));
-  await add(place(stepladder(), -73.5, 0, -34.6, 0.5));
+  // Each loose thing is somewhere a person left it for a reason: the chair pushed back from the
+  // desk, the boxes dropped at the cage gate waiting to go in, the ladder up at the wall panels.
+  // Spread down the aisle they read as scatter, and Jordan's note was "model position feels random".
+  await add(once(prop('office_chair'), X0 + 2.2, 0, -31.7, -Math.PI / 2 + 0.3));
+  await add(boxes([[GATE_X + 0.9, 0.2, -33.5, 0.3], [GATE_X + 1.28, 0.6, -33.64, -0.45]]));
+  await add(place(stepladder(), -64.6, 0, Z1 - 0.75, 0.15));
   await add(papers([
     [X0 + 3, 0, -30.4, 0.2], [X0 + 3.8, 0, -31.6, 1.1], [-66, 0, -30.2, 2.4], [-61, 0, -31.8, 0.7],
     [-64.2, 0, -33.1, 1.5], [-67.4, 0, -34.2, 0.3], [-70.6, 0, -28.3, 2.1], [-72.8, 0, -32.9, 0.9],

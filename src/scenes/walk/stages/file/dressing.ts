@@ -104,7 +104,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The lamp, at the back of the desk with its head over the folder. Its bulb is the room's one
   // warm light, declared in lighting.ts at the head's own height.
   const lamp = grounded(store.model('desk_lamp'));
-  place(lamp, DESK.x + 0.35, TOP, FILE.z + 0.55, -2.24);
+  // Turned so the head looks back over the folder toward the lens. At -2.24 it faced the window.
+  place(lamp, DESK.x + 0.35, TOP, FILE.z + 0.55, 0.9);
   await add(lamp);
 
   // The anchor a pinned panel would hang off, half a metre in front of the folder. Nothing in the

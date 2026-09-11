@@ -244,3 +244,20 @@ export function doorway(spec: DoorwaySpec): THREE.Group {
   if (spec.axis === 'x') g.rotation.y = Math.PI / 2;
   return g;
 }
+
+/**
+ * A tape stanchion: a steel post on a weighted base with a yellow cap, the thing a run of tape is
+ * actually tied to when there is no furniture at that end. Origin at the floor under the post. Tie
+ * tape at y 0.95. Two draw calls.
+ */
+export function stanchion(): THREE.Group {
+  const g = new THREE.Group();
+  const steel = labSteel(0x2b3740);
+  g.add(merged([
+    new THREE.CylinderGeometry(0.17, 0.19, 0.03, 20).translate(0, 0.015, 0),
+    new THREE.CylinderGeometry(0.018, 0.018, 0.94, 10).translate(0, 0.5, 0),
+  ], steel));
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 12), new THREE.MeshStandardMaterial({ color: LABS.hazard, roughness: 0.5 }));
+  cap.position.y = 0.97; g.add(cap);
+  return g;
+}

@@ -2,7 +2,11 @@ import { CatmullRomCurve3, Matrix4, Quaternion, Vector3 } from 'three';
 import type { Wing } from '../../content/schema';
 
 export type StopId = 'booth' | 'fabrication' | 'recreation' | 'operations' | 'credentials' | 'containment' | 'file';
-export interface Stop { id: StopId; t: number; hold: [number, number]; lookAt: [number, number, number]; wing?: Wing; light: string }
+/** `enter` is the t at which the camera crosses into the stop's room (the doorway, or the hold's
+ *  start where the camera holds on the threshold looking in). The light rig switches rooms on it.
+ *  Switching on the nearest stop, halfway between holds, dropped a room's lights while the camera
+ *  was still ten metres inside it. */
+export interface Stop { id: StopId; t: number; enter: number; hold: [number, number]; lookAt: [number, number, number]; wing?: Wing; light: string }
 
 export const EYE = 1.7;
 
@@ -17,24 +21,24 @@ export const STOPS: Stop[] = [
   // The booth looks down the hall through the door it is about to walk through. Its target sits
   // well past the door on the same sightline, so the camera is never turning toward a point it is
   // standing on while it pulls away from the hold.
-  { id: 'booth', t: 0.0, hold: [0.0, 0.09], lookAt: [0, 3.2, 8], light: '#6EC1D6' },
+  { id: 'booth', t: 0.0, enter: 0.0, hold: [0.0, 0.09], lookAt: [0, 3.2, 8], light: '#6EC1D6' },
   // The fabrication hold is inside the dispatch office. The camera turns west to the three exhibits
   // along its glass.
-  { id: 'fabrication', t: 0.2, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], wing: 'fabrication', light: '#E0813A' },
-  { id: 'recreation', t: 0.4, hold: [0.37, 0.44], lookAt: [-33.7, 1.5, -35], wing: 'recreation', light: '#3D7BE0' },
-  { id: 'operations', t: 0.56, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
+  { id: 'fabrication', t: 0.2, enter: 0.105, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], wing: 'fabrication', light: '#E0813A' },
+  { id: 'recreation', t: 0.4, enter: 0.332, hold: [0.37, 0.44], lookAt: [-33.7, 1.5, -35], wing: 'recreation', light: '#3D7BE0' },
+  { id: 'operations', t: 0.56, enter: 0.52, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
   // The credentials hold stands inside the glass lab and looks north up it, so the three plates on
   // each side of the aisle are both in frame. Looking west put one wall in shot and the other three
   // plates behind the camera, which is what Jordan saw. The aim sits a little east of the hold's
   // own x: the spline parks at -79.83 and the lab runs on -79, so a straight north aim leans the
   // frame toward the west row and crowds the east one against the edge.
-  { id: 'credentials', t: 0.7, hold: [0.67, 0.74], lookAt: [-79.2, 1.75, -12], light: '#D9E8EE' },
+  { id: 'credentials', t: 0.7, enter: 0.643, hold: [0.67, 0.74], lookAt: [-79.2, 1.75, -12], light: '#D9E8EE' },
   // The containment hold stands short of the room, in the credentials hall, and looks north
   // through the CONTAINMENT doorway. The aim is the table halfway up the aisle rather than the
   // far wall: the lamp over the redacted page is what the room is about, and aiming past it put
   // the one warm thing in a cold room down at the bottom edge of the frame.
-  { id: 'containment', t: 0.84, hold: [0.81, 0.88], lookAt: [-80.6, 1.3, 12], wing: 'containment', light: '#D7383A' },
-  { id: 'file', t: 1.0, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
+  { id: 'containment', t: 0.84, enter: 0.81, hold: [0.81, 0.88], lookAt: [-80.6, 1.3, 12], wing: 'containment', light: '#D7383A' },
+  { id: 'file', t: 1.0, enter: 0.936, hold: [0.96, 1.0], lookAt: [-68, 1.1, 31], light: '#D9E8EE' },
 ];
 
 // The shutter starts rolling on the first pixel of scroll and finishes at 0.075, while the camera
@@ -169,4 +173,11 @@ export function cameraAt(t: number, out = { position: new Vector3(), target: new
   _qAhead.slerp(lookQuat(stop), weight);
   out.target.copy(FORWARD).applyQuaternion(_qAhead).add(out.position);
   return out;
+}
+
+/** The room the camera is physically in: the last stop whose `enter` it has passed. */
+export function roomAt(t: number): Stop {
+  let room = STOPS[0];
+  for (const s of STOPS) if (t >= s.enter) room = s;
+  return room;
 }

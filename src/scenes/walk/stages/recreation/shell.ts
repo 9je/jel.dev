@@ -3,7 +3,7 @@ import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
 import { merged } from '../../merge';
 import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, ceilingGrid, nearestLitPanel } from '../../labs/materials';
-import { doorway, tapeStrip } from '../../labs/signage';
+import { doorway, tapeStrip, stanchion } from '../../labs/signage';
 import { X1, Z0, Z1, H, W, D, XC, ZC, ROOM, ROOM_W, ROOM_XC, TILE, LIT, PANEL, LANDING, BAY_DOOR, HALL_DOOR, HALL_FACE, HALL_HEAD } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D>; flicker: THREE.InstancedMesh[] }
@@ -70,7 +70,11 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   wall(Z1 - LANDING.z1, H, X1, H / 2, (LANDING.z1 + Z1) / 2, -Math.PI / 2);
   // One tape, hanging off the doorway's south post and trailing to the floor: somebody ducked under
   // it. It stops well short of the walked line, so it never runs through the camera or a wall.
-  root.add(tapeStrip([BAY_DOOR.x, 1.25, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.05], [BAY_DOOR.x + 2.0, 0.06, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.8], 0.06));
+  // Tied from the jamb to a stanchion two metres along. It used to run from the jamb to the floor
+  // with nothing at the floor end, a tape that had fallen and been left, and Jordan's note on the
+  // entry was that it felt weird.
+  const postA = stanchion(); postA.position.set(BAY_DOOR.x + 2.0, 0, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.8); root.add(postA);
+  root.add(tapeStrip([BAY_DOOR.x, 1.05, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.05], [BAY_DOOR.x + 2.0, 0.95, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.8], 0.06));
 
   // ---- The west end: the doorway into the server hall -------------------------------------------
   // Its far mouth is the hall's own east wall plane (X0), which the hall closes around, and its near
@@ -96,7 +100,8 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   if (sign) sign.position.y = HALL_HEAD + 0.35;
   // The tape that used to hang across this end ran down the walked line and the camera drove through
   // its lettering. This one hangs off the south flank beside the doorway, clear of the line.
-  root.add(tapeStrip([hallFace, 1.3, flankZ0 - 0.1], [hallFace + 1.9, 0.06, flankZ0 - 1.1], 0.06));
+  const postB = stanchion(); postB.position.set(hallFace + 1.9, 0, flankZ0 - 1.1); root.add(postB);
+  root.add(tapeStrip([hallFace, 1.1, flankZ0 - 0.1], [hallFace + 1.9, 0.95, flankZ0 - 1.1], 0.06));
 
   root.add(merged(dado, dadoMaterial()), merged(lines, dadoLineMaterial()));
   return { planes, flicker: room.flicker };
