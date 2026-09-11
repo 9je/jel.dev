@@ -30,7 +30,15 @@ const NORTH_DOOR = { x: -79, w: 3.2, h: 3.0, depth: 1.2 };
 export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
-  const floor = plane(W, D, labFloor(store, W, D, 0xb7c4cb)); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
+  // This hall and the server hall overlap by the metre their shared doorway is cut through, and both
+  // lay a floor across it at y 0: x -76 to -75, z -30 to -24, which is the strip beside the flagship
+  // desk at the server hall's west end. Two coplanar planes there tore into thin stripes of this
+  // room's paler, cooler tile across the server hall's greyer one, in the frame the walk leaves
+  // operations on. The overlap sits behind this room's own hold, so this floor is the one that gives
+  // way: a polygon offset settles the tie in depth without moving the plane the room stands on.
+  const floorMat = labFloor(store, W, D, 0xb7c4cb);
+  floorMat.polygonOffset = true; floorMat.polygonOffsetFactor = 1; floorMat.polygonOffsetUnits = 1;
+  const floor = plane(W, D, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
 
   // The long walls run full length and full height on both sides: the lab's glass is inset 0.4 m
   // from them, so there is always a solid wall (and a sliver of hall floor) behind every pane. The
