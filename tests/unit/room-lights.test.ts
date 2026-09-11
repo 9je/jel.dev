@@ -7,7 +7,7 @@ import { lights as credentialsLights } from '../../src/scenes/walk/stages/creden
 
 // The door's own standby lamp, which the booth appends to its placements. Stood in for here so the
 // booth's lighting can be read without building the door.
-const doorLamp: PointPlacement = { kind: 'point', position: [3.15, 3.05, 22], color: 0xc8322b, intensity: 2.5, distance: 5, decay: 2 };
+const doorLamp: PointPlacement = { kind: 'point', position: [3.15, 3.05, 22.5], color: 0xc8322b, intensity: 2, distance: 3.2, decay: 2 };
 
 // The fabrication floor's lighting is built against the asset store and the LED ticker in the DOM,
 // so it has no store-free path to call from a unit test. Every other dressed room declares its

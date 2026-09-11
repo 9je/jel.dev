@@ -276,7 +276,11 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     const pin = () => { if (!handle) return; pinOverlays(els.sections, handle.anchors, handle.camera, scroll?.progress() ?? 0); pinRaf = requestAnimationFrame(pin); };
     pin();
     scroll = createScroll();
-    scroll.onProgress((t) => handle?.setProgress(t));
+    scroll.onProgress((t) => {
+      handle?.setProgress(t);
+      // The cue has done its job the moment the walk moves, and it never comes back.
+      if (t > 0.01) els.root.dataset.scrolled = '';
+    });
     scroll.onStop((id) => activate(els, id));
     for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) {
       a.addEventListener('click', (e) => {

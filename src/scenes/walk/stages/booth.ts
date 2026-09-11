@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Stage, StageContext, StageDef } from './types';
 import { surface, prepareAO, disposeObject } from '../materials';
+import { merged } from '../merge';
+import { LABS } from '../labs/materials';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
 import type { Placement, PointPlacement } from '../rig';
@@ -18,12 +20,12 @@ export function boothLights(lamp: PointPlacement): Placement[] {
   return [
     // Cool ceiling strip washing down the shutter, warm pool at the desk.
     { kind: 'spot', position: [0, H - 0.3, 25.4], target: [0, 0.1, 23.3], color: 0x8fd0e0, intensity: 16, distance: 12, angle: Math.PI / 4.2, penumbra: 0.9, decay: 1.7, shadow: true },
-    { kind: 'point', position: [1.5, 1.24, 23.3], color: 0xffc98a, intensity: 3.4, distance: 3.2, decay: 2 },
+    { kind: 'point', position: [1.18, 1, 23.68], color: 0xffc98a, intensity: 2.6, distance: 3.2, decay: 2 },
     lamp,
   ];
 }
 
-function build({ scene, store, anchors, tier }: StageContext): Stage {
+function build({ scene, store, anchors, tier, typeface }: StageContext): Stage {
   const root = new THREE.Group(); root.name = 'booth'; scene.add(root);
   const plate = store.texture('metal_plate'), rubber = store.texture('rubber_floor');
   const zc = (Z0 + Z1) / 2;
@@ -42,13 +44,29 @@ function build({ scene, store, anchors, tier }: StageContext): Stage {
   for (const x of [-(DOOR_W + jamb) / 2, (DOOR_W + jamb) / 2]) { const m = shell(new THREE.Mesh(new THREE.PlaneGeometry(jamb, H), frontMat)); m.position.set(x, H / 2, Z0 + 0.01); }
   const header = shell(new THREE.Mesh(new THREE.PlaneGeometry(DOOR_W, H - DOOR_H), frontMat)); header.position.set(0, DOOR_H + (H - DOOR_H) / 2, Z0 + 0.01);
 
-  const door = buildDoor(store, { width: DOOR_W, height: DOOR_H, position: [0, 0, Z0] }); root.add(door.root);
+  const door = buildDoor(store, { width: DOOR_W, height: DOOR_H, position: [0, 0, Z0], typeface }); root.add(door.root);
 
   // Props sit in the right third of frame, clear of the copy that overlays the left half.
   const desk = store.model('desk'); desk.position.set(1.55, 0, 23.9); desk.rotation.y = -Math.PI / 2; root.add(desk);
   const stool = store.model('stool'); stool.position.set(0.62, 0, 23.7); root.add(stool);
   const lamp = store.model('desk_lamp'); lamp.position.set(1.5, 0.76, 23.35); lamp.rotation.y = 2.1; root.add(lamp);
-  const box = store.model('utility_box'); box.position.set(3.2, 1.75, Z0 + 0.06); box.rotation.y = Math.PI; root.add(box);
+  // The lamp is a warm prop beside the light, not a second light. Left on the shared PBR setup its
+  // chrome arm mirrored the warm point back at the camera and the whole armature read as lit from
+  // inside. Dulling the reflection and holding the roughness up puts the glow back in the shade.
+  lamp.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m instanceof THREE.MeshStandardMaterial) { m.envMapIntensity = 0.25; m.roughness = Math.max(m.roughness, 0.5); m.metalness = Math.min(m.metalness, 0.4); }
+    }
+  });
+  // Bolted to the side wall behind the camera's shoulder. On the front wall it stood in the door's
+  // own frame, clipping the jamb post and the hazard rail with it.
+  const box = store.model('utility_box'); box.position.set(W / 2 - 0.06, 1.75, 24.6); box.rotation.y = -Math.PI / 2; root.add(box);
+  // Painted hexes on the floor between the door and the desk, the one piece of colour down there.
+  // Spaced so no two overlap: coplanar at the same height, an overlap is a z fight, not a patch.
+  const hexes = ([[-1.8, 23], [-0.3, 24.05], [-1.9, 25.1]] as [number, number][])
+    .map(([x, z]) => new THREE.CylinderGeometry(0.9, 0.9, 0.01, 6).translate(x, 0.008, z));
+  root.add(merged(hexes, new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.9, transparent: true, opacity: 0.5 })));
   root.traverse((o) => { if (o instanceof THREE.Mesh) { o.castShadow = tier === 'high'; o.receiveShadow = true; } });
 
   // Cool ceiling strip washing down the shutter, warm pool at the desk.
