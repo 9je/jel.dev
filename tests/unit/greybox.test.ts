@@ -5,7 +5,7 @@ import { STOPS, type StopId } from '../../src/scenes/walk/path';
 import type { StageContext } from '../../src/scenes/walk/stages/types';
 
 function ctx(): StageContext {
-  return { scene: new Scene(), tier: 'low', anchors: new Map<string, Vector3>(), store: null as unknown as StageContext['store'], pace: async () => {} };
+  return { scene: new Scene(), tier: 'low', anchors: new Map<string, Vector3>(), store: null as unknown as StageContext['store'], typeface: null, pace: async () => {} };
 }
 
 /** Lights the renderer would see: three skips an invisible group whole, lights included. */

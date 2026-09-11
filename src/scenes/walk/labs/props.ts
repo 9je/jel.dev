@@ -3,10 +3,13 @@ import type { AssetStore } from '../assets';
 import { instances, merged, type Spot } from '../merge';
 import { LABS, labSteel, labGlass, ceilingGrid } from './materials';
 import { stencilTexture } from '../textures';
-import { rackFace, screenFace, paperSheet, tapeStripe, hazardPlate, chainlink, rng } from './textures';
+import { rackFace, screenFace, paperSheet, hazardPlate, chainlink, rng } from './textures';
 
 export function rackSlots(levels: number, height: number): number[] { return Array.from({ length: levels }, (_, i) => +(((i + 1) * height) / levels).toFixed(4)); }
 export { gridPitch } from './materials';
+// Barrier tape lives in the signage kit now, where it is a strip that reads the right way round from
+// both sides. Re-exported here so the rooms that string it keep their one import.
+export { tapeLine } from './signage';
 
 /** Evenly spaced post offsets from -len/2 to +len/2 inclusive, near `pitch` apart. Stepping from one
  *  edge by a fixed pitch drops the far edge's post whenever `len` isn't a multiple of the pitch (a
@@ -109,15 +112,6 @@ export function papers(spots: Spot[]): THREE.Mesh {
   const r = rng(spots.length + 7);
   const sheets = spots.map(([x, y, z, ry = 0]) => { const s = new THREE.PlaneGeometry(0.21, 0.297); s.rotateX(-Math.PI / 2); s.rotateY(ry + (r() - 0.5) * 0.6); s.translate(x, y + 0.006, z); return s; });
   const m = merged(sheets, new THREE.MeshStandardMaterial({ map: paperSheet(3), roughness: 0.9, side: THREE.DoubleSide })); m.receiveShadow = false; return m;
-}
-
-/** Barrier tape strung between two points at a height. */
-export function tapeLine(a: [number, number], b: [number, number], y = 1.0): THREE.Mesh {
-  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-  const t = tapeStripe(); t.repeat.x = len / 2;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.07), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6, side: THREE.DoubleSide }));
-  m.position.set((a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2); m.rotation.y = Math.atan2(-(b[1] - a[1]), b[0] - a[0]); m.rotation.z = 0.06;
-  return m;
 }
 
 /** A red roof beacon: a dome on a base. Emissive, blooms on high. Origin at the base. */

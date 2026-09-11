@@ -1,11 +1,14 @@
-// Converts Michroma (OFL) to the three.js typeface JSON format, keeping only the glyphs the sign uses.
+// Converts Michroma (OFL) to the three.js typeface JSON format, keeping only the glyphs the signage uses.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import opentype from 'opentype.js';
 
 const TTF = 'scripts/Michroma.ttf';
 const OUT = 'public/fonts/michroma.typeface.json';
-const TEXT = 'JEL LABS';
+// Every glyph the walk's signage can ask for: the capitals, the digits, a space, a full stop and a
+// hyphen. Room names, the booth lintel and any plate share one file, so nothing has to be
+// regenerated when a sign's copy changes.
+const TEXT = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .-';
 
 if (!existsSync(TTF)) {
   const css = execSync('curl -sA "curl" "https://fonts.googleapis.com/css2?family=Michroma"').toString();

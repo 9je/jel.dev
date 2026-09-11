@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
 import { cameraAt, stopAt, STOPS, type StopId } from './path';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
@@ -38,6 +39,13 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // Signage is drawn to a canvas, and canvas text does not wait for a webfont. Kick the load off
   // now so it overlaps the asset download, and await it just before a stage draws its stencils.
   const fontReady = (async () => { try { await document.fonts.load('600 190px Michroma'); await document.fonts.ready; } catch { /* the fallback stack still draws */ } })();
+  // The same face again, as outlines this time, for the signage the kit extrudes rather than paints.
+  // It rides alongside the asset download and never blocks a room: a failure hands the stages a null
+  // typeface and their lettering falls back to a stencil plane.
+  const typefaceReady: Promise<Font | null> = fetch('/fonts/michroma.typeface.json')
+    .then((r) => { if (!r.ok) throw new Error(`michroma typeface: ${r.status}`); return r.json(); })
+    .then((json) => new FontLoader().parse(json))
+    .catch((err) => { console.warn('the michroma typeface did not load, signage falls back to stencils', err); return null; });
 
   // Every surface here is metal, and metal with nothing to reflect renders black. A small prefiltered
   // room gives the plate walls and the shutter something in their reflections, kept dim so it reads
@@ -56,7 +64,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const store = await AssetStore.open(opts.tier);
   const anchors = new Map<string, THREE.Vector3>();
   const pacer = createPacer(4);
-  const ctx: StageContext = { scene, tier: opts.tier, anchors, store, pace: pacer.pace };
+  const ctx: StageContext = { scene, tier: opts.tier, anchors, store, typeface: await typefaceReady, pace: pacer.pace };
   const grey = greybox(ctx);
   // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
   // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
