@@ -32,9 +32,22 @@ export function surface(set: TextureSet, width: number, height: number, metersPe
 
 const OWNABLE_MAPS = ['map', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'alphaMap'] as const;
 
-/** Disposes geometry and materials on every mesh/points in the hierarchy. A map is disposed only when
- *  `userData.owned === true` — clones made for this instance (see `surface()`) — never a texture the
- *  AssetStore still owns and will dispose itself. */
+const shared = new WeakSet<THREE.BufferGeometry | THREE.Material>();
+
+/**
+ * Records the geometry and materials of a loaded model template as the AssetStore's own.
+ * `store.model()` hands back `clone(true)`, which shares both with the template, so a stage that
+ * disposed them would blank the same model in every other room. A clone made by a stage is a new
+ * object and is not in the set, so it is still disposed normally.
+ */
+export function markShared(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.Points)) return;
+    shared.add(o.geometry);
+    for (const mat of Array.isArray(o.material) ? o.material : [o.material]) shared.add(mat);
+  });
+}
+
 /**
  * Drops a room that failed halfway through its build. Every stage adds its root to the scene before
  * it dresses it and names that root after its own id, so a build that threw leaves a half dressed
@@ -52,11 +65,15 @@ export function disposeStray(scene: THREE.Scene, id: string): void {
   scene.remove(stray);
 }
 
+/** Disposes geometry and materials on every mesh/points in the hierarchy, except the ones the
+ *  AssetStore still owns (see `markShared()`), which it disposes itself. A map is disposed only when
+ *  `userData.owned === true`, that is a clone made for this instance (see `surface()`). */
 export function disposeObject(root: THREE.Object3D): void {
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.Points)) return;
-    o.geometry.dispose();
+    if (!shared.has(o.geometry)) o.geometry.dispose();
     for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (shared.has(mat)) continue;
       for (const key of OWNABLE_MAPS) {
         const tex = (mat as THREE.MeshStandardMaterial)[key];
         if (tex?.userData?.owned === true) tex.dispose();

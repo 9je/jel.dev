@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import type { Tier } from './quality';
+import { markShared } from './materials';
 
 export interface ManifestTexture { diffuse: string; normal: string; arm: string; repeat: [number, number]; bytes: number }
 export interface ManifestModel { url: string; bytes: number }
@@ -59,7 +60,7 @@ export class AssetStore {
     }
     for (const [key, m] of Object.entries(g.models)) {
       modelKeys.push(key);
-      work.push(track(m.bytes, this.gltf.loadAsync(m.url).then((res) => { this.models.set(key, res.scene); })));
+      work.push(track(m.bytes, this.gltf.loadAsync(m.url).then((res) => { markShared(res.scene); this.models.set(key, res.scene); })));
     }
     report();
     const p = Promise.all(work)
