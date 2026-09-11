@@ -35,6 +35,23 @@ const OWNABLE_MAPS = ['map', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap
 /** Disposes geometry and materials on every mesh/points in the hierarchy. A map is disposed only when
  *  `userData.owned === true` — clones made for this instance (see `surface()`) — never a texture the
  *  AssetStore still owns and will dispose itself. */
+/**
+ * Drops a room that failed halfway through its build. Every stage adds its root to the scene before
+ * it dresses it and names that root after its own id, so a build that threw leaves a half dressed
+ * room standing in the scene, drawn over the greybox space it was meant to replace and holding its
+ * geometry and textures for the rest of the session.
+ *
+ * Only the scene's own children are candidates: a stage root is always added straight to the scene,
+ * and a deep search could match a prop inside a room that built fine.
+ */
+export function disposeStray(scene: THREE.Scene, id: string): void {
+  const stray = scene.children.find((o) => o.name === id);
+  if (!stray) return;
+  stray.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); });
+  disposeObject(stray);
+  scene.remove(stray);
+}
+
 export function disposeObject(root: THREE.Object3D): void {
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.Points)) return;

@@ -10,6 +10,7 @@ import { greybox } from './stages/greybox';
 import { STAGE_LOADERS } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
+import { disposeStray } from './materials';
 import { createHover, pickHotspot } from './interact';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
@@ -97,7 +98,12 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       if (disposed) { stage.dispose(); return; }
       built.set(def.id, stage); if (def.replaces) grey.hide(def.replaces);
       if (stage.lights) rig.register(def.stop, stage.lights);
-    })().catch((err) => console.warn(`stage ${def.id} failed`, err)).finally(() => pending.delete(def.id));
+    })().catch((err) => {
+      console.warn(`stage ${def.id} failed`, err);
+      // The stage never handed back a dispose(), so the partial root it added is the caller's to
+      // clear: the greybox space it replaces is still standing and the two would draw over each other.
+      disposeStray(scene, def.id);
+    }).finally(() => pending.delete(def.id));
     pending.set(def.id, p); return p;
   }
 
