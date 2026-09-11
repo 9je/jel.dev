@@ -9,7 +9,7 @@ import { screenFace } from '../../labs/textures';
 import { papers, glassRoom } from '../../labs/props';
 import { signBox } from '../../labs/signage';
 import { OFFICE, SODIUM } from './layout';
-import { controller, key, adapter } from './exhibits';
+import { controller, key, bridge } from './exhibits';
 
 /** An edge-lit acrylic label, standing at the back of a plinth: a clear plate with the product's
  *  name burned through its top and the wing's orange in the channel it stands in. Origin at the foot
@@ -178,7 +178,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   const exhibits: [string, string, number, () => THREE.Group][] = [
     ['conch', 'conch.gg', 3.0, () => controller(store.model('gamecube_controller'))],
     ['ezkey', 'ezkey.io', 0.4, key],
-    ['gc-bridge', 'gc-bridge', -2.2, adapter],
+    ['gc-bridge', 'gc-bridge', -2.2, bridge],
   ];
   const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;

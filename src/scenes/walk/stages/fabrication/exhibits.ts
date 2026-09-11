@@ -99,72 +99,55 @@ export function key(): THREE.Group {
 }
 
 /**
- * gc-bridge: the four port adapter the bridge reads, with a GameCube controller plug in port one.
- * The box alone read as a network switch. What says GameCube is the plug, the console's own indigo
- * with its rounded nose, and the sockets cut to that plug's outline, a rounded square with a bump
- * on top. The whole thing leans a little toward the camera on a riser so the ports face the eye.
+ * gc-bridge: a bridge. A scale model suspension bridge spanning the plinth, towers and deck in the
+ * console's indigo, main cables hung between the tower tops in a parabola with a hanger every six
+ * centimetres, and concrete abutments at each end. The adapter box it replaces read as a network
+ * switch twice over. Five draw calls.
  */
-export function adapter(): THREE.Group {
+export function bridge(): THREE.Group {
   const g = new THREE.Group();
-  const W = 0.7, D = 0.36, H = 0.16, R = 0.012, LEAN = 0.3;
-  const hw = W / 2, hd = D / 2, F = hd + R;
-  // Lean about the front bottom edge, so the ports stay on the cap and the back rises onto the
-  // riser. The whole box sits BACK behind the origin so the plug and its cord fit on the cap.
-  const BACK = 0.2;
-  const tilt = new THREE.Group(); tilt.position.z = F - BACK; tilt.rotation.x = LEAN; g.add(tilt);
-  const a = new THREE.Group(); a.position.z = -F; tilt.add(a);
-  const rr = new THREE.Shape();
-  const r = 0.05;
-  rr.moveTo(-hw + r, -hd); rr.lineTo(hw - r, -hd); rr.quadraticCurveTo(hw, -hd, hw, -hd + r);
-  rr.lineTo(hw, hd - r); rr.quadraticCurveTo(hw, hd, hw - r, hd); rr.lineTo(-hw + r, hd);
-  rr.quadraticCurveTo(-hw, hd, -hw, hd - r); rr.lineTo(-hw, -hd + r); rr.quadraticCurveTo(-hw, -hd, -hw + r, -hd);
-  const body = new THREE.ExtrudeGeometry(rr, { depth: H - 2 * R, bevelEnabled: true, bevelThickness: R, bevelSize: R, bevelSegments: 3, curveSegments: 6 });
-  body.translate(0, 0, R); body.rotateX(-Math.PI / 2);
-  a.add(new THREE.Mesh(body, shell(0x2f353b, 0.55, 0.2)));
-
-  // Sockets across the front face, which the bevel carries R proud of the outline: a light surround
-  // in the plug's outline, and a dark hole inside it.
-  const PORTS = [-0.255, -0.085, 0.085, 0.255];
-  const plates: THREE.BufferGeometry[] = [], holes: THREE.BufferGeometry[] = [];
-  for (const x of PORTS) {
-    plates.push(new THREE.BoxGeometry(0.12, 0.08, 0.014).translate(x, 0.07, F + 0.006));
-    plates.push(new THREE.CylinderGeometry(0.04, 0.04, 0.014, 16).rotateX(Math.PI / 2).translate(x, 0.11, F + 0.006));
-    holes.push(new THREE.BoxGeometry(0.095, 0.058, 0.01).translate(x, 0.066, F + 0.014));
-    holes.push(new THREE.CylinderGeometry(0.028, 0.028, 0.01, 12).rotateX(Math.PI / 2).translate(x, 0.105, F + 0.014));
+  const HALF = 0.62, TX = 0.33, TH = 0.44, DECK = 0.12, SAG = 0.26, W = 0.15;
+  const indigo = shell(0x46398f, 0.45, 0.1);
+  // Towers: two legs each with a cross beam at the top and one under the deck, on a pier block.
+  const towers: THREE.BufferGeometry[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) towers.push(new THREE.BoxGeometry(0.03, TH, 0.03).translate(sx * TX, TH / 2, sz * (W / 2 + 0.005)));
+    towers.push(new THREE.BoxGeometry(0.03, 0.025, W + 0.04).translate(sx * TX, TH - 0.0125, 0));
+    towers.push(new THREE.BoxGeometry(0.03, 0.02, W + 0.04).translate(sx * TX, TH * 0.68, 0));
+    towers.push(new THREE.BoxGeometry(0.03, 0.02, W + 0.04).translate(sx * TX, DECK - 0.03, 0));
   }
-  a.add(merged(plates, shell(0xa3aab1, 0.5, 0.2)));
-  a.add(merged(holes, shell(0x0d1013, 0.8, 0.1)));
-  const led = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.006, 0.02), new THREE.MeshStandardMaterial({ color: 0x06131a, emissive: 0x3fd47a, emissiveIntensity: 2.4 }));
-  led.position.set(-0.3, H + 0.002, hd - 0.05); a.add(led);
-
-  // The controller plug in port one: the indigo body with its rounded nose in the socket, and a
-  // grey cable out of its back. The lean brings the cable's exit down to the cap right at the
-  // origin, so the cord lies flat from there, in the unleaned group, and curls short of the edge.
-  const indigo = shell(0x46398f, 0.42, 0.05);
-  const plug = [
-    new THREE.BoxGeometry(0.1, 0.07, 0.12).translate(PORTS[0], 0.095, F + 0.075),
-    new THREE.CylinderGeometry(0.03, 0.03, 0.12, 14).rotateX(Math.PI / 2).translate(PORTS[0], 0.13, F + 0.075),
-    new THREE.BoxGeometry(0.06, 0.05, 0.06).translate(PORTS[0], 0.09, F + 0.16),
+  g.add(merged(towers, indigo));
+  // The deck: a slab with a kerb down each side, carried the full span between the abutments.
+  const deck = [
+    new THREE.BoxGeometry(HALF * 2, 0.018, W).translate(0, DECK, 0),
+    new THREE.BoxGeometry(HALF * 2, 0.014, 0.012).translate(0, DECK + 0.016, W / 2 - 0.006),
+    new THREE.BoxGeometry(HALF * 2, 0.014, 0.012).translate(0, DECK + 0.016, -(W / 2 - 0.006)),
   ];
-  a.add(merged(plug, indigo));
-  const cord = [
-    new THREE.CylinderGeometry(0.009, 0.009, 0.1, 8).rotateX(Math.PI / 2).translate(PORTS[0], 0.02, F - BACK + 0.04),
-    new THREE.TorusGeometry(0.05, 0.009, 6, 18, Math.PI * 1.3).rotateX(Math.PI / 2).translate(PORTS[0] - 0.05, 0.02, F - BACK + 0.11),
+  g.add(merged(deck, shell(0x2f2a5e, 0.6, 0.1)));
+  // Main cables: from the anchor at each end up to the tower top, then a parabola to the far tower.
+  const cableY = (x: number) => Math.abs(x) >= TX
+    ? TH - ((Math.abs(x) - TX) / (HALF - TX)) * (TH - 0.03)
+    : TH - SAG * (1 - (x / TX) ** 2);
+  const cables: THREE.BufferGeometry[] = [];
+  const hangers: THREE.BufferGeometry[] = [];
+  for (const sz of [-1, 1]) {
+    const pts: THREE.Vector3[] = [];
+    for (let x = -HALF; x <= HALF + 1e-6; x += 0.02) pts.push(new THREE.Vector3(x, cableY(x), sz * (W / 2 + 0.005)));
+    cables.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, 0.005, 6, false));
+    for (let x = -TX + 0.06; x < TX - 0.03; x += 0.06) {
+      const top = cableY(x), h = top - DECK;
+      hangers.push(new THREE.CylinderGeometry(0.002, 0.002, h, 4).translate(x, DECK + h / 2, sz * (W / 2 + 0.005)));
+    }
+  }
+  g.add(merged(cables, shell(0xc0c8ce, 0.4, 0.7)));
+  g.add(merged(hangers, shell(0xc0c8ce, 0.4, 0.7)));
+  // Abutments and piers: concrete blocks the deck lands on and the towers stand on.
+  const blocks = [
+    new THREE.BoxGeometry(0.1, DECK - 0.009, W + 0.06).translate(-HALF + 0.05, (DECK - 0.009) / 2, 0),
+    new THREE.BoxGeometry(0.1, DECK - 0.009, W + 0.06).translate(HALF - 0.05, (DECK - 0.009) / 2, 0),
+    new THREE.BoxGeometry(0.08, 0.05, W + 0.08).translate(-TX, 0.025, 0),
+    new THREE.BoxGeometry(0.08, 0.05, W + 0.08).translate(TX, 0.025, 0),
   ];
-  g.add(merged(cord, shell(0x9aa4ac, 0.7, 0.1)));
-
-  // The USB lead out of the right side, bending back across the cap to its plug.
-  const lead = [
-    new THREE.CylinderGeometry(0.01, 0.01, 0.2, 8).rotateZ(Math.PI / 2).translate(hw + 0.1, 0.03, 0.02),
-    new THREE.TorusGeometry(0.09, 0.01, 6, 16, Math.PI / 2).rotateX(Math.PI / 2).translate(hw + 0.2, 0.03, -0.07),
-    new THREE.CylinderGeometry(0.01, 0.01, 0.06, 8).rotateX(Math.PI / 2).translate(hw + 0.29, 0.03, -0.1),
-  ];
-  a.add(merged(lead, shell(0x2b3740, 0.8, 0.1)));
-  const plugBody = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.09), shell(0x1e2328, 0.6, 0.2)); plugBody.position.set(hw + 0.29, 0.03, -0.175); a.add(plugBody);
-  const plugTip = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.016, 0.06), shell(0xc0c8ce, 0.3, 0.8)); plugTip.position.set(hw + 0.29, 0.03, -0.245); a.add(plugTip);
-
-  // The back bottom edge rises D sin LEAN. The riser's top stops just under the body there.
-  const riser = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.1), shell(0x1b2129, 0.7, 0.2));
-  riser.position.set(0, 0.05, -0.21 - BACK); g.add(riser);
+  g.add(merged(blocks, shell(0x8f9aa2, 0.85, 0.05)));
   return g;
 }

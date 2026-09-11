@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { controller, key, adapter } from '../../src/scenes/walk/stages/fabrication/exhibits';
+import { controller, key, bridge } from '../../src/scenes/walk/stages/fabrication/exhibits';
 
 // The office stands each product at the plinth top, face toward +z, on a cap 1.0 m across and
 // 1.4 m long. These hold the three to that cap at a scale that reads from the hold, three metres
@@ -12,7 +12,7 @@ const gamecube = () => { const m = new THREE.Group(); const mesh = new THREE.Mes
 const controllerExhibit = () => controller(gamecube());
 
 describe('fabrication exhibits', () => {
-  it.each([['controller', controllerExhibit], ['key', key], ['adapter', adapter]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
+  it.each([['controller', controllerExhibit], ['key', key], ['bridge', bridge]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
     const b = box(make());
     // The controller and the adapter are wide, the key is long and raked up: the biggest dimension
     // is what the eye sizes it by.
@@ -26,11 +26,14 @@ describe('fabrication exhibits', () => {
     expect(b.min.x).toBeGreaterThan(-0.7); expect(b.max.x).toBeLessThan(0.7);
     expect(b.max.y).toBeLessThan(0.75);
   });
-  it('leans every product toward the camera, the key most, the adapter least', () => {
+  it('leans the controller and the key toward the camera, and spans the bridge flat', () => {
     const face = (g: THREE.Group) => { const t = g.children.find((c) => c.rotation.x !== 0); return t?.rotation.x ?? 0; };
     expect(face(controllerExhibit())).toBeGreaterThan(0.4);
     expect(face(key())).toBeGreaterThan(0.4);
-    expect(face(adapter())).toBeGreaterThan(0.2); expect(face(adapter())).toBeLessThan(0.5);
+    expect(face(bridge())).toBe(0);
+    const b = box(bridge());
+    expect(b.max.x - b.min.x).toBeGreaterThan(1.1);
+    expect(b.max.y).toBeGreaterThan(0.4);
   });
   it('fits the controller model to the cap whatever scale it arrives at', () => {
     const b = box(controllerExhibit());
@@ -38,7 +41,7 @@ describe('fabrication exhibits', () => {
     expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
   });
   it('keeps each product to a handful of draw calls', () => {
-    for (const make of [controllerExhibit, key, adapter]) {
+    for (const make of [controllerExhibit, key, bridge]) {
       let n = 0; make().traverse((o) => { if ((o as THREE.Mesh).isMesh) n++; });
       expect(n).toBeLessThanOrEqual(10);
     }
