@@ -99,15 +99,20 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   }
 
   // ---- The floor ------------------------------------------------------------------------------
-  // Grating strips across the aisle every three metres, over a dark recess so the diamonds read as
-  // holes into a trench rather than as a pattern printed on the tile.
+  // Grating strips across the aisle every three metres. The first pass alpha tested a white lattice
+  // over a near black recess, which gave a hard black and white mat rather than steel over a trench:
+  // in the hold's frame it was the loudest thing in the room after the lamp. Now the recess is a dark
+  // steel frame rather than a hole, and the grating is a half opaque sheet sunk 4 mm inside it, so
+  // the diamonds sit close in value to what shows between them.
   const gratingZ: Spot[] = [];
   for (let z = Z0 + 1; z <= Z1 - 1; z += 3) gratingZ.push([HALL_DOOR.x, 0.011, z]);
+  root.add(instances(new THREE.BoxGeometry(1.3, 0.02, 0.46), new THREE.MeshStandardMaterial({
+    color: 0x2b3740, metalness: 0.5, roughness: 0.7,
+  }), gratingZ.map(([x, , z]) => [x, 0.01, z] as Spot)));
   const alpha = chainlink(128); alpha.repeat.set(3, 1);
-  root.add(instances(new THREE.BoxGeometry(1.2, 0.02, 0.4), new THREE.MeshStandardMaterial({
-    color: 0x525c63, alphaMap: alpha, alphaTest: 0.4, metalness: 0.6, roughness: 0.5,
-  }), gratingZ));
-  root.add(instances(new THREE.BoxGeometry(1.22, 0.01, 0.42), new THREE.MeshStandardMaterial({ color: 0x0d1216, roughness: 0.95 }), gratingZ.map(([x, , z]) => [x, 0.004, z] as Spot)));
+  root.add(instances(new THREE.BoxGeometry(1.2, 0.01, 0.4), new THREE.MeshStandardMaterial({
+    color: 0x6c757c, alphaMap: alpha, transparent: true, opacity: 0.45, depthWrite: false, metalness: 0.7, roughness: 0.45,
+  }), gratingZ.map(([x, , z]) => [x, 0.011, z] as Spot)));
 
   return { planes };
 }
