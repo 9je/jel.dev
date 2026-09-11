@@ -463,14 +463,16 @@ export function controlConsole(face: THREE.Texture): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.16, 0.5), carcass(0x9ea5a3, 0.6));
   body.position.set(0, 0.08, 0); g.add(body);
-  // The keyed face is a wedge lying back over the carcass: a slab with a printed top reads as a
-  // table mat, and the tilt is the whole reason a console looks like something a person operates.
+  // The keyed face is a wedge raked up away from the operator, who stands at +z: the far edge of
+  // the deck is the high one, so the keys are turned toward whoever is working them. Raked the
+  // other way the console presents its blank back to the room, which is exactly what the first
+  // pass put in the middle of the frame.
   const deck = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.44), carcass(0xb3b8b6, 0.55));
-  deck.rotation.x = -0.3; deck.position.set(0, 0.2, 0.02); g.add(deck);
+  deck.rotation.x = 0.3; deck.position.set(0, 0.2, 0.02); g.add(deck);
   const keys = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.42), new THREE.MeshStandardMaterial({
     map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.5, roughness: 0.75,
   }));
-  keys.rotation.x = -Math.PI / 2 - 0.3; keys.position.set(0, 0.212, 0.023); keys.name = 'keys'; g.add(keys);
+  keys.rotation.x = -Math.PI / 2 + 0.3; keys.position.set(0, 0.212, 0.023); keys.name = 'keys'; g.add(keys);
   return g;
 }
 
@@ -532,11 +534,14 @@ export function pinboard(w: number, h: number, label = 'ROSTER'): THREE.Group {
  *  is read from seven metres back at fifteen degrees off the horizontal, and at that angle an A4
  *  leaf is a seventy by twenty pixel sliver with nothing on it anybody can see. Propped, the same
  *  leaf is a card facing the lens, and a room turns the whole folder so that card faces the camera.
+ *  The leaves are 0.44 by 0.32, which is a dossier rather than a document wallet: at the distance
+ *  the control room parks the camera it is the difference between a form a hundred and forty pixels
+ *  across and one a hundred and ten across, and the form is the point of the room.
  */
 export function openFile(page?: THREE.Texture): THREE.Group {
   const g = new THREE.Group();
-  const LEAF = 0.4, DEEP = 0.29;
-  const card = new THREE.MeshStandardMaterial({ color: 0xd6b979, roughness: 0.9, side: THREE.DoubleSide });
+  const LEAF = 0.44, DEEP = 0.32;
+  const card = new THREE.MeshStandardMaterial({ color: 0xc2a469, roughness: 0.92, side: THREE.DoubleSide });
   const flat = new THREE.Mesh(new THREE.BoxGeometry(LEAF, 0.005, DEEP), card);
   flat.position.set(0, 0.0025, -DEEP / 2); g.add(flat);
   // The propped leaf swings about the fold, so it hangs off a pivot at the fold rather than sitting
@@ -547,7 +552,7 @@ export function openFile(page?: THREE.Texture): THREE.Group {
   // Half a turn about the sheet's own normal before it is laid down, or the form is typed upside
   // down on the leaf: laying a plane flat maps the top of its canvas toward the fold, which is the
   // bottom of the card once the leaf is propped.
-  const form = new THREE.PlaneGeometry(LEAF * 0.84, DEEP * 0.9).rotateZ(Math.PI).rotateX(-Math.PI / 2);
+  const form = new THREE.PlaneGeometry(LEAF * 0.92, DEEP * 0.92).rotateZ(Math.PI).rotateX(-Math.PI / 2);
   const sheet = new THREE.Mesh(form, new THREE.MeshStandardMaterial({ map: page, roughness: 0.9 }));
   sheet.position.set(0, 0.007, DEEP / 2); sheet.name = 'page';
   hinge.add(sheet);

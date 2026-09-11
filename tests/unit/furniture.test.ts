@@ -122,9 +122,14 @@ describe('the break room kit', () => {
     expect(box.max.y - box.min.y).toBeCloseTo(1.06, 2);
   });
 
-  it('rakes the console face back over its carcass', () => {
+  it('rakes the console face up toward whoever is working it', () => {
     const keys = kit.controlConsole(new THREE.Texture()).getObjectByName('keys') as T.Mesh;
-    expect(keys.rotation.x).toBeLessThan(-Math.PI / 2);
+    keys.updateMatrixWorld(true);
+    const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(keys.quaternion);
+    // Up, and leaning toward +z, which is the side the console is operated from. Leaning the other
+    // way turns a bank of keys into a blank pale slab facing the ceiling and the far wall.
+    expect(normal.y).toBeGreaterThan(0.9);
+    expect(normal.z).toBeGreaterThan(0.2);
     expect(keys.position.y).toBeGreaterThan(0.16);
   });
 });

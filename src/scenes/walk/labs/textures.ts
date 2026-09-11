@@ -212,7 +212,7 @@ export function personnelSheet(lines: string[]): THREE.CanvasTexture {
     const cut = entry.indexOf(' ');
     ctx.font = '700 28px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#8a3a2c';
     ctx.fillText(cut > 0 ? entry.slice(0, cut) : entry, 22, y);
-    ctx.font = '400 22px system-ui, sans-serif'; ctx.fillStyle = '#2b3138';
+    ctx.font = '600 22px system-ui, sans-serif'; ctx.fillStyle = '#0c1014';
     ctx.fillText(fit(ctx, cut > 0 ? entry.slice(cut + 1) : '', 390), 126, y + 1);
     ctx.fillStyle = '#0c1014'; ctx.fillRect(22, y + 16, w - 44, 3);
   });

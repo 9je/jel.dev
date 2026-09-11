@@ -18,21 +18,24 @@ import { H, FILE, DESK, X1, XC, ZC } from './layout';
  * around it goes back to grey and the window return behind it is not lit warm by a desk lamp.
  *
  * The sodium spot stands out in the yard and shines back through the window. It casts no shadows,
- * so the wall the window is cut in does not stop it, and it is aimed along the desk rather than
- * across the room. It ran at 60 in the first pass and that is not a shaft through a window, it is a
- * floodlit room: the tile went terracotta, the desk top blew to white and the file's own pool had
- * nothing left to be brighter than. At 14 into a narrower cone it is a wash down the desk run and
- * the window reveal, and the room behind it stays grey.
+ * so the wall the window is cut in does not stop it, and it is aimed at the floor between the desk
+ * and the glazing rather than at the desk itself. It ran at 60 in the first pass and that is not a
+ * shaft through a window, it is a floodlit room: the tile went terracotta, the desk top blew to
+ * white and the file's own pool had nothing left to be brighter than. At 11, into a narrower cone
+ * landing short of the desk, it is a warm strip on the floor under the window, and the only warm
+ * thing on the desk itself is the lamp.
  *
  * The cold point at the live monitor is a screen's worth of light and nothing more. The cold ceiling
- * spot is the room's own fittings, run at 26 rather than the 78 the switchgear room uses: a control
- * room with its lights up is an office, and the reference is an office at the end of a shift.
+ * spot is the room's own fittings, run at 13 rather than the 78 the switchgear room uses: a control
+ * room with its lights up is an office, and the reference is an office at the end of a shift. It
+ * came down from 26 when the desk run moved forward: two metres under the fitting instead of six,
+ * the steel tops blew to a white band straight across the frame and out-read the lamp.
  */
 export function lights(): Placement[] {
   return [
-    { kind: 'spot', position: [X1 + 6, 3.4, ZC + 1], target: [XC + 3.5, 1.0, ZC + 1.5], color: 0xe0813a, intensity: 14, distance: 20, angle: Math.PI / 8, penumbra: 0.85, decay: 1.6 },
-    { kind: 'spot', position: [XC + 0.5, H - 0.1, ZC], target: [XC + 0.5, 0, ZC], color: 0xbcd2dc, intensity: 26, distance: 10, angle: Math.PI / 2.6, penumbra: 0.9, decay: 1.7 },
-    { kind: 'point', position: [FILE.x - 0.12, DESK.top + 0.46, FILE.z - 0.06], color: 0xffc98a, intensity: 1.9, distance: 1.6, decay: 2 },
-    { kind: 'point', position: [DESK.x + 0.15, DESK.top + 0.36, 33.62], color: 0x6ec1d6, intensity: 1.4, distance: 1.8, decay: 2 },
+    { kind: 'spot', position: [X1 + 6, 3.4, ZC + 1], target: [XC + 4.5, 0.4, ZC + 1.5], color: 0xe0813a, intensity: 11, distance: 20, angle: Math.PI / 8, penumbra: 0.85, decay: 1.6 },
+    { kind: 'spot', position: [XC + 0.5, H - 0.1, ZC], target: [XC + 0.5, 0, ZC], color: 0xbcd2dc, intensity: 13, distance: 10, angle: Math.PI / 2.6, penumbra: 0.9, decay: 1.7 },
+    { kind: 'point', position: [FILE.x - 0.2, DESK.top + 0.4, FILE.z - 0.12], color: 0xffc98a, intensity: 1.9, distance: 1.6, decay: 2 },
+    { kind: 'point', position: [DESK.x + 0.3, DESK.top + 0.36, 33.2], color: 0x6ec1d6, intensity: 1.4, distance: 1.8, decay: 2 },
   ];
 }

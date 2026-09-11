@@ -49,8 +49,15 @@ export const ISLANDS: [number, number][] = [[-82.9, 8.5], [-82.9, 13], [-82.9, 1
  *
  * `x` is the run's centre: the carcass is 0.55 deep and the doors and band stand 0.32 proud, so the
  * face lands exactly on the clearance line at -76.8 and nothing crosses it.
+ *
+ * It ends at z 17, four metres short of the 21 it was drawn to. The walk leaves the aisle at z 18.8
+ * on its way to the office door, and a 2.3 m cream carcass two metres off the lens at that point is
+ * half the frame: the transition out of this room was a wall of overexposed cream with BLOCK E
+ * stencilled across it. Nine bays from z 8.6 puts the last of them at 16.4, which the camera has
+ * already passed, and the hold at (-79, 3.84) still reads the whole run down the far side of the
+ * aisle because the run it reads from there is the near half, not the far end.
  */
-export const BANK = { x: -76.48, z0: 8.6, z1: 21 };
+export const BANK = { x: -76.48, z0: 8.6, z1: 17 };
 
 /** Ceiling tiles left out, as grid indices: cols along x, rows from the near end of z. The block of
  *  six over the table is the opening the blue void shows through at the hold, and two singles up

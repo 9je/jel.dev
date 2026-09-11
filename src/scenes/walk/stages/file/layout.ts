@@ -31,14 +31,24 @@ export const SILL = 0.9;
 export const WINDOW = { z0: 27, z1: 33, y0: 1.0, y1: 2.6 };
 
 /**
- * The desk run under the window. Three of the metal office desks end to end, 2 m each, their long
- * axis along z, the north end of the run against the north wall. `x` is the centre of the run, so
- * the tops span x -63.475 to -62.525 and every prop standing on one is placed between those.
+ * The desk run. Three of the metal office desks end to end, 2 m each, their long axis along z, the
+ * north end of the run against the north wall. `x` is the centre of the run, so the tops span
+ * x -67.975 to -67.025 and every prop standing on one is placed between those.
+ *
+ * It stands out in the room rather than against the window wall, two metres in front of where the
+ * camera parks. Against the glazing at x -63 the desk was seven metres from the lens and the file
+ * on it was a fifty pixel sliver in a thumbnail sized pool: the room read as a control office but
+ * the thing the room is about did not read at all. At x -67.5 the same file is a hundred and forty
+ * pixels across and its pool is the largest warm area in the frame, and the window with the yard
+ * behind it sits above the run instead of behind it, which is the way the reference is composed
+ * anyway. The walk ends at (-70, 30) and comes in from (-74.13, 27.8), so the whole run is clear of
+ * the line by a metre and a half at its nearest.
  */
-export const DESK = { x: -63, z0: 28, z1: 34, top: 0.79 };
-/** Where the open file lies, which is where the lamp is aimed and where the camera is meant to
- *  land. North end of the run, clear of the copy column at about 780 pixels across the shot. */
-export const FILE = { x: -63.2, z: 32.55 };
+export const DESK = { x: -67.5, z0: 28, z1: 34, top: 0.79 };
+/** Where the open file stands, which is where the lamp is aimed and where the eye is meant to land.
+ *  On the front edge of the middle desk, 780 pixels across the settled shot: clear of the copy
+ *  column, under the window's north end, and 2.9 m off the lens. */
+export const FILE = { x: -67.85, z: 31.0 };
 
 /** The yard beyond the glass. No walk goes into it: it is dressing, seen through a six metre hole
  *  in a wall from eight metres back, and it is built to be read at that size and no closer. */
