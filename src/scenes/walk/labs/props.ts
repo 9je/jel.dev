@@ -106,10 +106,12 @@ export function container(color = 0x2b6a6f): THREE.Group {
   return g;
 }
 
-/** Sheets of paper lying on the floor, each spot a sheet with its own turn. One draw call. */
+/** Sheets of paper lying on the floor, each spot a sheet with its own turn. One draw call. A sheet
+ *  lies twelve millimetres over the y it is given: the credentials floor sits six up from its
+ *  neighbours, and a sheet six over that was coplanar with it and tore. */
 export function papers(spots: Spot[]): THREE.Mesh {
   const r = rng(spots.length + 7);
-  const sheets = spots.map(([x, y, z, ry = 0]) => { const s = new THREE.PlaneGeometry(0.21, 0.297); s.rotateX(-Math.PI / 2); s.rotateY(ry + (r() - 0.5) * 0.6); s.translate(x, y + 0.006, z); return s; });
+  const sheets = spots.map(([x, y, z, ry = 0]) => { const s = new THREE.PlaneGeometry(0.21, 0.297); s.rotateX(-Math.PI / 2); s.rotateY(ry + (r() - 0.5) * 0.6); s.translate(x, y + 0.012, z); return s; });
   const m = merged(sheets, new THREE.MeshStandardMaterial({ map: paperSheet(3), roughness: 0.9, side: THREE.DoubleSide })); m.receiveShadow = false; return m;
 }
 

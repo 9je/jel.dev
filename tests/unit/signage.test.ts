@@ -154,3 +154,17 @@ describe('tapeCross', () => {
     expect(g.getObjectByName('plate')).toBeDefined();
   });
 });
+
+describe('signFace and wallPlaque', () => {
+  it('prints the face as one map carried as colour and emissive, and plaques stay unlit', () => {
+    const box = kit.signBox('CONTAINMENT', { w: 2, h: 0.42, on: true, code: 'ZONE 06' });
+    const face = box.getObjectByName('face') as import('three').Mesh;
+    const m = face.material as import('three').MeshStandardMaterial;
+    expect(m.map).toBe(m.emissiveMap);
+    expect(box.getObjectByName('bezel')).toBeDefined();
+    expect(meshes(box)).toHaveLength(4);
+    const plaque = kit.wallPlaque('SWITCHGEAR', { code: 'B2' });
+    expect(meshes(plaque)).toHaveLength(2);
+    expect(((plaque.getObjectByName('face') as import('three').Mesh).material as import('three').MeshStandardMaterial).emissive.getHex()).toBe(0);
+  });
+});

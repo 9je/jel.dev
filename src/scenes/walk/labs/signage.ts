@@ -4,7 +4,8 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { merged } from '../merge';
 import { LABS, labSteel } from './materials';
 import { stencilTexture } from '../textures';
-import { tapeStripe } from './textures';
+import { tapeStripe, canvas, own } from './textures';
+import { batten } from './fixtures';
 
 /** Michroma's average advance as a fraction of the em, measured over the capitals in
  *  `public/fonts/michroma.typeface.json`. Only the fallback needs it: with the typeface parsed the
@@ -60,36 +61,104 @@ export function signLetters(font: Font | null, text: string, opts: { size: numbe
 }
 
 /**
- * A backlit sign box: dark steel carcass, a white acrylic face lit from behind, the text stencilled
- * on it in the dado blue, and a thin accent strip along the bottom edge. Origin at the centre of the
- * face, so hanging one over a door is a single position. Four draw calls.
- *
- * The lettering is its own plane rather than the face's colour map: a stencil is clear everywhere it
- * is not ink, and a clear map on an opaque material multiplies the face down to black instead of
- * leaving the acrylic white.
+ * The printed face of a lightbox: white acrylic lit from behind, a band of the accent across its
+ * head carrying the Labs mark and a small code, the name set large in Michroma under it with a
+ * little tracking, and a hairline of the accent along the foot. Colour and emissive map both, so
+ * the ink stays dark on the lit face and the band lights in its own colour. `w` and `h` fix the
+ * aspect; the canvas is 1024 wide.
  */
-export function signBox(text: string, opts: { w: number; h: number; accent?: number; on?: boolean }): THREE.Group {
+export function signFace(text: string, opts: { w: number; h: number; code?: string; accent?: string; ink?: string }): THREE.CanvasTexture {
+  const W = 1024, H = Math.max(96, Math.round((W * opts.h) / opts.w));
+  const [c, ctx] = canvas(W, H);
+  const accent = opts.accent ?? '#2455A4', ink = opts.ink ?? '#17334f';
+  // The acrylic: brighter where the tubes sit behind it, a little greyer toward the foot.
+  const ground = ctx.createLinearGradient(0, 0, 0, H);
+  ground.addColorStop(0, '#f2f7fa'); ground.addColorStop(0.45, '#fbfdfe'); ground.addColorStop(1, '#e6eef2');
+  ctx.fillStyle = ground; ctx.fillRect(0, 0, W, H);
+  // The band. Its height is the sign's own: a short wide sign gets a slim band, a squarer one more.
+  const band = Math.round(Math.min(H * 0.24, 72));
+  ctx.fillStyle = accent; ctx.fillRect(0, 0, W, band);
+  // The mark: a hexagon outline with a bar through it, in white, at the band's left.
+  const r = band * 0.3, mx = 34 + r, my = band / 2;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, band * 0.08); ctx.beginPath();
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + Math.PI / 6; const x = mx + Math.cos(a) * r, y = my + Math.sin(a) * r; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+  ctx.closePath(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(mx - r * 0.55, my - band * 0.05, r * 1.1, band * 0.1);
+  // The code, right of the mark, small.
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.font = `600 ${Math.round(band * 0.42)}px Michroma, system-ui, sans-serif`;
+  ctx.fillText(opts.code ?? 'JEL LABS', mx + r + 26, my + 1);
+  // The name, tracked out and fitted to the face.
+  const body = H - band, cy = band + body / 2;
+  let px = Math.round(Math.min(body * 0.52, 190));
+  ctx.textAlign = 'center';
+  const spacing = (n: number) => { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${n}px`; };
+  const font = (n: number) => { ctx.font = `600 ${n}px Michroma, system-ui, sans-serif`; spacing(Math.round(n * 0.08)); };
+  font(px);
+  const room = W * 0.86;
+  while (px > 24 && ctx.measureText(text).width > room) { px -= 4; font(px); }
+  ctx.fillStyle = ink; ctx.fillText(text, W / 2, cy + px * 0.06);
+  spacing(0);
+  // The foot line.
+  ctx.fillStyle = accent; ctx.fillRect(0, H - Math.max(3, Math.round(H * 0.025)), W, Math.max(3, Math.round(H * 0.025)));
+  return own(c);
+}
+
+/**
+ * A backlit sign box: a steel carcass behind a bezel, the acrylic face recessed two centimetres
+ * inside it and lit from behind, the name and a code printed on the face, and a thin accent strip
+ * along the bottom edge. Origin at the centre of the face, so hanging one over a door is a single
+ * position. Four draw calls.
+ *
+ * The lettering is part of the face's own map rather than a stencil plane over a plain white one:
+ * the earlier sign was a white rectangle with blue letters floating a few millimetres in front of
+ * it, and Jordan's read of it was cheap. A printed face under a bezel reads as a thing that was
+ * made, and the band with the mark and the code is what every sign in the building shares.
+ */
+export function signBox(text: string, opts: { w: number; h: number; accent?: number; on?: boolean; code?: string }): THREE.Group {
   const { w, h } = opts;
   const g = new THREE.Group();
-  // The carcass stops a centimetre short of the face rather than flush with it. Flush, the box's
-  // front and the face plane are coplanar, and at hall distance the depth buffer cannot separate
-  // them: the lit face breaks into vertical bands of carcass across whichever half of the sign the
-  // camera is off axis from.
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.09, h + 0.09, 0.09), labSteel(LABS.steel));
-  frame.position.z = -0.055; frame.name = 'frame'; g.add(frame);
+  const accentHex = '#' + new THREE.Color(opts.accent ?? LABS.dado).getHexString();
+  // The back box stops a centimetre short of the face plane and a centimetre inside the bezel's
+  // outer faces, for the reason it always has: two coplanar faces the depth buffer cannot separate
+  // band across the sign as the camera moves.
+  const back = new THREE.Mesh(new THREE.BoxGeometry(w + 0.07, h + 0.07, 0.07), labSteel(LABS.steel));
+  back.position.z = -0.045; back.name = 'frame'; g.add(back);
+  // The bezel: four bars standing proud of the face, so the acrylic sits recessed in a frame.
+  const lip = 0.045, deep = 0.05;
+  // The bars butt rather than overlap: the uprights run the full height and the rails sit between
+  // them, so no two faces of the bezel share a plane and a facing.
+  const bezel = merged([
+    new THREE.BoxGeometry(w, lip, deep).translate(0, h / 2 + lip / 2, deep / 2 - 0.02),
+    new THREE.BoxGeometry(w, lip, deep).translate(0, -(h / 2 + lip / 2), deep / 2 - 0.02),
+    new THREE.BoxGeometry(lip, h + 2 * lip, deep).translate(w / 2 + lip / 2, 0, deep / 2 - 0.02),
+    new THREE.BoxGeometry(lip, h + 2 * lip, deep).translate(-(w / 2 + lip / 2), 0, deep / 2 - 0.02),
+  ], new THREE.MeshStandardMaterial({ color: 0x9aa5ad, metalness: 0.7, roughness: 0.3 }));
+  bezel.name = 'bezel'; g.add(bezel);
+  const map = signFace(text, { w, h, code: opts.code, accent: accentHex });
   const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({
-    color: 0xffffff, roughness: 0.5, emissive: 0xffffff, emissiveIntensity: opts.on ? 0.6 : 0,
+    color: 0xffffff, map, roughness: 0.4, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: opts.on ? 0.6 : 0,
   }));
   face.name = 'face'; g.add(face);
-  const tw = w * 0.92, th = h * 0.74;
-  // A clean sign: flecks off, or the punched wear reads as damage on a lit white face.
-  const map = stencilTexture(text, { width: 1024, height: Math.max(64, Math.round((1024 * th) / tw)), color: '#2455A4', font: '600 320px Michroma, system-ui, sans-serif', alpha: 1, flecks: false });
-  const ink = new THREE.Mesh(new THREE.PlaneGeometry(tw, th), new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false }));
-  ink.position.z = 0.004; ink.name = 'text'; g.add(ink);
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.035, 0.03), new THREE.MeshStandardMaterial({
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.03), new THREE.MeshStandardMaterial({
     color: 0x101820, emissive: opts.accent ?? LABS.dado, emissiveIntensity: opts.on ? 2.2 : 0.25,
   }));
-  strip.position.set(0, -h / 2 - 0.055, 0.01); strip.name = 'strip'; g.add(strip);
+  strip.position.set(0, -h / 2 - lip - 0.03, 0.01); strip.name = 'strip'; g.add(strip);
+  return g;
+}
+
+/**
+ * A small wall plaque: the same printed face as the lightbox on a thin steel plate, unlit, for a
+ * door or a cabinet. Origin at the centre of the face. Two draw calls.
+ */
+export function wallPlaque(text: string, opts: { w?: number; h?: number; code?: string; accent?: number } = {}): THREE.Group {
+  const w = opts.w ?? 0.5, h = opts.h ?? 0.16;
+  const g = new THREE.Group();
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(w + 0.03, h + 0.03, 0.012), labSteel(0x9aa5ad));
+  plate.position.z = -0.007; g.add(plate);
+  const map = signFace(text, { w, h, code: opts.code, accent: '#' + new THREE.Color(opts.accent ?? LABS.dado).getHexString() });
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0xffffff, map, roughness: 0.35 }));
+  face.name = 'face'; g.add(face);
   return g;
 }
 
@@ -186,7 +255,7 @@ export function tapeCross(w: number, h: number): THREE.Group {
   return g;
 }
 
-export interface DoorwaySpec { w: number; h: number; depth: number; axis: 'x' | 'z'; sign?: string; tape?: boolean; floor: THREE.Material; wall: THREE.Material }
+export interface DoorwaySpec { w: number; h: number; depth: number; axis: 'x' | 'z'; sign?: string; code?: string; tape?: boolean; floor: THREE.Material; wall: THREE.Material }
 
 /**
  * The transition between two rooms: a steel frame in the wall plane and a short vestibule behind it,
@@ -194,7 +263,7 @@ export interface DoorwaySpec { w: number; h: number; depth: number; axis: 'x' | 
  * plane itself, so the vestibule straddles it by half `depth` either way. `axis` is the direction
  * the walk passes through, and the sign hangs over the +z (or +x) face.
  *
- * Four draw calls bare, eight with a sign, fourteen with the tape cross as well.
+ * Five draw calls bare, nine with a sign, fifteen with the tape cross as well.
  */
 export function doorway(spec: DoorwaySpec): THREE.Group {
   const { w, h, depth } = spec;
@@ -226,11 +295,13 @@ export function doorway(spec: DoorwaySpec): THREE.Group {
   const header = new THREE.BoxGeometry(w + section * 2 + clear * 2, section, section); header.translate(0, h + section / 2 + clear, 0); frame.push(header);
   const frameMesh = merged(frame, labSteel(0x2b3740)); frameMesh.name = 'frame'; g.add(frameMesh);
 
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, depth - 0.2), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: 1.5 }));
-  strip.position.y = h - 0.04; strip.name = 'strip'; g.add(strip);
+  // A surface mounted batten down the vestibule's ceiling, not a bare lit box: the fitting is the
+  // one thing in a doorway the camera passes directly under.
+  const strip = batten({ len: Math.max(0.6, depth - 0.3), intensity: 1.5 });
+  strip.rotation.y = Math.PI / 2; strip.position.y = h - 0.045; strip.name = 'strip'; g.add(strip);
 
   if (spec.sign) {
-    const sign = signBox(spec.sign, { w: Math.min(2.2, w * 0.72), h: 0.42, on: true });
+    const sign = signBox(spec.sign, { w: Math.min(2.2, w * 0.72), h: 0.42, on: true, code: spec.code });
     // Clear of the header's own 0.25 m section, standing proud of the wall it is bolted to.
     sign.position.set(0, h + 0.35, half + 0.12);
     sign.name = 'sign'; g.add(sign);

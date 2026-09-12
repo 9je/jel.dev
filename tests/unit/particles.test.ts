@@ -34,3 +34,34 @@ describe('particles', () => {
     p.dispose();
   });
 });
+
+describe('smoke', () => {
+  it('turns each puff on its own spin and leans the plume into a wind', async () => {
+    const THREE = await import('three');
+    const { plume, haze } = await import('../../src/scenes/walk/labs/particles');
+    const p = plume([0, 0, 0], { count: 12, drift: [0.5, 0, 0] });
+    const spin = p.points.geometry.getAttribute('spin');
+    expect(spin.count).toBe(12);
+    const m = p.points.material as InstanceType<typeof THREE.ShaderMaterial>;
+    expect(m.uniforms.uDrift.value.x).toBeCloseTo(0.5, 6);
+    expect(m.blending).toBe(THREE.NormalBlending);
+    // The same seed gives the same births, so a still is the same on every load.
+    const q = plume([0, 0, 0], { count: 12, drift: [0.5, 0, 0] });
+    expect(Array.from(q.points.geometry.getAttribute('seed').array)).toEqual(Array.from(p.points.geometry.getAttribute('seed').array));
+    p.dispose(); q.dispose();
+    const h = haze([1, 0, 1], { along: [4, 0, 0] });
+    const hm = h.points.material as InstanceType<typeof THREE.ShaderMaterial>;
+    expect(hm.uniforms.uRise.value).toBeLessThan(0.5);
+    expect(hm.uniforms.uSize.value).toBeGreaterThan(1);
+    h.dispose();
+  });
+  it('fades a point out when it is drawn under four pixels or over two hundred and forty', async () => {
+    const { plume, dust } = await import('../../src/scenes/walk/labs/particles');
+    for (const s of [plume([0, 0, 0]), dust([0, 0, 0], [1, 1, 1], 4)]) {
+      const src = (s.points.material as import('three').ShaderMaterial).vertexShader;
+      expect(src).toContain('smoothstep(1.5, 4.5, gl_PointSize)');
+      expect(src).toContain('smoothstep(180.0, 240.0, gl_PointSize)');
+      s.dispose();
+    }
+  });
+});

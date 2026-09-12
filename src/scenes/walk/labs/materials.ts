@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { AssetStore } from '../assets';
 import { surface, prepareAO } from '../materials';
+import { troffer, lensMaterial, fixtureSteel } from './fixtures';
 
 /** The Labs palette. Cold white panels, the Terragroup blue dado, grey tile, dark steel. */
 export const LABS = { panel: 0xd9e8ee, dado: 0x2455a4, tile: 0x9fb0b8, steel: 0x2b3740, glassTint: 0xcfe6ee, cold: 0xdff0f6, warn: 0xc8322b, hazard: 0xe8b923 } as const;
@@ -128,9 +129,9 @@ function tiledCeiling(w: number, d: number, cols: number, rows: number, missing:
   return g;
 }
 
-/** A suspended ceiling: tiles at a pitch with a pattern of them replaced by lit panels. One draw
- *  call for tiles, one for panels, one more for each panel the caller asked to drive itself. The
- *  lit panels are emissive geometry, not lights. */
+/** A suspended ceiling: tiles at a pitch with a pattern of them replaced by recessed troffers. One
+ *  draw call for tiles, one for the troffer frames, one for the lenses, one more for each lens the
+ *  caller asked to drive itself. The lit panels are emissive geometry, not lights. */
 export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: number, opts: CeilingGridOptions = {}): { group: THREE.Group; panels: THREE.InstancedMesh; flicker: THREE.InstancedMesh[] } {
   const tile = opts.tile ?? 1.2;
   const lit = litPredicate(opts);
@@ -160,22 +161,29 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
     // A fitting in a tile that is on the floor is a fitting hanging in a hole.
     if (hole.has(`${i},${j}`)) continue;
     if (!lit(i, j) || !whole(i, j)) continue;
-    const m = new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.02, oz + (j + 0.5) * tile);
+    const m = new THREE.Matrix4().makeTranslation(ox + (i + 0.5) * tile, y - 0.004, oz + (j + 0.5) * tile);
     if (wanted.includes(litIndex)) driven.set(litIndex, m); else spots.push(m);
     litIndex++;
   }
   const [pw, pd] = opts.panel ?? [tile - 0.1, tile * 0.5];
-  const panelGeometry = new THREE.BoxGeometry(pw, 0.04, pd);
-  const panelMat = () => new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: LABS.cold, emissiveIntensity: opts.intensity ?? 1.4 });
-  const panels = new THREE.InstancedMesh(panelGeometry, panelMat(), spots.length);
+  // A fitting, not a glowing box: a steel frame recessed into the tile with the lens inside it, and
+  // tubes showing through the lens. One batch of frames over every lit tile, driven ones included,
+  // one batch of lenses over the ones the room does not drive, and one lens each for those it does.
+  const { frame, lens: lensGeometry } = troffer(pw, pd);
+  const panelMat = () => lensMaterial(pw, pd, opts.intensity ?? 1.4);
+  const all = [...spots, ...driven.values()];
+  const frames = new THREE.InstancedMesh(frame, fixtureSteel(), all.length);
+  all.forEach((m, i) => frames.setMatrixAt(i, m)); frames.instanceMatrix.needsUpdate = true; frames.computeBoundingSphere();
+  frames.name = 'frames'; group.add(frames);
+  const panels = new THREE.InstancedMesh(lensGeometry, panelMat(), spots.length);
   spots.forEach((m, i) => panels.setMatrixAt(i, m)); panels.instanceMatrix.needsUpdate = true; panels.computeBoundingSphere();
-  group.add(panels);
+  panels.name = 'panels'; group.add(panels);
   // In the order the caller asked for them, so `flicker[0]` is the panel `flickerIndex[0]` named.
   const flicker: THREE.InstancedMesh[] = [];
   for (const index of wanted) {
     const m = driven.get(index);
     if (!m) continue;
-    const one = new THREE.InstancedMesh(panelGeometry, panelMat(), 1);
+    const one = new THREE.InstancedMesh(lensGeometry, panelMat(), 1);
     one.setMatrixAt(0, m); one.instanceMatrix.needsUpdate = true; one.computeBoundingSphere();
     group.add(one); flicker.push(one);
   }
