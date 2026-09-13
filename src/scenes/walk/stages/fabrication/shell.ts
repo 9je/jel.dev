@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { surface, prepareAO } from '../../materials';
-import { hazardTexture, stencilTexture } from '../../textures';
+import { hazardTexture } from '../../textures';
+import { columnTag } from './boards';
 import { instances, merged, place, type Spot } from '../../merge';
 import { cableTray } from '../../labs/props';
 import { X0, X1, Z0, Z1, H, W, D, XC, ZC, EXIT_X0, EXIT_X1, EXIT_H, EXIT_LINE_Z, COLUMNS, AISLE, AISLE_HALF, CLAD_Y, GIRTS, PAINT, SAFETY, AISLE_PAINT, BLOCK_TINT, CLAD_TINT, GIRT_TINT, FLOOR_TINT } from './layout';
@@ -129,10 +130,12 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const haz = hazardTexture(); haz.repeat.set(2, 1);
   root.add(instances(new THREE.BoxGeometry(0.9, H, 0.9), colMat, COLUMNS.map(([x, z]) => [x, H / 2, z] as Spot)));
   root.add(instances(new THREE.BoxGeometry(0.96, 1.2, 0.96), new THREE.MeshStandardMaterial({ map: haz, roughness: 0.7 }), COLUMNS.map(([x, z]) => [x, 1.6, z] as Spot)));
+  // Numbered on the face toward the aisle: a stencilled tag, hazard frame round a blue field,
+  // painted straight onto the blockwork and scuffed at its foot.
   COLUMNS.forEach(([x, z], i) => {
-    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), new THREE.MeshBasicMaterial({ map: stencilTexture(String(i + 1), { width: 128, height: 128, color: '#C3D6DE', font: '400 96px Michroma, system-ui, sans-serif', alpha: 0.55 }), transparent: true, depthWrite: false }));
+    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshStandardMaterial({ map: columnTag(String(i + 1), i + 3), transparent: true, roughness: 0.85, depthWrite: false }));
     const toward = x < XC ? 1 : -1;
-    n.position.set(x + toward * 0.46, 3.1, z); n.rotation.y = toward > 0 ? Math.PI / 2 : -Math.PI / 2; root.add(n);
+    n.position.set(x + toward * 0.455, 3.0, z); n.rotation.y = toward > 0 ? Math.PI / 2 : -Math.PI / 2; root.add(n);
   });
 
   // Two plain trunk ducts run the length of the ceiling on hangers. The detailed junction models

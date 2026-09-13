@@ -7,28 +7,83 @@ import { instances, merged, place, type Spot } from '../../merge';
 import { LABS, labSteel } from '../../labs/materials';
 import { screenFace } from '../../labs/textures';
 import { papers, glassRoom } from '../../labs/props';
+import { paperSheet } from '../../labs/textures';
 import { signBox } from '../../labs/signage';
 import { OFFICE, SODIUM } from './layout';
 import { controller, key, bridge } from './exhibits';
+import { nameplateFace, numberTag, dispatchBoardFace, consoleKeys } from './boards';
 
-/** An edge-lit acrylic label, standing at the back of a plinth: a clear plate with the product's
- *  name burned through its top and the wing's orange in the channel it stands in. Origin at the foot
- *  of the plate, face toward +z. Three draw calls, and every one of them takes the hover pulse.
- *  The plate is 0.72 tall with the name in its upper third, so a product standing half a metre off
- *  the cap in front of it hides clear acrylic and not the name. */
-function labelPlate(label: string): THREE.Group {
+/** What each product is, in three words, for the line under its name. */
+const SUBTITLES: Record<string, string> = { 'conch.gg': 'GameCube netplay', 'ezkey.io': 'Key store', 'gc-bridge': 'Controller bridge' };
+
+/**
+ * A museum nameplate, standing at the back of a plinth: a brushed steel plate on two standoffs,
+ * raked back a little toward the eye, the product's name engraved in tracked Michroma with a one
+ * line subtitle under it, and an edge-lit acrylic strip along its top edge in the wing's orange.
+ * Origin at the foot of the standoffs, face toward +z. Four draw calls, all of them part of the
+ * exhibit the pointer picks: the steel takes the hover wash and the strip pulses.
+ *
+ * The plate stands 0.5 m off the cap, so a product half a metre in front of it hides the
+ * standoffs and not the name. The earlier label was a pane of clear acrylic with the name glowing
+ * through it, which from the hold read as a text box floating over the product.
+ */
+function nameplate(label: string): THREE.Group {
   const g = new THREE.Group();
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.72), new THREE.MeshPhysicalMaterial({ color: LABS.glassTint, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0, side: THREE.DoubleSide }));
-  plate.position.y = 0.38; plate.name = 'plate'; g.add(plate);
-  // The name is an alpha mapped plane, not a screen: a lit black card in front of a product is the
-  // text box Jordan counted, and acrylic that only glows where the letters are is the label a
-  // product actually gets. Three reads an alpha map's green channel, and the stencil's ink is pale
-  // blue on clear, so the glyphs come through opaque and the ground does not come through at all.
-  const map = stencilTexture(label, { width: 512, height: 160, color: '#CFE6EE', font: '600 96px Michroma, system-ui, sans-serif', alpha: 1, flecks: false });
-  const ink = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.32), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xcfe6ee, emissiveIntensity: 1.6, emissiveMap: map, alphaMap: map, transparent: true, depthWrite: false }));
-  ink.position.set(0, 0.57, 0.01); ink.renderOrder = 1; ink.name = 'ink'; g.add(ink);
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.03, 0.03), new THREE.MeshStandardMaterial({ color: 0x101820, emissive: SODIUM, emissiveIntensity: 2.4 }));
-  strip.position.y = 0.02; strip.name = 'strip'; g.add(strip);
+  const W = 1.1, Hp = 0.3, LIFT = 0.5, RAKE = 0.16;
+  // The standoffs: two rods with a foot each, up into the plate's lower third.
+  const rods: THREE.BufferGeometry[] = [];
+  for (const sx of [-1, 1]) {
+    rods.push(new THREE.CylinderGeometry(0.011, 0.011, LIFT + 0.1, 8).translate(sx * W * 0.36, (LIFT + 0.1) / 2, -0.02));
+    rods.push(new THREE.CylinderGeometry(0.03, 0.036, 0.012, 12).translate(sx * W * 0.36, 0.006, -0.02));
+  }
+  const standoffs = merged(rods, labSteel(0x6d7a84)); standoffs.name = 'standoffs'; g.add(standoffs);
+  // The plate, hinged at its foot and leaned back: a body of plain steel and the engraved face
+  // on it, so the map sits on the front only.
+  const tilt = new THREE.Group(); tilt.position.y = LIFT; tilt.rotation.x = -RAKE; g.add(tilt);
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(W, Hp, 0.012), labSteel(0x9aa5ad));
+  plate.position.set(0, Hp / 2, 0); plate.name = 'plate'; tilt.add(plate);
+  const face = nameplateFace(label, SUBTITLES[label] ?? '', label.length);
+  const ink = new THREE.Mesh(new THREE.PlaneGeometry(W, Hp), new THREE.MeshStandardMaterial({ map: face, color: 0xffffff, metalness: 0.45, roughness: 0.42 }));
+  ink.position.set(0, Hp / 2, 0.0065); ink.name = 'ink'; tilt.add(ink);
+  // The lit edge: a bar of acrylic along the top of the plate, lit from its ends.
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(W + 0.02, 0.022, 0.022), new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: SODIUM, emissiveIntensity: 2.2 }));
+  strip.position.set(0, Hp + 0.011, 0); strip.name = 'strip'; tilt.add(strip);
+  return g;
+}
+
+/**
+ * The dispatch board on the office's back wall: a printed schedule in an aluminium frame, with
+ * the hand-written marks on it, a marker tray along its foot, magnets, and a sheet pinned under
+ * one of them. Origin at the centre of the face, face toward +z. Five draw calls.
+ */
+function dispatchBoard(): THREE.Group {
+  const g = new THREE.Group();
+  const W = 1.8, Hb = 1.0;
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, Hb + 0.06, 0.03), labSteel(0x9aa5ad));
+  frame.position.z = -0.02; frame.name = 'frame'; g.add(frame);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(W, Hb), new THREE.MeshStandardMaterial({ map: dispatchBoardFace(), roughness: 0.32, metalness: 0.05 }));
+  face.name = 'face'; g.add(face);
+  // The tray and two markers lying in it.
+  const tray = merged([
+    new THREE.BoxGeometry(0.7, 0.012, 0.06).translate(0, 0, 0.03),
+    new THREE.BoxGeometry(0.7, 0.03, 0.01).translate(0, 0.015, 0.06),
+  ], labSteel(0x8e99a1));
+  tray.position.set(-W / 2 + 0.42, -Hb / 2 - 0.035, 0); tray.name = 'tray'; g.add(tray);
+  const pens = merged([
+    new THREE.CylinderGeometry(0.008, 0.008, 0.14, 8).rotateZ(Math.PI / 2).translate(-0.12, 0.014, 0.03),
+    new THREE.CylinderGeometry(0.008, 0.008, 0.14, 8).rotateZ(Math.PI / 2).rotateY(0.18).translate(0.1, 0.014, 0.028),
+  ], new THREE.MeshStandardMaterial({ color: 0x1f3f8f, roughness: 0.45 }));
+  pens.position.copy(tray.position); pens.name = 'pens'; g.add(pens);
+  // Magnets: a pinned sheet under one, three more parked along the frame.
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.22), new THREE.MeshStandardMaterial({ map: paperSheet(4), roughness: 0.9 }));
+  sheet.position.set(W / 2 - 0.16, Hb / 2 - 0.34, 0.003); sheet.rotation.z = -0.05; sheet.name = 'sheet'; g.add(sheet);
+  const magnets = merged([
+    new THREE.CylinderGeometry(0.018, 0.018, 0.008, 14).rotateX(Math.PI / 2).translate(W / 2 - 0.16, Hb / 2 - 0.25, 0.008),
+    new THREE.CylinderGeometry(0.018, 0.018, 0.008, 14).rotateX(Math.PI / 2).translate(W / 2 - 0.08, -Hb / 2 + 0.12, 0.006),
+    new THREE.CylinderGeometry(0.018, 0.018, 0.008, 14).rotateX(Math.PI / 2).translate(W / 2 - 0.13, -Hb / 2 + 0.12, 0.006),
+    new THREE.CylinderGeometry(0.018, 0.018, 0.008, 14).rotateX(Math.PI / 2).translate(W / 2 - 0.18, -Hb / 2 + 0.12, 0.006),
+  ], new THREE.MeshStandardMaterial({ color: LABS.hazard, roughness: 0.5 }));
+  magnets.name = 'magnets'; g.add(magnets);
   return g;
 }
 
@@ -72,9 +127,9 @@ function plinth(store: StageContext['store'], n: number): THREE.Group {
   lip.push(new THREE.BoxGeometry(0.02, 0.012, D + 0.06).translate(W / 2 + 0.02, ly, 0));
   lip.push(new THREE.BoxGeometry(0.02, 0.012, D + 0.06).translate(-W / 2 - 0.02, ly, 0));
   g.add(merged(lip, new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: SODIUM, emissiveIntensity: 1.8 })));
-  // The plate: brushed steel on the front face at eye level for a standing visitor, numbered.
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.09, 0.006), labSteel(0xaab3ba)); plate.position.set(0, 0.72, D / 2 + 0.004); g.add(plate);
-  const num = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.064), new THREE.MeshBasicMaterial({ map: stencilTexture(`0${n}`, { width: 256, height: 102, color: '#2455A4', font: '600 72px Michroma, system-ui, sans-serif', alpha: 1, flecks: false }), transparent: true, depthWrite: false }));
+  // The tag: a small engraved steel plate on the front face at eye level for a standing visitor.
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.006), labSteel(0xaab3ba)); plate.position.set(0, 0.72, D / 2 + 0.004); g.add(plate);
+  const num = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.1), new THREE.MeshStandardMaterial({ map: numberTag(`0${n}`, n), metalness: 0.45, roughness: 0.42 }));
   num.position.set(0, 0.72, D / 2 + 0.0075); g.add(num);
   return g;
 }
@@ -103,9 +158,9 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   });
   g.position.set(OX, 0, OZ); root.add(g);
   // A lit box over the front door instead of the stencil on its head panel. From the far end of the
-  // hall the office was a grey glass shed with a grey word on it; the one lit sign in the bay that
+  // hall the office was a grey glass shed with a grey word on it. The one lit sign in the bay that
   // is not the ticker is what makes it read as somewhere with someone in it.
-  g.add(place(signBox('DISPATCH', { w: 1.8, h: 0.3, accent: SODIUM, on: true }), frontDoorX - OX, H - 0.25, hz + 0.07));
+  g.add(place(signBox('DISPATCH', { w: 1.8, h: 0.3, accent: SODIUM, on: true, code: 'BAY 02' }), frontDoorX - OX, H - 0.25, hz + 0.07));
 
   // The dispatch counter, along the front glass west of the door. Six metres of it, as drawn, would
   // have run across the doorway the camera walks through, so it takes the clear run instead.
@@ -114,14 +169,32 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   counter.position.set(cx, S / 2, cz); g.add(counter);
   const top = new THREE.Mesh(new THREE.BoxGeometry(cw + 0.04, 0.04, 0.64), labSteel(0x8e99a1)); top.position.set(cx, S + 0.02, cz); g.add(top);
 
-  // The console: a panel box with its screen raked back toward whoever is standing behind it. The
-  // face is built by geometry rather than by Euler angles, so the lines read the right way up from
-  // the operator's side rather than mirrored.
-  const console_ = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.5), shell(0xb6c0c7, 0.55, 0.2));
-  console_.position.set(cx - 0.6, S + 0.13, cz); g.add(console_);
-  const faceGeo = new THREE.PlaneGeometry(1.06, 0.4); faceGeo.rotateZ(Math.PI); faceGeo.rotateX(-Math.PI / 2 - 0.35);
-  const face = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.1, emissiveMap: screenFace(['DISPATCH', 'bay 2 open', 'dock 1 closed'], '#E0813A', 512, 200) }));
-  face.position.set(cx - 0.6, S + 0.29, cz - 0.02); g.add(face);
+  // The console: a cream wedge with its top raked toward whoever stands behind it, a screen on
+  // the operator's left of the raked face and a keypad on the right. The panels are built by
+  // geometry rather than by Euler angles, so their faces read the right way up from the operator's
+  // side rather than mirrored. The box with a lit rectangle it replaces was a box with a lit
+  // rectangle, and the reference for this room is a keyed desk console under a gooseneck.
+  const CW = 1.2, CD = 0.5, BACK = 0.2, FRONT = 0.07;
+  const profile = new THREE.Shape();
+  profile.moveTo(-CD / 2, 0); profile.lineTo(CD / 2, 0); profile.lineTo(CD / 2, FRONT); profile.lineTo(-CD / 2, BACK); profile.closePath();
+  const wedgeGeo = new THREE.ExtrudeGeometry(profile, { depth: CW, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2 });
+  // Extruded along its own z, then turned so the run lies along x with the high edge at +z, the glass.
+  wedgeGeo.rotateY(Math.PI / 2); wedgeGeo.translate(-CW / 2, 0, 0);
+  const console_ = new THREE.Mesh(wedgeGeo, shell(0xd5d6cf, 0.6, 0.05));
+  console_.position.set(cx - 0.6, S + 0.04, cz); g.add(console_);
+  // The raked face: from the low edge at -z up to the high edge at +z. A panel is turned so its
+  // top lands on the high edge and its normal stands off the slope.
+  const rake = Math.atan2(BACK - FRONT, CD), SKIN = 0.006;
+  const onSlope = (geo: THREE.BufferGeometry, x: number, s: number, lift: number) => {
+    const off = SKIN + lift;
+    geo.rotateZ(Math.PI); geo.rotateX(-Math.PI / 2 - rake);
+    geo.translate(x, (FRONT + BACK) / 2 + s * Math.sin(rake) + off * Math.cos(rake), s * Math.cos(rake) - off * Math.sin(rake));
+    return geo;
+  };
+  const bezel = new THREE.Mesh(onSlope(new THREE.PlaneGeometry(0.54, 0.24), 0.3, 0.12, 0.002), shell(0x1b2129, 0.5, 0.2));
+  const screen = new THREE.Mesh(onSlope(new THREE.PlaneGeometry(0.5, 0.2), 0.3, 0.12, 0.004), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.1, emissiveMap: screenFace(['DISPATCH', 'bay 2 open', 'dock 1 closed'], '#E0813A', 512, 200) }));
+  const keys = new THREE.Mesh(onSlope(new THREE.PlaneGeometry(0.56, 0.28), -0.3, -0.04, 0.002), new THREE.MeshStandardMaterial({ map: consoleKeys(), roughness: 0.55 }));
+  for (const m of [bezel, screen, keys]) { m.position.copy(console_.position); g.add(m); }
 
   // The gooseneck: two segments and a head, bent toward the operator.
   const mic = new THREE.Group();
@@ -149,14 +222,9 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   g.add(instances(new THREE.BoxGeometry(2.4, 0.02, 0.05), blindMat, slats));
   g.add(instances(new THREE.BoxGeometry(2.44, 0.07, 0.07), labSteel(0x8e99a1), rails));
 
-  // The back wall's two working fixtures: the shift board and the clock. The board is a white face
-  // with its writing on a plane of its own, because a stencil is clear everywhere it is not ink and
-  // a clear map on an opaque material multiplies the whole board down to black.
-  const boardBack = new THREE.Mesh(new THREE.BoxGeometry(1.86, 1.06, 0.03), labSteel(0x8e99a1)); boardBack.position.set(-2.4, 1.55, -hz + 0.08); g.add(boardBack);
-  const board = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.0), new THREE.MeshStandardMaterial({ color: 0xf2f6f8, roughness: 0.4 }));
-  board.position.set(-2.4, 1.55, -hz + 0.1); g.add(board);
-  const shift = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.5), new THREE.MeshBasicMaterial({ map: stencilTexture('SHIFT B', { width: 512, height: 171, color: '#2455A4', font: '600 110px Michroma, system-ui, sans-serif', alpha: 0.85, flecks: false }), transparent: true, depthWrite: false }));
-  shift.position.set(-2.4, 1.72, -hz + 0.11); g.add(shift);
+  // The back wall's two working fixtures: the dispatch board and the clock. The board hangs
+  // toward the west end of the wall, where the turn into and out of the hold sweeps across it.
+  g.add(place(dispatchBoard(), -3.2, 1.55, -hz + 0.1));
 
   // The recreation wing owns the clock model and is not loaded here, so this one is turned.
   const clock = new THREE.Group();
@@ -189,7 +257,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
     // The plinth's long side faces the camera, so its front plate turns with it.
     const exhibit = new THREE.Group(); exhibit.name = key;
     exhibit.add(place(plinth(store, i + 1), ex, 0, dz, Math.PI / 2));
-    exhibit.add(place(labelPlate(label), ex - 0.34, 1.045, dz, Math.PI / 2));
+    exhibit.add(place(nameplate(label), ex - 0.34, 1.045, dz, Math.PI / 2));
     exhibit.add(place(make(), ex + 0.14, 1.045, dz, Math.PI / 2 + 0.35));
     g.add(exhibit);
     hotspots.push({ id: key, kind: 'project', label, object: exhibit, stop: 'fabrication' });

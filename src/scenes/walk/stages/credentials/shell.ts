@@ -5,12 +5,11 @@ import { merged, instances, type Spot } from '../../merge';
 import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, labSteel, LABS } from '../../labs/materials';
 import { glassRoom } from '../../labs/props';
 import { doorway } from '../../labs/signage';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB } from './layout';
+import { battens, lightShaft, troffer, lensMaterial, fixtureSteel } from '../../labs/fixtures';
+import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
-/** Four fluorescent fixtures down the corridor outside the lab. The lab has its own lit grid. */
-const FIXTURE_Z = [-12, -6, 0, 4];
 
 /** The only break in the long walls: the east wall opens from the hall's south end to here, where
  *  the walk arrives from the server hall (the path crosses x -75 at z about -29.2). The server hall
@@ -86,11 +85,15 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   north.rotation.y = Math.PI;
   north.position.set(NORTH_DOOR.x, 0, Z1); north.name = 'containment-door'; root.add(north);
 
-  // A dark steel ceiling the room's full length, four fixtures over the corridor outside the lab.
+  // A dark steel ceiling the room's full length. Over the corridor north of the lab, four battens
+  // hung on rods off it, and under the two the spots sit at, a faint shaft: the hall is dark, and
+  // the air under a fitting is the one place a shaft reads as air rather than as a solid.
   const ceiling = plane(W, D, labSteel(0x1a222a)); ceiling.rotation.x = Math.PI / 2; ceiling.position.set(XC, H, ZC);
-  const stripMat = new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 2 });
-  const strips: Spot[] = FIXTURE_Z.map((z) => [XC, H - 0.1, z]);
-  root.add(instances(new THREE.BoxGeometry(3, 0.06, 0.18), stripMat, strips));
+  root.add(battens({ len: 3, drop: BATTEN_DROP, intensity: 1.4 }, BATTEN_Z.map((z) => [XC, BATTEN_Y, z] as Spot)));
+  for (const z of [BATTEN_Z[0], BATTEN_Z[2]]) {
+    const shaft = lightShaft({ top: 0.4, bottom: 2.4, height: BATTEN_Y - 0.1, opacity: 0.05 });
+    shaft.position.set(XC, BATTEN_Y - 0.06, z); root.add(shaft);
+  }
 
   // The glass lab itself, inset within the hall, a door in its south and north faces at the same
   // x, straddling the walked line.
@@ -101,12 +104,19 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
       { face: 'south', x: doorLocalX, w: LAB.doorW },
       { face: 'north', x: doorLocalX, w: LAB.doorW },
     ],
-    // Every tile lit at 0.9 was the ceiling Jordan called crazy: a continuous sheet of light with
-    // no ceiling left between the panels, and the plates washed out under it. One tile in three at
-    // 0.55 leaves the grid reading as a grid and hands the glow back to the plates.
-    litEvery: 3, panelIntensity: 0.55, panel: [1.1, 1.1], frosted: true,
+    // The grid's own pattern lights every nth tile on a diagonal, and no n gives this room the
+    // reference's luminous lid: a few large panels in two even rows. So the grid is asked for none
+    // (nothing on its diagonal fits a 2.2 m fitting) and the six panels are laid below by hand,
+    // with the grid's own troffer and lens so they are the same fitting every other ceiling has.
+    // Tinted whiter than the shared tile so the lid reads as a white box, not a grey one.
+    litEvery: 1000, panel: LAB_PANEL.size, tint: 0xe4ecf0, frosted: true,
     floor: labFloor(store, LAB.w, LAB.d, LABS.panel),
   });
+  const [pw, pd] = LAB_PANEL.size;
+  const { frame, lens } = troffer(pw, pd);
+  const panelSpots: Spot[] = LAB_PANEL.x.flatMap((x) => LAB_PANEL.z.map((z) => [x, LAB.h - 0.004, z] as Spot));
+  lab.add(instances(frame, fixtureSteel(), panelSpots));
+  const lenses = instances(lens, lensMaterial(pw, pd, LAB_PANEL.intensity), panelSpots); lenses.name = 'panels'; lab.add(lenses);
   lab.position.set(LAB.x, 0, LAB.z); root.add(lab);
 
   return { planes };

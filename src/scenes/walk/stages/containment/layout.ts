@@ -24,8 +24,6 @@ export const SEALED = { x: -80.2, z: Z1, w: 1.6, h: 2.3 };
 export const OFFICE_DOOR = { x: -75.6, z: Z1, w: 2.4 };
 export const OFFICE_OPEN = { x0: -77, x1: X1 };
 
-/** The table under the lamp, which is the one warm thing in the room. */
-export const TABLE = { x: -80.6, z: 12 };
 /** Metres either side of the walked line that stay empty, so nothing is ever walked through. */
 export const AISLE_CLEAR = 2.2;
 
@@ -37,6 +35,25 @@ export const AISLE_CLEAR = 2.2;
  * appeared in a frame.
  */
 export const ISLANDS: [number, number][] = [[-82.9, 8.5], [-82.9, 13], [-82.9, 17.5], [-82.9, 22]];
+/** Half an island along x (three bays of 0.92) and along z (a 0.7 m carcass plus its plinth). */
+export const ISLAND_HALF = { x: 0.92 * 1.5, z: 0.37 };
+
+/**
+ * The table under the lamp, which is the one warm thing in the room. It stands against the front
+ * of the second island's east cabinet, long side along the doors, rather than loose in the aisle
+ * where it was drawn: a table on its own in the middle of a floor is furniture somebody dropped,
+ * and against a cabinet it is where somebody sat to work on the panel behind it. Its east edge at
+ * -81.45 is a quarter metre outside the aisle's clearance line.
+ */
+export const TABLE = { x: -82.05, z: 12.25 };
+/** The chair, pulled round to the table's west end and turned as if somebody stood up from it. */
+export const CHAIR = { x: -83.05, z: 12.15, ry: Math.PI / 2 - 0.35 };
+/** The wet floor sign, stood in the aisle beside the tiles that came down, on the clearance line. */
+export const WET_SIGN = { x: -81.5, z: 10.3, ry: 0.55 };
+/** The generator, against the east wall past the bank's north end, with a lead up to a wall box.
+ *  It was parked by the office door, two metres off the curve into the control room and out of
+ *  every frame the room is held in. Here the walk out of the room turns straight toward it. */
+export const GENERATOR = { x: -73.05, z: 19.9, ry: 0.35 };
 
 /**
  * The cream control bank (ref 17), standing proud of the east wall rather than flat against the
@@ -59,8 +76,36 @@ export const ISLANDS: [number, number][] = [[-82.9, 8.5], [-82.9, 13], [-82.9, 1
  */
 export const BANK = { x: -76.48, z0: 8.6, z1: 17 };
 
+// ---- The ceiling grid ----------------------------------------------------------------------------
+/** The tile pitch the grid is laid on. 0.6 m, so the ceiling is 23 by 33 and a missing tile is a
+ *  hole you could put a shoulder through rather than a whole bay of the room. */
+export const TILE = 0.6;
+export const COLS = Math.floor(W / TILE), ROWS = Math.floor(D / TILE);
+
+/** Which tiles carry a troffer: one in every eighth column and every sixth row, a fitting every
+ *  4.8 m across the room and every 3.6 m up it. The shell hands this to `ceilingGrid` and the
+ *  lights read their positions back out of it, so a spot never sits anywhere but under a lens. */
+export const LIT = (i: number, j: number): boolean => i % 8 === 2 && j % 6 === 2;
+
+/** The world x, z of the troffer in tile `i, j`, by the grid's own arithmetic: whole tiles at the
+ *  pitch, centred in the room, so the leftover splits between the two edges. */
+export function trofferAt(i: number, j: number): [number, number] {
+  return [XC - (COLS * TILE) / 2 + (i + 0.5) * TILE, ZC - (ROWS * TILE) / 2 + (j + 0.5) * TILE];
+}
+
+/** The three troffers the room's cold spots hang under, all in the aisle column: the one nearest
+ *  the doorway, one mid aisle, and one over the far end by the sealed door. */
+export const SPOT_TILES: [number, number][] = [[10, 2], [10, 14], [10, 26]];
+
+/** Where a missing tile actually is in the world. The ceiling is one segmented plane spanning the
+ *  full room, so its cells are W/COLS wide rather than exactly TILE, and the cables that hang
+ *  through the holes have to be hung off the same arithmetic or they miss. */
+export function holeAt(i: number, j: number): [number, number] {
+  return [XC - W / 2 + (i + 0.5) * (W / COLS), ZC - D / 2 + (j + 0.5) * (D / ROWS)];
+}
+
 /** Ceiling tiles left out, as grid indices: cols along x, rows from the near end of z. The block of
- *  six over the table is the opening the blue void shows through at the hold, and two singles up
+ *  six over the aisle is the opening the blue void shows through at the hold, and two singles up
  *  the room keep it from reading as the only damage in the ceiling. Six rather than the three it was
  *  drawn with: a 0.6 m tile seen from seven metres back at eye height is a slot, and three of them
  *  showed as slivers of blue where the reference has a hole you could stand a ladder in. */

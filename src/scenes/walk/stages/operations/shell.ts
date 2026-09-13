@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
-import { merged, instances, type Spot } from '../../merge';
+import { merged, type Spot } from '../../merge';
 import { labFloor, labWall, labSteel, dadoBands, dadoMaterial, dadoLineMaterial } from '../../labs/materials';
 import { cableTray } from '../../labs/props';
 import { doorway } from '../../labs/signage';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, RACK_Z, EAST_OPEN, WEST_OPEN, HALL_DOOR } from './layout';
+import { battens, lightShaft } from '../../labs/fixtures';
+import { X0, X1, Z0, Z1, H, W, D, XC, ZC, RACK_Z, EAST_OPEN, WEST_OPEN, HALL_DOOR, BATTEN_ROWS, BATTEN_XS, BATTEN_DROP, BATTEN_Y, SPOT_FITTINGS } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
@@ -42,14 +43,22 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const bands = [dadoBands(W, XC, Z0 + 0.02, 0), dadoBands(W, XC, Z1 - 0.02, 0)];
   root.add(merged(bands.map((b) => b.band), dadoMaterial()), merged(bands.map((b) => b.line), dadoLineMaterial()));
 
-  // No suspended ceiling grid in this room: a dark steel plane, two rows of emissive fluorescent
-  // strips down the aisle, and a cable tray over each rack row.
+  // No suspended ceiling grid in this room: a dark steel plane with two rows of fluorescent battens
+  // hung from it on rods, and a cable tray over each rack row. The battens are fittings rather than
+  // lit rectangles on the ceiling, which is what Jordan's "procedural junk" was: a housing with end
+  // caps, a diffuser with the tubes showing through it, and the rods and plates it hangs by.
   const ceiling = plane(W, D, labSteel(0x1a222a)); ceiling.rotation.x = Math.PI / 2; ceiling.position.set(XC, H, ZC);
 
-  const stripMat = new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 2 });
-  const strips: Spot[] = [];
-  for (const z of [-34.5, -27.5]) for (let x = X0 + 2; x <= X1 - 2; x += 3) strips.push([x, H - 0.1, z]);
-  root.add(instances(new THREE.BoxGeometry(2.2, 0.06, 0.18), stripMat, strips));
+  const spots: Spot[] = [];
+  for (const z of BATTEN_ROWS) for (const x of BATTEN_XS) spots.push([x, BATTEN_Y, z]);
+  const row = battens({ len: 2.2, drop: BATTEN_DROP, intensity: 1.4 }, spots); row.name = 'battens'; root.add(row);
+
+  // A shaft of light under the two battens the spots sit in, and only those two. The hall is dark
+  // and the air in it is dusty, so the cone under a lamp is the one place the light itself shows.
+  for (const [x, z] of SPOT_FITTINGS) {
+    const shaft = lightShaft({ top: 0.25, bottom: 1.6, height: 4.1, opacity: 0.05 });
+    shaft.position.set(x, BATTEN_Y - 0.06, z); root.add(shaft);
+  }
 
   for (const z of [RACK_Z.south, RACK_Z.north]) { const tray = cableTray(W - 2); tray.position.set(XC, H - 0.4, z); root.add(tray); }
 

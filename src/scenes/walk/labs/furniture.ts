@@ -595,3 +595,289 @@ export function taskChair(): THREE.Group {
   g.add(merged(trim, plastic));
   return g;
 }
+
+// ---------------------------------------------------------------------------------------------
+// The break room's second drinks machine. `vendingMachine` above is the first cut and stays as it
+// is for any room that still uses it. This one is built the way the real object is built: a full
+// height glass door in a steel frame with a handle, the stock on lit shelves behind it, a lit header
+// over the door, a coin mech column beside it and a delivery flap and a vent in the plinth.
+
+export interface DrinksSpec { accent: string; lit: boolean; seed: number }
+
+/** Draws `text` one glyph at a time with `spacing` pixels between them, centred on `x`. The canvas
+ *  `letterSpacing` property is not in every browser the walk runs on. */
+function tracked(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, spacing: number): void {
+  const widths = [...text].map((ch) => ctx.measureText(ch).width);
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * (text.length - 1);
+  let cx = x - total / 2;
+  const align = ctx.textAlign; ctx.textAlign = 'left';
+  [...text].forEach((ch, i) => { ctx.fillText(ch, cx, y); cx += widths[i] + spacing; });
+  ctx.textAlign = align;
+}
+
+/** A rounded rectangle path. */
+function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
+/** A can on a shelf: a cylinder shaded across its width, a rim at the top and a label band with a
+ *  mark on it. `x` is the left edge and `base` the shelf it stands on. */
+function can(ctx: CanvasRenderingContext2D, x: number, base: number, w: number, h: number, colour: string, label: string): void {
+  const top = base - h;
+  const shade = ctx.createLinearGradient(x, 0, x + w, 0);
+  shade.addColorStop(0, 'rgba(0,0,0,0.55)'); shade.addColorStop(0.18, 'rgba(255,255,255,0.18)'); shade.addColorStop(0.42, 'rgba(255,255,255,0)');
+  shade.addColorStop(0.8, 'rgba(0,0,0,0.25)'); shade.addColorStop(1, 'rgba(0,0,0,0.6)');
+  ctx.fillStyle = colour; rrect(ctx, x, top + 4, w, h - 4, 5); ctx.fill();
+  ctx.fillStyle = shade; rrect(ctx, x, top + 4, w, h - 4, 5); ctx.fill();
+  // The label: a band of the label colour with a lighter mark across it.
+  ctx.fillStyle = label; ctx.fillRect(x + 2, top + Math.round(h * 0.34), w - 4, Math.round(h * 0.34));
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; rrect(ctx, x + w * 0.22, top + h * 0.44, w * 0.56, h * 0.09, 3); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + w * 0.3, top + h * 0.57, w * 0.4, 3);
+  ctx.fillStyle = shade; ctx.fillRect(x + 2, top + Math.round(h * 0.34), w - 4, Math.round(h * 0.34));
+  // The rim.
+  ctx.fillStyle = '#b9c3c9'; ctx.beginPath(); ctx.ellipse(x + w / 2, top + 5, w / 2, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#5f6a70'; ctx.beginPath(); ctx.ellipse(x + w / 2, top + 5, w / 2 - 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+/** A bottle: body, shoulders, neck and cap, shaded like the can, with a label band. */
+function bottle(ctx: CanvasRenderingContext2D, x: number, base: number, w: number, h: number, colour: string, label: string, cap: string): void {
+  const top = base - h, neckW = w * 0.42, neckH = h * 0.2, shoulder = h * 0.12;
+  ctx.fillStyle = colour;
+  ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x, top + neckH + shoulder);
+  ctx.quadraticCurveTo(x, top + neckH, x + (w - neckW) / 2, top + neckH);
+  ctx.lineTo(x + (w - neckW) / 2, top + 8); ctx.lineTo(x + (w + neckW) / 2, top + 8); ctx.lineTo(x + (w + neckW) / 2, top + neckH);
+  ctx.quadraticCurveTo(x + w, top + neckH, x + w, top + neckH + shoulder); ctx.lineTo(x + w, base); ctx.closePath(); ctx.fill();
+  const shade = ctx.createLinearGradient(x, 0, x + w, 0);
+  shade.addColorStop(0, 'rgba(0,0,0,0.5)'); shade.addColorStop(0.2, 'rgba(255,255,255,0.28)'); shade.addColorStop(0.45, 'rgba(255,255,255,0)');
+  shade.addColorStop(0.85, 'rgba(0,0,0,0.3)'); shade.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = shade; ctx.fill();
+  ctx.fillStyle = label; ctx.fillRect(x + 1, top + h * 0.48, w - 2, h * 0.28);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; rrect(ctx, x + w * 0.2, top + h * 0.56, w * 0.6, h * 0.08, 3); ctx.fill();
+  ctx.fillStyle = shade; ctx.fillRect(x + 1, top + h * 0.48, w - 2, h * 0.28);
+  ctx.fillStyle = cap; rrect(ctx, x + (w - neckW) / 2 - 2, top, neckW + 4, 10, 2); ctx.fill();
+}
+
+/** The stock behind the glass: five lit shelves of cans and bottles with a price rail on each and
+ *  a few slots sold out. Colour and emissive map, 512 by 1024, for a door 0.56 by 1.17. */
+export function drinksStock(seed = 1): THREE.CanvasTexture {
+  const W = 512, H = 1024;
+  const [c, ctx] = canvas(W, H); const r = rng(seed);
+  // The cabinet interior: dark, with the LED strips down both sides lighting the edges.
+  ctx.fillStyle = '#0a1219'; ctx.fillRect(0, 0, W, H);
+  for (const [x0, x1] of [[0, 90], [W, W - 90]] as [number, number][]) {
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, 'rgba(190,220,240,0.32)'); g.addColorStop(1, 'rgba(190,220,240,0)');
+    ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x1), 0, 90, H);
+  }
+  const drinks: [string, string, string][] = [
+    ['#3fd47a', '#0e6d3a', '#e8f2ea'], ['#d7383a', '#7a1517', '#e8e2e2'], ['#6ec1d6', '#1f6f8a', '#eaf4f8'],
+    ['#e8b923', '#8a6a0c', '#f3ecd8'], ['#e4eaee', '#2455a4', '#e4eaee'], ['#2b1a12', '#c8322b', '#1a120d'],
+  ];
+  const pitch = 200, cols = 8, colW = W / cols;
+  for (let s = 0; s < 5; s++) {
+    const base = pitch * (s + 1) - 26;
+    const soldOut = Math.floor(r() * cols);
+    for (let k = 0; k < cols; k++) {
+      if (k === soldOut || r() < 0.1) continue;
+      const [body, label, cap] = drinks[Math.floor(r() * drinks.length)];
+      const isBottle = s < 2 ? r() < 0.75 : r() < 0.2;
+      const x = k * colW + 5;
+      if (isBottle) bottle(ctx, x, base, colW - 10, 168, body, label, cap);
+      else can(ctx, x, base, colW - 8, 112, body, label);
+    }
+    // The shelf: a steel plate with a lip, and the price rail on its front edge.
+    const plate = ctx.createLinearGradient(0, base, 0, base + 14);
+    plate.addColorStop(0, '#8b979e'); plate.addColorStop(1, '#4b565d');
+    ctx.fillStyle = plate; ctx.fillRect(0, base, W, 14);
+    ctx.fillStyle = '#dfe6ea'; ctx.fillRect(0, base + 14, W, 16);
+    ctx.fillStyle = '#1a2530';
+    for (let k = 0; k < cols; k++) { ctx.fillRect(k * colW + 10, base + 19, 22, 6); ctx.fillRect(k * colW + 36, base + 19, 14, 6); ctx.fillRect(k * colW + colW - 3, base + 14, 2, 16); }
+    // The spiral in front of each slot: a coil seen end on is a ring, and three rings a little
+    // apart are the turns of one.
+    ctx.strokeStyle = 'rgba(210,222,230,0.5)'; ctx.lineWidth = 2;
+    for (let k = 0; k < cols; k++) for (let t = 0; t < 3; t++) {
+      ctx.beginPath(); ctx.ellipse(k * colW + colW / 2, base - 24 - t * 3, colW * 0.4, 20, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  // Frost on the inside of the glass, along the bottom, where the cold pools.
+  const frost = ctx.createLinearGradient(0, H - 120, 0, H);
+  frost.addColorStop(0, 'rgba(200,225,240,0)'); frost.addColorStop(1, 'rgba(200,225,240,0.22)');
+  ctx.fillStyle = frost; ctx.fillRect(0, H - 120, W, 120);
+  const t = own(c); t.anisotropy = 8; return t;
+}
+
+/** The header over the door: a cold blue gradient, a bottle mark and the words in tracked Michroma.
+ *  Colour and emissive map, 512 by 171, for a header 0.84 by 0.28. */
+export function drinksHeader(accent = '#3D7BE0'): THREE.CanvasTexture {
+  const W = 512, H = 171;
+  const [c, ctx] = canvas(W, H);
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#123a86'); g.addColorStop(0.55, accent); g.addColorStop(1, '#6ec1d6');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // A light sweep across the face, as a lit sign has where the tubes sit behind it.
+  const sweep = ctx.createLinearGradient(0, 0, W * 0.6, H);
+  sweep.addColorStop(0, 'rgba(255,255,255,0)'); sweep.addColorStop(0.5, 'rgba(255,255,255,0.16)'); sweep.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sweep; ctx.fillRect(0, 0, W, H);
+  // A few soft flecks of frost.
+  for (const [x, y, rad] of [[60, 30, 3], [420, 140, 2.5], [470, 40, 2], [110, 145, 2], [300, 20, 1.6]] as [number, number, number][]) {
+    const f = ctx.createRadialGradient(x, y, 0, x, y, rad * 3);
+    f.addColorStop(0, 'rgba(255,255,255,0.8)'); f.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = f; ctx.fillRect(x - rad * 3, y - rad * 3, rad * 6, rad * 6);
+  }
+  // The bottle mark: a white bottle with a highlight down one side and a droplet off its shoulder.
+  const bx = 70, by = 28, bw = 34, bh = 118;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.moveTo(bx, by + bh); ctx.lineTo(bx, by + 44); ctx.quadraticCurveTo(bx, by + 30, bx + 10, by + 28);
+  ctx.lineTo(bx + 10, by + 8); ctx.lineTo(bx + bw - 10, by + 8); ctx.lineTo(bx + bw - 10, by + 28);
+  ctx.quadraticCurveTo(bx + bw, by + 30, bx + bw, by + 44); ctx.lineTo(bx + bw, by + bh); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = accent; ctx.fillRect(bx + 4, by + 62, bw - 8, 26);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(bx + 6, by + 34, 5, bh - 42);
+  ctx.fillStyle = '#ffffff'; rrect(ctx, bx + 8, by, bw - 16, 10, 3); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(bx + bw + 14, by + 52, 5, 8, 0, 0, Math.PI * 2); ctx.fill();
+  // The words, tracked wide, with a hairline under them.
+  ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.font = '600 44px Michroma, system-ui, sans-serif';
+  tracked(ctx, 'COLD DRINKS', 312, 74, 7);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(160, 108, 304, 2);
+  ctx.font = '600 15px Michroma, system-ui, sans-serif';
+  tracked(ctx, 'SERVED CHILLED', 312, 130, 5);
+  // The sign's own bezel, so the face reads as a lit panel in a frame and not a decal.
+  ctx.strokeStyle = 'rgba(8,16,26,0.75)'; ctx.lineWidth = 10; ctx.strokeRect(0, 0, W, H);
+  const t = own(c); t.anisotropy = 8; return t;
+}
+
+/** The coin mech column: a display, a keypad, the coin and note slots, the return cup. Two maps of
+ *  192 by 664 for a panel 0.26 by 0.9: the printed face, and the parts of it that light up. */
+export function drinksMech(): { map: THREE.CanvasTexture; glow: THREE.CanvasTexture } {
+  const W = 192, H = 664;
+  const [c, ctx] = canvas(W, H);
+  const [gc, gctx] = canvas(W, H);
+  gctx.fillStyle = '#000000'; gctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#1e2932'; ctx.fillRect(0, 0, W, H);
+  // A brushed inset panel the controls sit in.
+  ctx.fillStyle = '#2a353e'; rrect(ctx, 10, 12, W - 20, H - 24, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; rrect(ctx, 10, 12, W - 20, H - 24, 8); ctx.stroke();
+  // The display: a dark window with a lit readout.
+  ctx.fillStyle = '#05080b'; rrect(ctx, 24, 30, W - 48, 72, 4); ctx.fill();
+  ctx.strokeStyle = '#4b565d'; ctx.lineWidth = 2; rrect(ctx, 24, 30, W - 48, 72, 4); ctx.stroke();
+  for (const cx of [ctx, gctx]) {
+    cx.fillStyle = cx === ctx ? '#7fe3d6' : '#9ff0e4'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.font = '600 22px Michroma, system-ui, sans-serif'; cx.fillText('1.20', W / 2, 54);
+    cx.font = '600 10px Michroma, system-ui, sans-serif'; cx.fillText('INSERT COIN', W / 2, 84);
+  }
+  // The keypad: three by four keys, each with its digit.
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+  keys.forEach((k, i) => {
+    const kx = 30 + (i % 3) * 46, ky = 128 + Math.floor(i / 3) * 52;
+    ctx.fillStyle = '#0f151a'; rrect(ctx, kx, ky, 38, 40, 5); ctx.fill();
+    ctx.fillStyle = '#39454e'; rrect(ctx, kx + 2, ky + 2, 34, 34, 4); ctx.fill();
+    ctx.fillStyle = '#cfd8dd'; ctx.font = '600 15px Michroma, system-ui, sans-serif'; ctx.fillText(k, kx + 19, ky + 20);
+    gctx.fillStyle = 'rgba(120,150,170,0.28)'; gctx.font = ctx.font; gctx.textAlign = 'center'; gctx.textBaseline = 'middle'; gctx.fillText(k, kx + 19, ky + 20);
+  });
+  // The note slot, with its ready lamp, and the coin slot beside it.
+  ctx.fillStyle = '#0f151a'; rrect(ctx, 30, 366, 100, 34, 4); ctx.fill();
+  ctx.fillStyle = '#05080b'; ctx.fillRect(38, 380, 84, 6);
+  ctx.fillStyle = '#3fd47a'; ctx.beginPath(); ctx.arc(150, 383, 5, 0, Math.PI * 2); ctx.fill();
+  gctx.fillStyle = '#3fd47a'; gctx.beginPath(); gctx.arc(150, 383, 5, 0, Math.PI * 2); gctx.fill();
+  ctx.fillStyle = '#8b979e'; rrect(ctx, 76, 416, 40, 60, 4); ctx.fill();
+  ctx.fillStyle = '#05080b'; ctx.fillRect(92, 424, 8, 44);
+  ctx.fillStyle = '#cfd8dd'; ctx.font = '600 9px Michroma, system-ui, sans-serif';
+  ctx.fillText('COINS', 96, 490); ctx.fillText('NOTES', 80, 410);
+  // The coin return button and the cup below it.
+  ctx.fillStyle = '#0f151a'; ctx.beginPath(); ctx.arc(150, 446, 14, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#d7383a'; ctx.beginPath(); ctx.arc(150, 446, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#05080b'; rrect(ctx, 40, 560, W - 80, 60, 6); ctx.fill();
+  ctx.fillStyle = '#cfd8dd'; ctx.fillText('CHANGE', W / 2, 636);
+  // A service label and the maker's plate at the top.
+  ctx.fillStyle = '#e6e1d3'; ctx.fillRect(28, 520, 60, 22);
+  ctx.fillStyle = '#2455A4'; ctx.fillRect(28, 520, 60, 5);
+  ctx.fillStyle = '#6b6f72'; ctx.fillRect(32, 530, 40, 2); ctx.fillRect(32, 535, 30, 2);
+  const map = own(c); map.anisotropy = 8;
+  const glow = own(gc); glow.anisotropy = 8;
+  return { map, glow };
+}
+
+/**
+ * A glass fronted drinks machine, 0.9 wide, 1.9 tall, 0.8 deep, origin at floor centre, facing +z.
+ * A dark painted carcass with a full height glass door in a steel frame, the stock lit on shelves
+ * behind it under LED strips, a lit header over the door, the coin mech column beside it, a
+ * delivery flap and a vent grille in the plinth, and rubber feet. Unlit, the header, the strips, the
+ * readout and the stock all go dark and the same machine is a dead one. Eight draw calls. The header
+ * is named `header` so a room can drive its emissive with a failing circuit.
+ */
+export function drinksMachine(spec: DrinksSpec): THREE.Group {
+  const g = new THREE.Group();
+  const W = 0.9, H = 1.9, D = 0.8, F = D / 2, BACK = 0.1, FOOT = 0.04;
+  const DOOR = { x0: -0.41, x1: 0.15, y0: 0.36, y1: 1.53 };
+  const doorW = DOOR.x1 - DOOR.x0, doorH = DOOR.y1 - DOOR.y0, doorX = (DOOR.x0 + DOOR.x1) / 2, doorY = (DOOR.y0 + DOOR.y1) / 2;
+  const colX = (DOOR.x1 + W / 2) / 2, colW = W / 2 - DOOR.x1;
+  const body: THREE.BufferGeometry[] = [];
+  const put = (geo: THREE.BufferGeometry, x: number, y: number, z: number) => { geo.translate(x, y, z); body.push(geo); };
+  // The carcass: a back slab up to the shelves, then the wall, the column, the top and the plinth
+  // that frame the cavity the door closes.
+  put(new THREE.BoxGeometry(W, H - FOOT, BACK + F), 0, FOOT + (H - FOOT) / 2, (BACK - F) / 2);
+  put(new THREE.BoxGeometry(DOOR.x0 + W / 2, H - FOOT, F - BACK), (DOOR.x0 - W / 2) / 2, FOOT + (H - FOOT) / 2, (BACK + F) / 2);
+  put(new THREE.BoxGeometry(colW, H - FOOT, F - BACK), colX, FOOT + (H - FOOT) / 2, (BACK + F) / 2);
+  put(new THREE.BoxGeometry(doorW, H - DOOR.y1, F - BACK), doorX, (H + DOOR.y1) / 2, (BACK + F) / 2);
+  put(new THREE.BoxGeometry(doorW, DOOR.y0 - FOOT, F - BACK), doorX, (DOOR.y0 + FOOT) / 2, (BACK + F) / 2);
+  // The delivery flap, hinged at its top and pushed in a little at the bottom.
+  const flap = new THREE.BoxGeometry(0.36, 0.17, 0.012).translate(0, -0.085, 0).rotateX(0.35);
+  put(flap, doorX, 0.29, F - 0.006);
+  // The vent slats over the recess in the plinth under the column.
+  for (let k = 0; k < 6; k++) put(new THREE.BoxGeometry(0.22, 0.012, 0.012), colX, 0.1 + k * 0.032, F + 0.004);
+  g.add(merged(body, carcass(0x1a2530, 0.42)));
+
+  // The black parts: the recesses behind the flap and the vent, and the feet.
+  const black: THREE.BufferGeometry[] = [
+    new THREE.BoxGeometry(0.4, 0.2, 0.09).translate(doorX, 0.2, F - 0.045 + 0.0005),
+    new THREE.BoxGeometry(0.24, 0.2, 0.031).translate(colX, 0.19, F - 0.015 + 0.0005),
+  ];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) black.push(new THREE.CylinderGeometry(0.032, 0.036, FOOT, 10).translate(sx * 0.38, FOOT / 2, sz * 0.32));
+  g.add(merged(black, carcass(0x0b0f13, 0.7)));
+
+  // The steel: the door frame, the handle, the note slot mouth and the coin cup.
+  const rail = 0.04, proud = 0.02;
+  const steel: THREE.BufferGeometry[] = [
+    new THREE.BoxGeometry(doorW + rail, rail, proud).translate(doorX, DOOR.y1 + rail / 2, F + proud / 2),
+    new THREE.BoxGeometry(doorW + rail, rail, proud).translate(doorX, DOOR.y0 - rail / 2, F + proud / 2),
+    new THREE.BoxGeometry(rail, doorH + rail * 2, proud).translate(DOOR.x0 - rail / 2 + 0.01, doorY, F + proud / 2),
+    new THREE.BoxGeometry(rail, doorH + rail * 2, proud).translate(DOOR.x1 + rail / 2 - 0.01, doorY, F + proud / 2),
+    new THREE.BoxGeometry(0.025, 0.5, 0.02).translate(DOOR.x1 - 0.06, 1.0, F + 0.06),
+    new THREE.BoxGeometry(0.02, 0.03, 0.05).translate(DOOR.x1 - 0.06, 0.78, F + 0.035),
+    new THREE.BoxGeometry(0.02, 0.03, 0.05).translate(DOOR.x1 - 0.06, 1.22, F + 0.035),
+    new THREE.BoxGeometry(0.12, 0.03, 0.02).translate(colX, 0.98, F + 0.01),
+    new THREE.BoxGeometry(0.1, 0.05, 0.03).translate(colX, 0.70, F + 0.015),
+  ];
+  g.add(merged(steel, labSteel(0x9aa5ad)));
+
+  // The stock on its shelves at the back of the cavity, and the LED strips down the door reveals.
+  const shelves = drinksStock(spec.seed);
+  const stock = new THREE.Mesh(new THREE.PlaneGeometry(doorW, doorH), new THREE.MeshStandardMaterial({
+    map: shelves, emissive: 0xffffff, emissiveMap: shelves, emissiveIntensity: spec.lit ? 0.9 : 0, roughness: 0.8,
+  }));
+  stock.position.set(doorX, doorY, BACK + 0.002); g.add(stock);
+  const strips: THREE.BufferGeometry[] = [];
+  for (const x of [DOOR.x0 + 0.012, DOOR.x1 - 0.012]) strips.push(new THREE.BoxGeometry(0.012, doorH - 0.02, 0.012).translate(x, doorY, F - 0.03));
+  g.add(merged(strips, new THREE.MeshStandardMaterial({ color: spec.lit ? 0xffffff : 0x2a3138, emissive: 0xdff0f6, emissiveIntensity: spec.lit ? 2.4 : 0, roughness: 0.5 })));
+
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(doorW, doorH), new THREE.MeshPhysicalMaterial({
+    color: LABS.glassTint, transparent: true, opacity: 0.12, roughness: 0.14, metalness: 0, depthWrite: false,
+  }));
+  glass.position.set(doorX, doorY, F + 0.004); glass.renderOrder = 2; g.add(glass);
+
+  const face = drinksHeader(spec.accent);
+  const header = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.28), new THREE.MeshStandardMaterial({
+    color: 0xffffff, map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: spec.lit ? 1.3 : 0, roughness: 0.5,
+  }));
+  header.position.set(0, (H + DOOR.y1) / 2 + 0.01, F + 0.002); header.name = 'header'; g.add(header);
+
+  const mech = drinksMech();
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.9), new THREE.MeshStandardMaterial({
+    color: 0xffffff, map: mech.map, emissive: 0xffffff, emissiveMap: mech.glow, emissiveIntensity: spec.lit ? 1.4 : 0, roughness: 0.6,
+  }));
+  panel.position.set(colX, 1.05, F + 0.002); g.add(panel);
+  return g;
+}

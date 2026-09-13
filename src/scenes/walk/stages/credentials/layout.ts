@@ -24,3 +24,13 @@ export const PLATE_Z = { west: [-17.4, -15.6, -13.8], east: [-17.4, -15.6, -13.8
 export const PLATE_X = { west: XC - 3.6 + 0.45, east: XC + 3.6 - 0.45 };
 /** How far each plate turns off its wall toward the aisle, so both rows face the hold. */
 export const PLATE_TURN = 0.25;
+
+/** Four battens down the corridor north of the lab, hung half a metre off the dark steel ceiling
+ *  on rods. The room's two spots sit under the first and the third. `BATTEN_Y` is where a housing
+ *  hangs: its rods run `BATTEN_DROP` up from the housing top to plates on the ceiling. */
+export const BATTEN_Z = [-10.6, -5.9, -1.1, 3.6];
+export const BATTEN_DROP = 0.5;
+export const BATTEN_Y = H - BATTEN_DROP - 0.05;
+/** The lab's lit ceiling: six 2.2 by 1.1 panels in two rows along the room, local to the lab's
+ *  own centre. The points inside the lab sit under two of them. */
+export const LAB_PANEL = { size: [2.2, 1.1] as [number, number], x: [-1.2, 1.2], z: [-4.2, -0.6, 3.0], intensity: 0.9 };
