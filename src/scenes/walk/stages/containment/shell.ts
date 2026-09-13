@@ -20,7 +20,7 @@ export { holeAt } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
-/** The void above the tiles: 1.2 m of dark plant space with a blue lit panel in its ceiling. */
+/** The void above the tiles: 1.2 m of dark plant space with two battens burning in it. */
 const VOID_H = 1.2;
 /** The trays run just under the tile line, and the cables strung across the room leave them at
  *  the tray's own cable height. */
@@ -100,23 +100,30 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   });
   grid.group.position.set(XC, 0, ZC); root.add(grid.group);
 
-  // Above it, plant space: an interior-facing box a little over a metre deep, near black, with one
-  // blue lit panel in its ceiling. The panel is wide and long rather than the one tile square it
-  // sits over, because a sightline that enters a 0.6 m hole from seven metres back leaves it four
-  // or five metres further up the room: what the hold sees through the gap is the void's ceiling
-  // well north of the hole, not the patch directly above it.
+  // Above it, plant space: an interior-facing box a little over a metre deep, near black. What the
+  // hold sees through the gap is not the patch directly above the hole: a sightline that enters a
+  // 0.6 m hole from seven metres back leaves it four or five metres further up the room, which is
+  // where the battens below hang.
   const shellBox = new THREE.Mesh(new THREE.BoxGeometry(W, VOID_H, D), new THREE.MeshStandardMaterial({
-    color: 0x06090c, emissive: 0x1d4478, emissiveIntensity: 0.13, roughness: 0.9, side: THREE.BackSide,
+    color: 0x090d12, emissive: 0x1d4478, emissiveIntensity: 0.07, roughness: 0.9, side: THREE.BackSide,
   }));
   shellBox.position.set(XC, H + VOID_H / 2, ZC); shellBox.name = 'void'; root.add(shellBox);
-  // What the gap shows is a fitting burning up in the plant space with the dark around it, not a
-  // rectangle of blue. A flat lit plane on its own read as a painted panel from the aisle, which was
-  // the note "the blue light on the top looks a bit weird": it had no source in it. The wash stays,
-  // at half what it was, and a batten hangs in it for the eye to find.
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(5, 8), new THREE.MeshStandardMaterial({ color: 0x071429, emissive: 0x2a6fd6, emissiveIntensity: 0.18 }));
-  glow.rotation.x = Math.PI / 2; glow.position.set(-79.5, H + VOID_H - 0.1, 14.5); glow.name = 'void-glow'; root.add(glow);
-  const voidLamp = batten({ len: 1.8, intensity: 1.7, color: 0x9fc6ea });
-  voidLamp.position.set(-79.4, H + VOID_H - 0.3, 13.1); root.add(voidLamp);
+  // What the gap shows is the plant space with a fitting burning in it. A lit plane across the void's
+  // ceiling read from the aisle as a rectangle of blue paint in the tile, which was the note "the
+  // blue light on the top looks a bit weird": it had no source in it and it was the same value
+  // corner to corner. Two battens in the sightline through the hole, and dark everywhere else.
+  for (const z of [12.5, 13.7]) {
+    const voidLamp = batten({ len: 2.0, intensity: 1.8, color: 0xbcd8f2 });
+    voidLamp.position.set(-79.3, H + VOID_H - 0.42, z); root.add(voidLamp);
+  }
+  // A batten's tube is 5 cm deep and the aisle reads it at a grazing angle, so from the hold it is a
+  // hairline. This is the lens of the same fitting, a panel facing straight down where the sightline
+  // through the hole lands, which is what carries the light at that angle.
+  const voidLens = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.3), new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0xcfe3f4, emissiveIntensity: 0.62, roughness: 0.5,
+  }));
+  voidLens.rotation.x = Math.PI / 2; voidLens.position.set(-79.3, H + VOID_H - 0.44, 13.1);
+  voidLens.name = 'void-lens'; root.add(voidLens);
 
   // Cable trays down both long walls under the tile line, the thing every run across the ceiling
   // leaves from. Each is a channel with rungs and a bed of cable in it, from the kit.
