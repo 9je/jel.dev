@@ -371,7 +371,7 @@ function labsStencil(w: number, h: number): THREE.Mesh {
   ctx.font = `600 ${Math.round(H * 0.5)}px Michroma, system-ui, sans-serif`;
   ctx.fillText('LABS', 290, H * 0.6);
   ctx.font = `600 ${Math.round(H * 0.15)}px Michroma, system-ui, sans-serif`;
-  const word = 'TERRAGROUP'; let x = 296;
+  const word = 'JEL DEV'; let x = 296;
   for (const ch of word) { ctx.fillText(ch, x, H * 0.85); x += ctx.measureText(ch).width + H * 0.035; }
   ctx.globalAlpha = 1;
   // Wear: flecks knocked out of the paint, and a band scuffed along the bottom where things leaned.

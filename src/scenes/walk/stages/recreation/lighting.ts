@@ -1,23 +1,30 @@
 import type { Placement } from '../../rig';
-import { Z0 } from './layout';
+import { Z0, FITTINGS } from './layout';
 /**
  * Four spots and two points over 36 m of room. All four are warm white against the cold white every
  * other room in the building is lit with: a staff room is the one place with a different bulb in it,
  * and the warmth is half of why it reads as somewhere people sat down. The west pair used to be one
  * cold spot over a service passage, which is what made the far half read as the detail running out.
  *
+ * Each spot hangs at a batten the dressing draws at the same position, and aims at the wall the
+ * things under it stand against, rather than straight down the middle of the room at nothing.
+ *
  * The two points are the room's glow: one inside the lit drinks machine and one over the arcade row,
  * both in the room's accent, both short range so they pool on the wall behind rather than washing
  * the whole room blue.
  */
 export function lights(): Placement[] {
-  const room = { color: 0xf1ece0, angle: Math.PI / 2.4, penumbra: 0.75, decay: 1.7 } as const;
+  const room = { color: 0xf1ece0, angle: Math.PI / 2.4, penumbra: 0.8, decay: 1.7 } as const;
+  const [kitchen, row, lounge, west] = FITTINGS;
   return [
-    { kind: 'spot', position: [-27.5, 3.05, -31], target: [-27.9, 0, -32.6], intensity: 50, distance: 18, ...room },
-    { kind: 'spot', position: [-33, 3.05, -31], target: [-33.4, 0, -32.8], intensity: 56, distance: 18, ...room },
-    { kind: 'spot', position: [-41, 3.0, -31], target: [-41.4, 0, -32.4], intensity: 52, distance: 18, ...room },
-    { kind: 'spot', position: [-48.5, 3.0, -31], target: [-49, 0, -32.6], intensity: 62, distance: 22, ...room },
-    { kind: 'point', position: [-31.4, 1.2, Z0 + 0.7], color: 0x3d7be0, intensity: 5, distance: 5, decay: 2 },
-    { kind: 'point', position: [-33.8, 1.9, Z0 + 1.3], color: 0x3d7be0, intensity: 5, distance: 7, decay: 2 },
+    { kind: 'spot', position: [kitchen[0], 3.02, kitchen[1]], target: [kitchen[0], 0.95, kitchen[1] - 0.9], intensity: 32, distance: 16, ...room },
+    // The row is the brightest thing in the room, which is how the eye is told where to look. Its
+    // cone is the narrow one: at the room's own angle it washed the wall to the ceiling and took the
+    // sign over the cabinets with it, and a lit sign in a hot pool of light is a white rectangle.
+    { kind: 'spot', position: [row[0], 3.02, row[1]], target: [row[0] - 0.25, 0.85, row[1] - 0.95], intensity: 56, distance: 16, ...room, angle: Math.PI / 3.4 },
+    { kind: 'spot', position: [lounge[0], 3.02, lounge[1]], target: [lounge[0] - 0.4, 0, lounge[1] - 1.4], intensity: 52, distance: 18, ...room },
+    { kind: 'spot', position: [west[0], 3.02, west[1]], target: [west[0] - 0.5, 0, west[1] - 1.2], intensity: 62, distance: 22, ...room },
+    { kind: 'point', position: [-34.95, 1.2, Z0 + 0.7], color: 0x3d7be0, intensity: 5, distance: 5, decay: 2 },
+    { kind: 'point', position: [-32.1, 1.85, Z0 + 1.2], color: 0x3d7be0, intensity: 5, distance: 4.5, decay: 2 },
   ];
 }

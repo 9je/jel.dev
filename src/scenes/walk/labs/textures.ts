@@ -235,23 +235,25 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
  * a still room and it pulls the eye off the page under the lamp, which is what the room is about.
  */
 export function timelineScreen(rows: { when: string; what: string }[]): THREE.CanvasTexture {
-  const w = 512, h = 340;
+  const w = 768, h = 480;
   const [c, ctx] = canvas(w, h);
   ctx.fillStyle = '#050d14'; ctx.fillRect(0, 0, w, h);
   ctx.textBaseline = 'top';
-  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(0, 0, w, 46);
-  ctx.fillStyle = '#04222c'; ctx.font = '600 26px Michroma, system-ui, sans-serif';
-  ctx.fillText('PERSONNEL FILE', 18, 10);
+  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(0, 0, w, 72);
+  ctx.fillStyle = '#04222c'; ctx.font = '600 40px Michroma, system-ui, sans-serif';
+  ctx.fillText('PERSONNEL FILE', 24, 16);
+  // Three entries, set large enough to be read from the walk's last hold. The type used to be 20 px
+  // on a 512 wide canvas, which is a grey smear at this distance.
   rows.slice(0, 3).forEach((row, i) => {
-    const y = 76 + i * 72;
-    ctx.font = '600 26px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#e6b14a';
-    ctx.fillText(row.when, 18, y);
-    ctx.font = '400 20px system-ui, sans-serif'; ctx.fillStyle = '#9fc0cf';
-    ctx.fillText(fit(ctx, row.what, 366), 122, y + 4);
-    ctx.fillStyle = '#12313f'; ctx.fillRect(18, y + 44, w - 36, 2);
+    const y = 108 + i * 124;
+    ctx.font = '600 44px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#e6b14a';
+    ctx.fillText(row.when, 24, y);
+    ctx.font = '400 34px system-ui, sans-serif'; ctx.fillStyle = '#b6d6e4';
+    ctx.fillText(fit(ctx, row.what, w - 60), 24, y + 58);
+    ctx.fillStyle = '#12313f'; ctx.fillRect(24, y + 108, w - 48, 2);
   });
-  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(18, h - 42, 16, 26);
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 2);
+  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(24, h - 46, 20, 30);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 0; y < h; y += 5) ctx.fillRect(0, y, w, 2);
   return own(c);
 }
 

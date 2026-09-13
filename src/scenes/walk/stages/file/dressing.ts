@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { site } from '../../../../content/site';
-import { grounded, instances, merged, place, repeat, type Spot } from '../../merge';
+import { grounded, instances, merged, place, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
 import { labSteel } from '../../labs/materials';
-import { controlConsole, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
+import { controlConsole, controlDesk, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
 import { consoleFace, personnelSheet, timelineScreen } from '../../labs/textures';
 import { DESK, FILE, X1, Z1 } from './layout';
 
@@ -52,8 +52,8 @@ function fileLines(): string[] {
 /**
  * The control room, dressed for one frame.
  *
- * A four metre desk run under the window with a keyed console on it, three screens, a radio and a
- * shift's worth of paperwork, and at the north end of it, where the copy column in the page leaves
+ * A six metre built desk under the window with a keyed console on it, three screens and a shift's
+ * worth of paperwork, and at the north end of it, where the copy column in the page leaves
  * the frame clear, a manila folder open under a desk lamp with Jordan's own record typed on the
  * leaf. The chair is pushed back and turned. Two of the three screens are dead and the third is
  * showing the same record the folder carries.
@@ -70,11 +70,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const TOP = DESK.top;
 
   // ---- The desk run ----------------------------------------------------------------------------
-  // Three of the office desks end to end, long axis along z, fronts west to the room. One batch, so
-  // a six metre run costs what one desk costs.
-  await add(repeat(store.model('desk'), [
-    [DESK.x, 0, 29, -Math.PI / 2], [DESK.x, 0, 31, -Math.PI / 2], [DESK.x, 0, 33, -Math.PI / 2],
-  ]));
+  // One built desk, six metres of it, front edge west to the room and the instrument tier along the
+  // back for the screens. It was three of the office desk model stood end to end, and that is what
+  // Jordan saw: "3 desks in a row for some reason". Four draw calls.
+  const desk = controlDesk({ len: DESK.z1 - DESK.z0, depth: DESK.back - DESK.front, top: TOP, tier: DESK.tier, tierDepth: DESK.tierBack - DESK.back });
+  desk.position.set(DESK.front, 0, (DESK.z0 + DESK.z1) / 2);
+  await add(desk);
 
   // ---- The exhibit -----------------------------------------------------------------------------
   // One group: the pointer picks the folder, the form on it and the lamp over it as one thing.
@@ -119,10 +120,14 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // ---- The screens -----------------------------------------------------------------------------
   // One alive, two dead. The live one is the record typed up, so the folder and the screen say the
   // same thing twice and the room reads as one person's file rather than as a set of props.
-  const live = monitor({ alive: true, face: timelineScreen(site.about.timeline) });
-  await add(place(live, DESK.x + 0.3, TOP, 33.2, -Math.PI / 2 - 0.3));
+  // The live one is a large panel rather than a desk monitor. At four metres from the lens a 0.5 m
+  // screen renders its type at about seven pixels whatever is drawn on it, which is the whole of the
+  // note "screen hard to read". At 1.9 times the size, with three lines set large, it reads.
+  const TIER = TOP + DESK.tier;
+  const live = monitor({ alive: true, size: 1.9, face: timelineScreen(site.about.timeline) });
+  await add(place(live, DESK.tierBack - 0.2, TIER, 32.9, -Math.PI / 2 - 0.22));
   for (const [z, turn] of [[29.7, -Math.PI / 2 + 0.1], [28.6, -Math.PI / 2 - 0.15]] as [number, number][]) {
-    await add(place(monitor({ alive: false }), DESK.x + 0.3, TOP, z, turn));
+    await add(place(monitor({ alive: false }), DESK.tierBack - 0.2, TIER, z, turn));
   }
 
   // ---- The console -----------------------------------------------------------------------------
@@ -141,12 +146,13 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(mic, DESK.x - 0.33, TOP + 0.01, 32.95, 1.9));
 
   // ---- The shift's paperwork -------------------------------------------------------------------
+  // Paperwork, and only paperwork. The transceiver that stood at the north end was a piece of field
+  // radio kit in an office, and the loose stationery sat with its pencils a centimetre off the top:
+  // "random military equipment", "floating penicls". What is left is what a shift leaves behind.
   const prop = (key: string) => grounded(store.model(key));
-  await add(place(prop('radio'), DESK.x - 0.18, TOP, 33.75, -1.2));
   await add(place(prop('binder'), DESK.x - 0.15, TOP, 30.2, 0.5));
   await add(place(prop('clipboard'), DESK.x - 0.2, TOP, 29.2, -0.4));
   await add(place(prop('notepads'), DESK.x - 0.05, TOP, 28.5, 1.1));
-  await add(place(prop('stationery'), DESK.x + 0.16, TOP, 30.7, 0.3));
 
   // The chair, pushed back from the console and swung north, which is the last thing a person does
   // before they leave a desk. It stands clear of the folder in the settled frame on purpose: a

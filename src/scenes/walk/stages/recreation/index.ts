@@ -28,8 +28,14 @@ async function build(ctx: StageContext): Promise<Stage> {
   for (const p of fx) root.add(p.points);
   // Two faults, on their own clocks, because one panel blinking on a loop reads as an animation and
   // two that never line up read as a building nobody is maintaining. Panel A over the arcade row
-  // drops out twice in three seconds. Panel B over the drinks machine buzzes in bursts, and the
-  // machine's own header buzzes with it: one failing circuit, two things on it.
+  // drops out twice in three seconds. Panel B over the drinks machines buzzes in bursts.
+  //
+  // The machine's lit header used to buzz off panel B's own value, on the reasoning that one failing
+  // circuit should take both. On screen that reads the other way round: two things blinking on the
+  // same frame is the tell of a script, and Jordan's note was "sometimes the light flickers
+  // perfectly in sync with the cold drinks flicker and that feels too scripted". So the header runs
+  // on its own clock at a period that shares no factor with the panel's, and the two coincide about
+  // as often as two failing ballasts in one room would.
   const [panelA, panelB] = shell.flicker.map((f) => f.material as THREE.MeshStandardMaterial);
   const rested = header.emissiveIntensity;
   let clock = 0;
@@ -40,9 +46,9 @@ async function build(ctx: StageContext): Promise<Stage> {
       for (const p of fx) p.update(dt);
       const a = clock % 3.1;
       panelA.emissiveIntensity = a < 0.06 || (a > 0.5 && a < 0.62) ? 0.2 : 1.1;
-      const buzz = 0.9 + 0.2 * Math.sin(clock * 37) * (clock % 7 < 1.4 ? 1 : 0);
-      panelB.emissiveIntensity = buzz;
-      header.emissiveIntensity = (rested * buzz) / 0.9;
+      panelB.emissiveIntensity = 0.9 + 0.2 * Math.sin(clock * 37) * (clock % 7 < 1.4 ? 1 : 0);
+      const h = (clock + 2.4) % 8.7;
+      header.emissiveIntensity = rested * (h < 0.09 ? 0.25 : h < 0.17 ? 1.04 : h < 0.23 ? 0.35 : 1);
     },
     dispose() { for (const p of fx) p.dispose(); root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
   };

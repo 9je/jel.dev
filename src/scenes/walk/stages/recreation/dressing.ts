@@ -3,8 +3,10 @@ import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { cableTray, papers } from '../../labs/props';
 import { arcadeCabinet, crtBracket, fridge, kitchenette, locker, poster, splashback, vendingMachine } from '../../labs/furniture';
+import { battens } from '../../labs/fixtures';
+import { signBox } from '../../labs/signage';
 import { screenFace } from '../../labs/textures';
-import { Z0, Z1, CABINETS, CABINET_RY, CABINET_Z, ACCENT, HALL_FACE } from './layout';
+import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
 
@@ -30,8 +32,17 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // kind puts there: a horizontal line that ties the kitchen and the arcade row into one wall.
   await add(place(cableTray(30), -39, 2.72, Z0 + 0.28));
 
+  // The four fittings the room's four spots hang under. The ceiling grid's own troffers are sparse
+  // and land where the tile pattern puts them, which is not where a light wants to be, and a spot
+  // burning in open ceiling was the note "lights are super bad and have a single light point in
+  // middle doesnt even line up". These are surface battens over the served wall and the lounge, on
+  // the same four positions `lighting.ts` puts its spots. One instanced pair for all four.
+  await add(battens({ len: 1.6, drop: 0.08, intensity: 1.45 }, FITTINGS.map(([x, z]) => [x, 3.1, z])));
+
   // ---- South wall, east to west: the kitchen ----------------------------------------------------
-  await add(place(fridge(), -26.05, 0, Z0 + 0.37));
+  // Half a metre of counter end between the fridge and the units, because butted against them the
+  // two read as one white mass with a seam through it on the approach.
+  await add(place(fridge(), -25.45, 0, Z0 + 0.37));
   await add(place(kitchenette(3.2), -28.0, 0, Z0 + 0.33));
   await add(place(splashback(3.2, 0.62), -28.0, 1.19, Z0 + 0.05));
   await add(once(prop('microwave'), -27.2, 0.905, Z0 + 0.33, 0.15));
@@ -42,28 +53,33 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // metre of wall between the cupboards and the ceiling on the side of the frame the copy leaves.
   await add(once(prop('wall_clock'), -26.75, 2.3, Z0 + 0.07));
 
-  // ---- South wall, west end: the one bold thing in the room -------------------------------------
-  // The lit machine stands at the head of the row, and the row runs into the corner. Each cabinet is
-  // turned a fifth of a radian out of the wall: square to it, the hold saw four dark flanks and
-  // Jordan's note was "idk what any of these things are".
+  // ---- South wall, the middle: the row the room is about ----------------------------------------
+  // The four cabinets stand nearest the hold, under their own batten and their own sign, and the
+  // drinks machines moved behind them. This is the whole of Jordan's note on the room: the machines
+  // were the big lit pair in the foreground and the projects were four small shapes behind them.
+  const hotspots: Hotspot[] = [];
+  for (const [key, title, x, accent, ry] of CABINETS) {
+    const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7 }), x, 0, CABINET_Z, ry);
+    await add(cabinet);
+    hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
+    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-30.7, 2.15, Z0 + 1.0));
+  }
+  // The sign over the row, on the wall above the marquees. A lit box at the head of an aisle is how
+  // a building this size tells you what a corner of a room is for, and it is what makes the row the
+  // thing you look at on the way in rather than the machines.
+  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'BREAK ROOM' }), -32.1, 2.32, Z0 + 0.1));
+
+  // ---- South wall, west of the row: the drinks ---------------------------------------------------
+  // The lit machine and its dead twin, past the cabinets, where they are the backdrop the row stands
+  // against and the light that leaks down the wall behind it.
   const machine = vendingMachine({ accent: ACCENT, lit: true, seed: 11 });
   const header = machine.getObjectByName('header') as THREE.Mesh;
   const litHeader = header.material as THREE.MeshStandardMaterial;
-  await add(place(machine, -31.4, 0, Z0 + 0.42));
-  // Its dark twin stands beside it, between the lit machine and the counter. Two machines side by
-  // side, one out, is the whole abandonment beat in one object, and the dead one is the piece of
-  // wall the flagship plate hangs over at the hold.
-  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -30.35, 0, Z0 + 0.42));
+  await add(place(machine, -34.95, 0, Z0 + 0.42));
+  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -36.0, 0, Z0 + 0.42));
 
-  const hotspots: Hotspot[] = [];
-  for (const [key, title, x, accent] of CABINETS) {
-    const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7 }), x, 0, CABINET_Z, CABINET_RY);
-    await add(cabinet);
-    hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
-    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-30.35, 2.2, Z0 + 0.6));
-  }
-  // The copy panel hangs on the dead machine beside the row, on the right of the frame, so it never
-  // covers the four cabinets it is describing.
+  // The copy panel hangs east of the row, over the counter end, so it never covers the four cabinets
+  // it is describing.
   anchors.set('recreation', new THREE.Vector3(-27.4, 2.0, -33.6));
 
   // ---- North wall: the quiet side ---------------------------------------------------------------

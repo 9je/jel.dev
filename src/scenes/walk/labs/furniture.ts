@@ -319,11 +319,18 @@ export function marqueeFace(title: string, accent = '#3D7BE0'): THREE.CanvasText
   ctx.fillStyle = accent; ctx.fillRect(0, 0, 512, 146);
   ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, 512, 10); ctx.fillRect(0, 136, 512, 10);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
+  // A long title is condensed rather than shrunk. Michroma is a wide face, so setting a name like
+  // "character bot" to fit at full size dropped it to about half the cap height of the short ones
+  // and it could not be read at the hold at all. Squeezing the x axis keeps the letters as tall as
+  // every other marquee, which is what carries at four metres.
   const px = 64;
   ctx.font = `600 ${px}px Michroma, system-ui, sans-serif`;
   const wide = ctx.measureText(title).width;
-  if (wide > 460) ctx.font = `600 ${Math.max(12, Math.floor((px * 460) / wide))}px Michroma, system-ui, sans-serif`;
-  ctx.fillText(title, 256, 76);
+  const squeeze = wide > 460 ? Math.max(0.55, 460 / wide) : 1;
+  ctx.save();
+  ctx.translate(256, 76); ctx.scale(squeeze, 1);
+  ctx.fillText(title, 0, 0);
+  ctx.restore();
   return own(c);
 }
 
@@ -478,23 +485,33 @@ export function controlConsole(face: THREE.Texture): THREE.Group {
   return g;
 }
 
-export interface MonitorSpec { alive: boolean; face?: THREE.Texture }
+export interface MonitorSpec {
+  alive: boolean;
+  face?: THREE.Texture;
+  /** How many times the 0.55 m panel this one is. A screen carrying something the visitor is meant
+   *  to read has to be sized for the distance it is read from: at four metres a desk monitor's type
+   *  lands at seven pixels whatever the texture does, which was the note "i cant read the laptop"
+   *  and then "screen hard to read". Around 1.9 is a large panel on a stand, and legible. */
+  size?: number;
+}
 
-/** A desk monitor on a plinth stand, 0.55 by 0.36, origin at the desk top on its own centre, screen
- *  toward +z. A dead one carries the same dark glass with nothing behind it, which is what a room
- *  with one live screen and two dark ones needs to read as a shift that ended. Three calls. */
+/** A desk monitor on a plinth stand, 0.55 by 0.36 at size 1, origin at the desk top on its own
+ *  centre, screen toward +z. A dead one carries the same dark glass with nothing behind it, which is
+ *  what a room with one live screen and two dark ones needs to read as a shift that ended. Three
+ *  calls. */
 export function monitor(spec: MonitorSpec): THREE.Group {
+  const k = spec.size ?? 1;
   const g = new THREE.Group();
-  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.02), carcass(DARK, 0.5));
-  stand.position.set(0, 0.1, -0.01); g.add(stand);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.36, 0.04), carcass(DARK, 0.5));
-  body.position.set(0, 0.38, 0); g.add(body);
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.2 * k, 0.2 * k, 0.02 * k), carcass(DARK, 0.5));
+  stand.position.set(0, 0.1 * k, -0.01); g.add(stand);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55 * k, 0.36 * k, 0.04), carcass(DARK, 0.5));
+  body.position.set(0, 0.38 * k, 0); g.add(body);
   const map = spec.alive ? spec.face : undefined;
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.31), new THREE.MeshStandardMaterial({
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.5 * k, 0.31 * k), new THREE.MeshStandardMaterial({
     color: 0x0b1117, map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: spec.alive ? 1.1 : 0,
     roughness: 0.4,
   }));
-  screen.position.set(0, 0.38, 0.021); screen.name = 'face'; g.add(screen);
+  screen.position.set(0, 0.38 * k, 0.021); screen.name = 'face'; g.add(screen);
   return g;
 }
 
@@ -879,5 +896,56 @@ export function drinksMachine(spec: DrinksSpec): THREE.Group {
     color: 0xffffff, map: mech.map, emissive: 0xffffff, emissiveMap: mech.glow, emissiveIntensity: spec.lit ? 1.4 : 0, roughness: 0.6,
   }));
   panel.position.set(colX, 1.05, F + 0.002); g.add(panel);
+  return g;
+}
+
+
+/**
+ * A purpose built control desk: a laminate worktop with a rounded front nosing, a raised instrument
+ * tier along the back for the screens to stand on, a modesty panel with a cable duct on it, and
+ * three drawer pedestals under it. Origin at the floor on the front edge of the worktop, the run
+ * along z, the tier standing behind the top in +x.
+ *
+ * It replaces three office desk models stood end to end. Three desks in a line have three pairs of
+ * legs, three gaps and three front edges, and Jordan read exactly that: "3 desks in a row for some
+ * reason". A control room's desk is one piece of joinery with the equipment built into it.
+ *
+ * Four draw calls whatever the length.
+ */
+export function controlDesk(opts: { len: number; depth?: number; top?: number; tier?: number; tierDepth?: number }): THREE.Group {
+  const { len } = opts;
+  const depth = opts.depth ?? 0.8, top = opts.top ?? 0.79;
+  const tier = opts.tier ?? 0.25, tierDepth = opts.tierDepth ?? 0.35;
+  const g = new THREE.Group();
+  const pedestals = [-len / 3, 0, len / 3];
+  const body: THREE.BufferGeometry[] = [
+    // The worktop, and the tier standing on the back of it.
+    new THREE.BoxGeometry(depth, 0.045, len).translate(depth / 2, top - 0.0225, 0),
+    new THREE.BoxGeometry(tierDepth, tier, len).translate(depth + tierDepth / 2, top + tier / 2, 0),
+    // The modesty panel, set back from the front edge and stopping short of the floor, with the
+    // cable duct running the length of it.
+    new THREE.BoxGeometry(0.028, top - 0.3, len - 0.14).translate(depth * 0.74, (top - 0.3) / 2 + 0.14, 0),
+    new THREE.BoxGeometry(0.07, 0.09, len - 0.3).translate(depth * 0.74 + 0.05, 0.28, 0),
+  ];
+  for (const z of pedestals) {
+    body.push(new THREE.BoxGeometry(depth - 0.14, top - 0.15, 0.56).translate(depth / 2 + 0.02, (top - 0.15) / 2 + 0.09, z));
+    // The plinth each pedestal stands on, set back so the desk reads as having a toe space.
+    body.push(new THREE.BoxGeometry(depth - 0.24, 0.09, 0.5).translate(depth / 2 + 0.07, 0.045, z));
+  }
+  g.add(merged(body, new THREE.MeshStandardMaterial({ color: 0xcdd3d4, roughness: 0.55, metalness: 0.1 })));
+  // The nosing: a rounded front edge along the whole run, which is the one line that tells you the
+  // top is a made thing and not a slab.
+  const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, len, 10), new THREE.MeshStandardMaterial({ color: 0x2f3940, roughness: 0.5, metalness: 0.3 }));
+  nose.rotation.x = Math.PI / 2; nose.position.set(0.004, top - 0.024, 0); g.add(nose);
+
+  const fronts: Spot[] = [], handles: Spot[] = [];
+  for (const z of pedestals) {
+    for (let i = 0; i < 3; i++) {
+      const y = 0.24 + i * 0.2;
+      fronts.push([0.1, y, z]); handles.push([0.075, y + 0.055, z]);
+    }
+  }
+  g.add(instances(new THREE.BoxGeometry(0.03, 0.18, 0.5), new THREE.MeshStandardMaterial({ color: 0xb6bec0, roughness: 0.5, metalness: 0.2 }), fronts));
+  g.add(instances(new THREE.BoxGeometry(0.02, 0.022, 0.16), labSteel(0x39434b), handles));
   return g;
 }

@@ -25,7 +25,7 @@ export const STOPS: Stop[] = [
   // The fabrication hold is inside the dispatch office. The camera turns west to the three exhibits
   // along its glass.
   { id: 'fabrication', t: 0.2, enter: 0.105, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], wing: 'fabrication', light: '#E0813A' },
-  { id: 'recreation', t: 0.4, enter: 0.332, hold: [0.37, 0.44], lookAt: [-33.7, 1.5, -35], wing: 'recreation', light: '#3D7BE0' },
+  { id: 'recreation', t: 0.4, enter: 0.332, hold: [0.37, 0.44], lookAt: [-32.1, 1.4, -34.7], wing: 'recreation', light: '#3D7BE0' },
   { id: 'operations', t: 0.56, enter: 0.52, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
   // The credentials hold stands inside the glass lab and looks north up it, so the three plates on
   // each side of the aisle are both in frame. Looking west put one wall in shot and the other three

@@ -34,7 +34,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const grid = { tile: TILE, lit: LIT, panel: PANEL, intensity: 1.25, tint: 0xd6e0e6, tileGlow: 0.6 };
   // Two panels come out of the batch so the room can drive them: one over the arcade row, one over
   // the drinks machines, whose lit header shares the second one's fault.
-  const flickerIndex = [[-33.1, -34.0], [-29.5, -34.0]].map(([x, z]) => nearestLitPanel(ROOM_W, D, x - ROOM_XC, z - ZC, grid));
+  const flickerIndex = [[-32.1, -33.4], [-35.0, -33.4]].map(([x, z]) => nearestLitPanel(ROOM_W, D, x - ROOM_XC, z - ZC, grid));
   const room = ceilingGrid(store, ROOM_W, D, ROOM.ceiling, { ...grid, flickerIndex });
   if (room.flicker.length !== 2) throw new Error('recreation: the ceiling did not give up two panels to flicker');
   room.group.position.set(ROOM_XC, 0, ZC); root.add(room.group);

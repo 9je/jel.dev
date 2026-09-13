@@ -37,27 +37,38 @@ export const HALL_HEAD = 2.6;
 /** The dropped ceiling: from the west wall plane to the east wall, and its height. */
 export const ROOM = { x0: HALL_FACE, x1: X1, ceiling: 3.2 };
 export const ROOM_W = ROOM.x1 - ROOM.x0, ROOM_XC = (ROOM.x0 + ROOM.x1) / 2;
-/** A 0.6 m tile grid hung with 1.2 m troffers on a 3.6 by 2.4 m pattern, thirty of them over the
- *  room. Jordan's read of the old grid was "this light pattern is crazy": it was a lit panel on
- *  every third tile of a 1.2 m grid, about eighty of them, which is a disco floor overhead rather
- *  than a ceiling. */
+/** A 0.6 m tile grid hung with 1.2 m troffers on a 4.8 by 3 m pattern, sixteen of them over the
+ *  whole room. Two earlier grids were denser and both got the same note, the last being "the sheer
+ *  quantity of them makes the room feel unatural": a fitting every few tiles is a showroom ceiling,
+ *  and a corridor nobody has maintained runs two sparse rows with dark tile between them. */
 export const TILE = 0.6;
-export const LIT = (i: number, j: number) => i % 6 === 2 && j % 4 === 1;
+export const LIT = (i: number, j: number) => i % 8 === 3 && j % 5 === 2;
 export const PANEL: [number, number] = [1.2, 0.28];
 
-/** The row: four cabinets, each turned a little out of the wall so the hold sees its marquee and its
- *  screen rather than four dark flanks. `ry` and the offset off the wall are the same for all four,
- *  which puts every back corner on the wall plane. The row stands 1.2 m clear of the drinks
- *  machines: butted up to them it read as one row of six where four answered the pointer and two
- *  did not, and the lit machine's header hid the last marquee from the hold. */
-export const CABINET_RY = 0.2, CABINET_Z = Z0 + 0.4675;
-export const CABINETS: [string, string, number, string][] = [
-  ['torn-bet', 'torn.bet', -33.60, '#3D7BE0'],
-  ['faction-tools', 'faction.tools', -34.53, '#E8B923'],
-  ['kayou-bot', 'Kayou', -35.46, '#D7383A'],
-  ['character-bot', 'character bot', -36.39, '#3FD47A'],
+/** The row: four cabinets standing where the drinks machines used to, which is the nearest stretch
+ *  of the served wall to the hold and the only place they are the thing the eye lands on. With the
+ *  machines in front of them they were the smaller, further pair of objects in their own frame, and
+ *  Jordan read the room as being about the drinks twice.
+ *
+ *  Each carries its own turn out of the wall, rising down the row, so all four marquees face the
+ *  hold rather than only the nearest one. The last cabinet is the one he could not read, and it is
+ *  the one turned furthest. The turn swings a back corner toward the wall, so the row stands a
+ *  little further off it than a square row would need. */
+export const CABINET_Z = Z0 + 0.52;
+export const CABINETS: [string, string, number, string, number][] = [
+  ['torn-bet', 'torn.bet', -30.70, '#3D7BE0', 0.26],
+  ['faction-tools', 'faction.tools', -31.66, '#E8B923', 0.36],
+  ['kayou-bot', 'Kayou', -32.62, '#D7383A', 0.47],
+  ['character-bot', 'character bot', -33.58, '#3FD47A', 0.58],
 ];
 export const ACCENT = '#3D7BE0';
+
+/** Where the room's four spots hang, and where the dressing hangs a batten so each of them has a
+ *  fitting over it. The first two wash the served wall at the kitchen and at the arcade row, the
+ *  last two stand further out over the lounge. `[x, z]`, and the fitting sits at y 3.1 under the
+ *  3.2 m ceiling. Kept here because `lighting.ts` and `dressing.ts` have to agree on them exactly,
+ *  which is the whole of the note that a light did not line up with anything. */
+export const FITTINGS: [number, number][] = [[-28.2, -33.4], [-32.1, -33.4], [-41.0, -32.0], [-48.5, -32.0]];
 
 /**
  * The east landing: the elbow behind the bay's exit. The walk leaves the bay southward through the
