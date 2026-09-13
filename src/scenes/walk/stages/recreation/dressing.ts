@@ -6,7 +6,7 @@ import { arcadeCabinet, crtBracket, fridge, kitchenette, locker, poster, splashb
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
 import { screenFace } from '../../labs/textures';
-import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS } from './layout';
+import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, ROW_PANEL } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
 
@@ -39,35 +39,42 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // the same four positions `lighting.ts` puts its spots. One instanced pair for all four.
   await add(battens({ len: 1.6, drop: 0.08, intensity: 1.45 }, FITTINGS.map(([x, z]) => [x, 3.1, z])));
 
-  // ---- South wall, east to west: the kitchen ----------------------------------------------------
-  // Half a metre of counter end between the fridge and the units, because butted against them the
-  // two read as one white mass with a seam through it on the approach.
-  await add(place(fridge(), -25.45, 0, Z0 + 0.37));
-  await add(place(kitchenette(3.2), -28.0, 0, Z0 + 0.33));
-  await add(place(splashback(3.2, 0.62), -28.0, 1.19, Z0 + 0.05));
-  await add(once(prop('microwave'), -27.2, 0.905, Z0 + 0.33, 0.15));
-  await add(once(prop('kettle'), -29.4, 0.905, Z0 + 0.28, -0.4));
-  await add(once(prop('tea_set'), -29.0, 0.905, Z0 + 0.24, 0.9));
-  await add(place(poster('WASH YOUR HANDS', 0.44, 0.62, 5), -29.3, 1.6, Z0 + 0.06));
+  // ---- South wall, the east end: the kitchen ----------------------------------------------------
+  // The whole kitchen moved four metres east, to the first stretch of wall past the door, because
+  // the arcade row now takes the piece of wall the camera parks in front of. Walking in, the
+  // servery goes by on the right and the row is straight ahead.
+  await add(place(fridge(), -21.7, 0, Z0 + 0.37));
+  await add(place(kitchenette(3.2), -24.2, 0, Z0 + 0.33));
+  await add(place(splashback(3.2, 0.62), -24.2, 1.19, Z0 + 0.05));
+  await add(once(prop('microwave'), -23.4, 0.905, Z0 + 0.33, 0.15));
+  await add(once(prop('kettle'), -25.6, 0.905, Z0 + 0.28, -0.4));
+  await add(once(prop('tea_set'), -25.2, 0.905, Z0 + 0.24, 0.9));
+  await add(place(poster('WASH YOUR HANDS', 0.44, 0.62, 5), -25.5, 1.6, Z0 + 0.06));
   // The clock hangs over the counter, not on the far wall: it is the one thing that fills the bare
   // metre of wall between the cupboards and the ceiling on the side of the frame the copy leaves.
-  await add(once(prop('wall_clock'), -26.75, 2.3, Z0 + 0.07));
+  await add(once(prop('wall_clock'), -22.9, 2.3, Z0 + 0.07));
 
   // ---- South wall, the middle: the row the room is about ----------------------------------------
-  // The four cabinets stand nearest the hold, under their own batten and their own sign, and the
-  // drinks machines moved behind them. This is the whole of Jordan's note on the room: the machines
-  // were the big lit pair in the foreground and the projects were four small shapes behind them.
+  // The four cabinets stand square on the piece of wall the camera parks in front of, under their
+  // own batten and their own sign. The dark panel behind them is what gives a blue machine an edge
+  // against a blue dado, which was the note "blue blends into wall", and it reads as the painted
+  // back of a machine bay.
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(ROW_PANEL.w, ROW_PANEL.h, 0.06), new THREE.MeshStandardMaterial({ color: 0x272e35, roughness: 0.85 }));
+  panel.position.set(ROW_PANEL.x, ROW_PANEL.h / 2, Z0 + 0.05); await add(panel);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(ROW_PANEL.w + 0.08, 0.05, 0.1), new THREE.MeshStandardMaterial({ color: 0x8e99a1, roughness: 0.45, metalness: 0.4 }));
+  rail.position.set(ROW_PANEL.x, ROW_PANEL.h + 0.02, Z0 + 0.07); await add(rail);
+
   const hotspots: Hotspot[] = [];
   for (const [key, title, x, accent, ry] of CABINETS) {
     const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7 }), x, 0, CABINET_Z, ry);
     await add(cabinet);
     hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
-    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-30.7, 2.15, Z0 + 1.0));
+    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-26.66, 2.15, Z0 + 1.0));
   }
   // The sign over the row, on the wall above the marquees. A lit box at the head of an aisle is how
   // a building this size tells you what a corner of a room is for, and it is what makes the row the
   // thing you look at on the way in rather than the machines.
-  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'BREAK ROOM' }), -32.1, 2.32, Z0 + 0.1));
+  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'BREAK ROOM' }), -28.1, 2.28, Z0 + 0.13));
 
   // ---- South wall, west of the row: the drinks ---------------------------------------------------
   // The lit machine and its dead twin, past the cabinets, where they are the backdrop the row stands
@@ -75,12 +82,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const machine = vendingMachine({ accent: ACCENT, lit: true, seed: 11 });
   const header = machine.getObjectByName('header') as THREE.Mesh;
   const litHeader = header.material as THREE.MeshStandardMaterial;
-  await add(place(machine, -34.95, 0, Z0 + 0.42));
-  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -36.0, 0, Z0 + 0.42));
+  await add(place(machine, -30.95, 0, Z0 + 0.42));
+  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -32.0, 0, Z0 + 0.42));
 
   // The copy panel hangs east of the row, over the counter end, so it never covers the four cabinets
   // it is describing.
-  anchors.set('recreation', new THREE.Vector3(-27.4, 2.0, -33.6));
+  anchors.set('recreation', new THREE.Vector3(-25.4, 2.0, -33.9));
 
   // ---- North wall: the quiet side ---------------------------------------------------------------
   await add(place(statusBoard(prop('tv')), -29.6, 2.05, Z1 - 0.02, Math.PI));

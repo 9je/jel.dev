@@ -22,7 +22,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   // the room. Both are one draw call each and move in the shader.
   const fx: ParticleSystem[] = [
     // Normal blended and a shade under the tiles: additive white on a white splashback was invisible.
-    plume([-29.35, 1.16, Z0 + 0.34], { count: 30, life: 2.6, rise: 0.95, spread: 0.24, size: 0.32, color: 0x94a6b2, opacity: 0.55 }),
+    plume([-25.55, 1.16, Z0 + 0.34], { count: 30, life: 2.6, rise: 0.95, spread: 0.24, size: 0.32, color: 0x94a6b2, opacity: 0.55 }),
     dust([ROOM.x0 + 1, 0.4, Z0 + 0.5], [ROOM.x1 - 1, 3.0, Z1 - 0.5], tier === 'high' ? 360 : 140, { size: 0.04, opacity: 0.28, color: 0xe6eef2 }),
   ];
   for (const p of fx) root.add(p.points);

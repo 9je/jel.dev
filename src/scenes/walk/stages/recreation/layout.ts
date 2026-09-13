@@ -45,22 +45,27 @@ export const TILE = 0.6;
 export const LIT = (i: number, j: number) => i % 8 === 3 && j % 5 === 2;
 export const PANEL: [number, number] = [1.2, 0.28];
 
-/** The row: four cabinets standing where the drinks machines used to, which is the nearest stretch
- *  of the served wall to the hold and the only place they are the thing the eye lands on. With the
- *  machines in front of them they were the smaller, further pair of objects in their own frame, and
- *  Jordan read the room as being about the drinks twice.
+/**
+ * The row: four cabinets square to the wall, centred on the exact point the camera parks at for
+ * this stop. `travelParam` freezes the camera at t 0.4 for the whole hold, which puts it at
+ * (-28.09, -31.05), so a row built about x -28.1 on the south wall is looked at straight on.
  *
- *  Each carries its own turn out of the wall, rising down the row, so all four marquees face the
- *  hold rather than only the nearest one. The last cabinet is the one he could not read, and it is
- *  the one turned furthest. The turn swings a back corner toward the wall, so the row stands a
- *  little further off it than a square row would need. */
-export const CABINET_Z = Z0 + 0.52;
+ * They were turned out of the wall a little more each, so that an oblique camera saw four faces.
+ * Jordan's read of that was "the angle doesnt make sense. pan the camera to it dont tilt the cabs",
+ * which is right: cabinets stand against a wall, and it is the camera's job to go and look at them.
+ * So the turn is gone and the hold's aim in `path.ts` swings south to the row instead.
+ */
+export const CABINET_Z = Z0 + 0.45;
 export const CABINETS: [string, string, number, string, number][] = [
-  ['torn-bet', 'torn.bet', -30.70, '#3D7BE0', 0.26],
-  ['faction-tools', 'faction.tools', -31.66, '#E8B923', 0.36],
-  ['kayou-bot', 'Kayou', -32.62, '#D7383A', 0.47],
-  ['character-bot', 'character bot', -33.58, '#3FD47A', 0.58],
+  ['torn-bet', 'torn.bet', -26.66, '#3D7BE0', 0],
+  ['faction-tools', 'faction.tools', -27.62, '#E8B923', 0],
+  ['kayou-bot', 'Kayou', -28.58, '#D7383A', 0],
+  ['character-bot', 'character bot', -29.54, '#3FD47A', 0],
 ];
+/** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a
+ *  blue machine on a blue wall has no edge. `[x, width, height]`. */
+export const ROW_PANEL = { x: -28.1, w: 4.6, h: 2.5 };
+
 export const ACCENT = '#3D7BE0';
 
 /** Where the room's four spots hang, and where the dressing hangs a batten so each of them has a
@@ -68,7 +73,7 @@ export const ACCENT = '#3D7BE0';
  *  last two stand further out over the lounge. `[x, z]`, and the fitting sits at y 3.1 under the
  *  3.2 m ceiling. Kept here because `lighting.ts` and `dressing.ts` have to agree on them exactly,
  *  which is the whole of the note that a light did not line up with anything. */
-export const FITTINGS: [number, number][] = [[-28.2, -33.4], [-32.1, -33.4], [-41.0, -32.0], [-48.5, -32.0]];
+export const FITTINGS: [number, number][] = [[-23.8, -33.4], [-28.1, -32.6], [-41.0, -32.0], [-48.5, -32.0]];
 
 /**
  * The east landing: the elbow behind the bay's exit. The walk leaves the bay southward through the

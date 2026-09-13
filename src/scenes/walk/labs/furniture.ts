@@ -323,10 +323,14 @@ export function marqueeFace(title: string, accent = '#3D7BE0'): THREE.CanvasText
   // "character bot" to fit at full size dropped it to about half the cap height of the short ones
   // and it could not be read at the hold at all. Squeezing the x axis keeps the letters as tall as
   // every other marquee, which is what carries at four metres.
-  const px = 64;
-  ctx.font = `600 ${px}px Michroma, system-ui, sans-serif`;
-  const wide = ctx.measureText(title).width;
-  const squeeze = wide > 460 ? Math.max(0.55, 460 / wide) : 1;
+  let px = 64;
+  const set = () => { ctx.font = `600 ${px}px Michroma, system-ui, sans-serif`; return ctx.measureText(title).width; };
+  let wide = set();
+  // Condense first, down to a floor where the letters are still a face and not a comb, then take
+  // the size down until what is left fits. Condensing alone left "character bot" 35 px wider than
+  // its own plate and the marquee read "character b".
+  const squeeze = wide > 460 ? Math.max(0.62, 460 / wide) : 1;
+  while (wide * squeeze > 460 && px > 22) { px -= 2; wide = set(); }
   ctx.save();
   ctx.translate(256, 76); ctx.scale(squeeze, 1);
   ctx.fillText(title, 0, 0);

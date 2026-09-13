@@ -18,13 +18,14 @@ export function lights(): Placement[] {
   const [kitchen, row, lounge, west] = FITTINGS;
   return [
     { kind: 'spot', position: [kitchen[0], 3.02, kitchen[1]], target: [kitchen[0], 0.95, kitchen[1] - 0.9], intensity: 32, distance: 16, ...room },
-    // The row is the brightest thing in the room, which is how the eye is told where to look. Its
-    // cone is the narrow one: at the room's own angle it washed the wall to the ceiling and took the
-    // sign over the cabinets with it, and a lit sign in a hot pool of light is a white rectangle.
-    { kind: 'spot', position: [row[0], 3.02, row[1]], target: [row[0] - 0.25, 0.85, row[1] - 0.95], intensity: 56, distance: 16, ...room, angle: Math.PI / 3.4 },
+    // The row's own fitting stands nearly two metres off the wall and throws into the cabinet faces
+    // rather than down the wall behind them. Hung tight to the wall with a wide cone it washed the
+    // panel to the ceiling and blew the sign on it to a white rectangle, and it was doing very
+    // little for the cabinets themselves, which are vertical and take almost nothing off a ceiling.
+    { kind: 'spot', position: [row[0], 3.02, row[1]], target: [row[0], 1.25, row[1] - 1.2], intensity: 44, distance: 16, ...room, angle: Math.PI / 4 },
     { kind: 'spot', position: [lounge[0], 3.02, lounge[1]], target: [lounge[0] - 0.4, 0, lounge[1] - 1.4], intensity: 52, distance: 18, ...room },
     { kind: 'spot', position: [west[0], 3.02, west[1]], target: [west[0] - 0.5, 0, west[1] - 1.2], intensity: 62, distance: 22, ...room },
-    { kind: 'point', position: [-34.95, 1.2, Z0 + 0.7], color: 0x3d7be0, intensity: 5, distance: 5, decay: 2 },
-    { kind: 'point', position: [-32.1, 1.85, Z0 + 1.2], color: 0x3d7be0, intensity: 5, distance: 4.5, decay: 2 },
+    { kind: 'point', position: [-30.95, 1.2, Z0 + 0.7], color: 0x3d7be0, intensity: 3.4, distance: 4.5, decay: 2 },
+    { kind: 'point', position: [-28.1, 1.85, Z0 + 1.2], color: 0x3d7be0, intensity: 5, distance: 4.5, decay: 2 },
   ];
 }
