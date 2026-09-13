@@ -29,7 +29,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   // burning rack, grey and slow, leaning out over the aisle as it thins.
   const fx: ParticleSystem[] = [
     dust([X0 + 2, 0.3, Z0 + 2.4], [X1 - 1, 4.0, Z1 - 2.4], tier === 'high' ? 160 : 60, { size: 0.07, opacity: 0.18, color: 0xd8e8f0 }),
-    plume(fire.top, { count: tier === 'high' ? 24 : 12, life: 4, rise: 1.4, spread: 0.3, size: 0.3, grow: 2.4, color: 0x8b9298, opacity: 0.35, drift: [0.02, 0, -0.12], texture: 'smoke', seed: 5 }),
+    plume(fire.top, { count: tier === 'high' ? 38 : 16, life: 4.4, rise: 1.7, spread: 0.34, size: 0.34, grow: 2.6, color: 0x8b9298, opacity: 0.5, drift: [0.02, 0, -0.12], texture: 'smoke', seed: 5 }),
   ];
   for (const p of fx) root.add(p.points);
   // The rows breathe. Every rack's units are one batch over one material, so a whole rack pulses on

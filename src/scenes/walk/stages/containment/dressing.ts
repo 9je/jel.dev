@@ -92,15 +92,19 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     m.rotation.x = -Math.PI / 2; m.rotation.z = ry; m.position.set(x, y, z);
     return m;
   };
+  // Both sheets and the lamp are placed off `TABLE` rather than off their own numbers. They were
+  // written out long hand and the table moved after that, which left the page and the lamp hanging
+  // over the floor more than a metre east of the top they belong on: "desk and items on desk
+  // shifted".
   const page = redactedSheet();
-  table.add(sheet(page, -80.72, 12.0, 0.12, TOP + 0.023));
-  table.add(sheet(page, -80.58, 12.1, -0.34, TOP + 0.022));
+  table.add(sheet(page, TABLE.x + 0.06, TABLE.z - 0.09, 0.12, TOP + 0.023));
+  table.add(sheet(page, TABLE.x + 0.2, TABLE.z + 0.01, -0.34, TOP + 0.022));
   await add(table);
 
   // The lamp stands at the back corner of the table with its head over the page. Its bulb is the
   // room's one warm light, declared in lighting.ts at the head's own position.
   const lamp = store.model('desk_lamp');
-  lamp.position.set(-81.05, TOP + 0.02, 11.78); lamp.rotation.y = -0.9;
+  lamp.position.set(TABLE.x - 0.4, TOP + 0.02, TABLE.z + 0.2); lamp.rotation.y = -0.9;
   await add(lamp);
 
   // The panel hangs on the far side of the table, over the west islands. The walk looks north here

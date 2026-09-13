@@ -48,10 +48,13 @@ export const FIRE_NORTH = 5;
  * mirror: at z -28.6 it would have been 1.3 m off the walked line.
  */
 export const TAPE_Y = 0.95;
-export const STANCHIONS: [number, number][] = [[-73.4, -33.3], [-73.4, -27.2]];
+export const STANCHIONS: [number, number][] = [[-73.4, -33.3], [-73.4, -27.2], [-74.7, -35.5], [-74.7, -25.5]];
+/** Post to post, both ends. Each run used to start on a point out by the west wall with nothing at
+ *  it, so the tape read as tied to the paint: "this tape seems unnaturally placed". A tape is tied
+ *  to something at both ends or it is not a tape. */
 export const TAPE_RUNS: [[number, number], [number, number]][] = [
-  [[X0 + 2, CAGE_Z.south], STANCHIONS[0]],
-  [[X0 + 2, CAGE_Z.north], STANCHIONS[1]],
+  [STANCHIONS[2]!, STANCHIONS[0]!],
+  [STANCHIONS[3]!, STANCHIONS[1]!],
 ];
 
 /** The cartons dropped at the south gate: two on the floor and one set square on the first. */

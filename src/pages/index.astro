@@ -8,11 +8,12 @@ import CertWall from '../components/CertWall.astro';
 import { STOPS } from '../scenes/walk/path';
 import { site } from '../content/site';
 import { buildTickerLines } from '../content/ticker';
+import streak from '../content/streak.json';
 import type { Wing } from '../content/schema';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 const byWing = (w: Wing) => projects.filter((p) => p.data.wing === w);
-const tickerLines = buildTickerLines(projects.map((p) => ({ title: p.data.title, status: p.data.status })));
+const tickerLines = buildTickerLines(projects.map((p) => ({ title: p.data.title, status: p.data.status })), streak.current);
 const stop = (id: (typeof STOPS)[number]['id']) => STOPS.find((s) => s.id === id)!;
 const a = site.about;
 

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, place, merged, instances, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
-import { tripodCamera, hardCase, cableCoil, tarpWall } from '../../labs/furniture';
+import { tripodCamera, cableCoil, tarpWall } from '../../labs/furniture';
 import { labSteel, LABS } from '../../labs/materials';
 import { canvas, own, rng } from '../../labs/textures';
 import { X0, X1, H, LAB, PLATE_X, PLATE_Z, PLATE_TURN } from './layout';
@@ -206,6 +206,49 @@ function sheetedTrolley(): THREE.Group {
   return g;
 }
 
+/**
+ * An operating theatre lamp on a ceiling pendant: a stem, a yoke, a shallow dish and the ring of
+ * lamp cells burning under it. Origin at the ceiling, hanging 0.9 m down. Three draw calls.
+ */
+function theatreLamp(): THREE.Group {
+  const g = new THREE.Group();
+  const steel = new THREE.MeshStandardMaterial({ color: 0xdfe6e9, roughness: 0.35, metalness: 0.55 });
+  const drop = 0.9;
+  const body: THREE.BufferGeometry[] = [
+    new THREE.CylinderGeometry(0.06, 0.06, 0.06, 12).translate(0, -0.03, 0),
+    new THREE.CylinderGeometry(0.028, 0.028, drop - 0.2, 10).translate(0, -0.06 - (drop - 0.2) / 2, 0),
+    new THREE.CylinderGeometry(0.44, 0.34, 0.11, 24).translate(0, -drop + 0.02, 0),
+    new THREE.TorusGeometry(0.44, 0.018, 6, 24).rotateX(Math.PI / 2).translate(0, -drop - 0.03, 0),
+  ];
+  g.add(merged(body, steel));
+  const face = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0xf3f9ff, emissiveIntensity: 0.85, roughness: 0.3,
+  }));
+  face.rotation.x = Math.PI / 2; face.position.y = -drop - 0.04; g.add(face);
+  const cells: Spot[] = [];
+  for (let i = 0; i < 6; i++) cells.push([Math.cos((i / 6) * Math.PI * 2) * 0.22, -drop - 0.05, Math.sin((i / 6) * Math.PI * 2) * 0.22]);
+  g.add(instances(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.4 }), cells));
+  return g;
+}
+
+/** A drip stand: a five leg base on castors, a pole and a hook with a bag on it. Origin at the
+ *  floor. Three draw calls. */
+function dripStand(): THREE.Group {
+  const g = new THREE.Group();
+  const steel = new THREE.MeshStandardMaterial({ color: 0xc3ccd1, roughness: 0.4, metalness: 0.5 });
+  const parts: THREE.BufferGeometry[] = [new THREE.CylinderGeometry(0.022, 0.022, 1.9, 10).translate(0, 0.95, 0)];
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    parts.push(new THREE.BoxGeometry(0.026, 0.026, 0.3).rotateY(-a).translate(Math.sin(a) * 0.15, 0.05, Math.cos(a) * 0.15));
+    parts.push(new THREE.CylinderGeometry(0.028, 0.028, 0.03, 8).rotateZ(Math.PI / 2).translate(Math.sin(a) * 0.29, 0.028, Math.cos(a) * 0.29));
+  }
+  parts.push(new THREE.TorusGeometry(0.05, 0.01, 6, 12).rotateY(Math.PI / 2).translate(0, 1.86, 0.05));
+  g.add(merged(parts, steel));
+  const bag = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.26, 0.05), new THREE.MeshStandardMaterial({ color: 0xdfe8ea, roughness: 0.5, transparent: true, opacity: 0.75 }));
+  bag.position.set(0, 1.68, 0.08); g.add(bag);
+  return g;
+}
+
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Dressing> {
   const { store, pace } = ctx;
   const add = async (o: THREE.Object3D) => { root.add(o); await pace(); };
@@ -246,11 +289,17 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // the lab's centre line, where `cameraAt` puts the walk within 0.1 m of it, and a metre south of
   // where it first stood so its sheet stays under the near plate's frame at the hold.
   await add(place(sheetedTrolley(), -81.4, 0, -20.4, Math.PI + 0.15));
-  // The stacked pair stands off the east glass rather than against it: from the hold the wall line
-  // is behind the page's own certification card, and a case parked there is a case nobody sees.
-  await add(place(hardCase(), -77.8, 0, -16.2, 0.2));
-  await add(place(hardCase(), -77.8, 0.45, -16.2, -0.35));
-  await add(place(hardCase(0xd6691f), -81.6, 0, -15.2, 1.1));
+  // The theatre lamp over it, on its pendant from the lab ceiling, with the room's second point
+  // light in the dish. Jordan's read of the room was that it is "like a room surgeries are performed
+  // in", which is the right instinct for a white glass box with a draped trolley in the middle of
+  // it, and one fitting says it outright.
+  const lamp = theatreLamp();
+  lamp.position.set(-81.2, LAB.h, -19.7); await add(lamp);
+  // The flight cases that stood on the floor are gone. Three road cases, one of them orange, are
+  // load out kit in a room that is otherwise sterile: "boxes feel kinda out of place". A second
+  // draped trolley and a drip stand belong to the room the lamp is over.
+  await add(place(sheetedTrolley(), -78.2, 0, -16.4, -0.4));
+  await add(place(dripStand(), -80.1, 0, -16.8, 0.6));
 
   // The bench: 2.2 m along the east glass, south of the east plates so nothing stands under them,
   // its top 0.9 up. The microscope and the chemistry set on it, the medical box at its end, and the

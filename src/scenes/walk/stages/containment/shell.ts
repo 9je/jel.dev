@@ -4,6 +4,7 @@ import { prepareAO } from '../../materials';
 import { instances, merged, place, type Spot } from '../../merge';
 import { ceilingGrid, dadoBands, dadoLineMaterial, dadoMaterial, labFloor, labWall } from '../../labs/materials';
 import { cableDrop, wallPanel } from '../../labs/plant';
+import { batten } from '../../labs/fixtures';
 import { cableTray } from '../../labs/props';
 import { wallPlaque } from '../../labs/signage';
 import { canvas, chainlink, hazardPlate, own } from '../../labs/textures';
@@ -105,11 +106,17 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // or five metres further up the room: what the hold sees through the gap is the void's ceiling
   // well north of the hole, not the patch directly above it.
   const shellBox = new THREE.Mesh(new THREE.BoxGeometry(W, VOID_H, D), new THREE.MeshStandardMaterial({
-    color: 0x06090c, emissive: 0x2a6fd6, emissiveIntensity: 0.22, roughness: 0.9, side: THREE.BackSide,
+    color: 0x06090c, emissive: 0x1d4478, emissiveIntensity: 0.13, roughness: 0.9, side: THREE.BackSide,
   }));
   shellBox.position.set(XC, H + VOID_H / 2, ZC); shellBox.name = 'void'; root.add(shellBox);
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(5, 8), new THREE.MeshStandardMaterial({ color: 0x071429, emissive: 0x2a6fd6, emissiveIntensity: 0.75 }));
+  // What the gap shows is a fitting burning up in the plant space with the dark around it, not a
+  // rectangle of blue. A flat lit plane on its own read as a painted panel from the aisle, which was
+  // the note "the blue light on the top looks a bit weird": it had no source in it. The wash stays,
+  // at half what it was, and a batten hangs in it for the eye to find.
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(5, 8), new THREE.MeshStandardMaterial({ color: 0x071429, emissive: 0x2a6fd6, emissiveIntensity: 0.18 }));
   glow.rotation.x = Math.PI / 2; glow.position.set(-79.5, H + VOID_H - 0.1, 14.5); glow.name = 'void-glow'; root.add(glow);
+  const voidLamp = batten({ len: 1.8, intensity: 1.7, color: 0x9fc6ea });
+  voidLamp.position.set(-79.4, H + VOID_H - 0.3, 13.1); root.add(voidLamp);
 
   // Cable trays down both long walls under the tile line, the thing every run across the ceiling
   // leaves from. Each is a channel with rungs and a bed of cable in it, from the kit.
@@ -128,7 +135,10 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     { from: [west, TRAY_Y + 0.08, 9.4], to: [hx - 0.75, 3.3, hz - 0.45], into: [hx - 0.4, 3.95, hz - 0.2], strands: 4, sag: 0.2 },
     { from: [east, TRAY_Y + 0.08, 10.0], to: [hx + 0.75, 3.3, hz - 0.15], into: [hx + 0.4, 3.95, hz + 0.05], strands: 3, sag: 0.2 },
     { from: [-80.6, TRAY_Y + 0.08, Z1 - 0.4], to: [hx, 3.3, hz + 0.65], into: [hx, 3.95, hz + 0.15], strands: 4, sag: 0.32 },
-    { from: [east, TRAY_Y + 0.08, 7.0], to: [hx + 0.7, 3.3, hz - 0.5], into: [hx + 0.45, 3.95, hz - 0.15], strands: 3, sag: 0.18 },
+    // One run per side of the hole and no more. A fourth came up from the east at z 7 and crossed
+    // the one at z 10 on its way in, which is the "wires are clashing" in the frame. It runs the
+    // width of the room now and never reaches the hole.
+    { from: [east, TRAY_Y + 0.08, 7.4], to: [west, TRAY_Y + 0.05, 7.0], strands: 3, sag: 0.26 },
     { from: [west, TRAY_Y + 0.08, 19.4], to: [east, TRAY_Y + 0.08, 18.7], strands: 5, sag: 0.3 },
     { from: [west, TRAY_Y + 0.08, 16.6], to: [holeAt(6, 20)[0] - 0.3, 3.3, holeAt(6, 20)[1] - 0.2], into: [holeAt(6, 20)[0], 3.95, holeAt(6, 20)[1]], strands: 3, sag: 0.12 },
     { from: [X1 - 0.15, 1.17, GENERATOR.z + 0.05], to: [GENERATOR.x + 0.1, 0.58, GENERATOR.z - 0.05], strands: 2, sag: 0.16 },

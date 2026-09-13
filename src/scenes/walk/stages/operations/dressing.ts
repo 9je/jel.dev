@@ -169,10 +169,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // One run each side, from the cage's west end post out to a stanchion in the hall, and the
   // middle left open. The old run went post to post straight across the aisle, which put it
   // through the desk and the laptop on it; these two stop well short of the desk and of the walk.
-  for (const [i, [a, b]] of TAPE_RUNS.entries()) {
-    await add(tapeStrip([a[0], TAPE_Y, a[1]], [b[0], TAPE_Y, b[1]], 0.04));
-    await add(place(stanchion(), STANCHIONS[i][0], 0, STANCHIONS[i][1]));
-  }
+  for (const [a, b] of TAPE_RUNS) await add(tapeStrip([a[0], TAPE_Y, a[1]], [b[0], TAPE_Y, b[1]], 0.04));
+  for (const [x, z] of STANCHIONS) await add(place(stanchion(), x, 0, z));
 
   return { hotspots, blink, fire, camera };
 }

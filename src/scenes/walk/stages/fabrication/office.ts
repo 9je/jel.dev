@@ -12,6 +12,7 @@ import { signBox } from '../../labs/signage';
 import { OFFICE, SODIUM } from './layout';
 import { controller, key, bridge } from './exhibits';
 import { nameplateFace, numberTag, dispatchBoardFace, consoleKeys } from './boards';
+import { streakBoard } from './streak';
 
 /** What each product is, in three words, for the line under its name. */
 const SUBTITLES: Record<string, string> = { 'conch.gg': 'GameCube netplay', 'ezkey.io': 'Key store', 'gc-bridge': 'Controller bridge' };
@@ -224,7 +225,13 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
 
   // The back wall's two working fixtures: the dispatch board and the clock. The board hangs
   // toward the west end of the wall, where the turn into and out of the hold sweeps across it.
-  g.add(place(dispatchBoard(), -3.2, 1.55, -hz + 0.1));
+  // The shift board takes the west end of that wall, where the turn into the hold sweeps across it:
+  // days without a missed commit, the longest run, the year's total, and the last twelve weeks a
+  // cell at a time. It is the one thing in the building that is about something still going on, so
+  // it gets the piece of wall the camera actually reads. The dispatch board moves east of the back
+  // door, where it is still in shot on the way in.
+  g.add(place(streakBoard(), -2.75, 1.62, -hz + 0.1));
+  g.add(place(dispatchBoard(), 2.3, 1.5, -hz + 0.1));
 
   // The recreation wing owns the clock model and is not loaded here, so this one is turned.
   const clock = new THREE.Group();
@@ -232,7 +239,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   const dial = new THREE.Mesh(new THREE.CircleGeometry(0.155, 24), shell(0xeef3f5, 0.5, 0)); dial.position.z = 0.017; clock.add(dial);
   const hands = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.13), new THREE.MeshBasicMaterial({ map: stencilTexture('11 : 07', { width: 256, height: 128, color: '#1B2129', font: '600 64px Michroma, system-ui, sans-serif', alpha: 1, flecks: false }), transparent: true, depthWrite: false }));
   hands.position.z = 0.019; clock.add(hands);
-  g.add(place(clock, 2.5, 2.4, -hz + 0.1));
+  g.add(place(clock, 4.1, 2.25, -hz + 0.1));
 
   // Exhibits along the west glass, evenly spaced, facing the camera at the hold. The flagship sits in
   // the centre so its plate, which pins to the right of its anchor, lands in the gap beside it

@@ -932,7 +932,7 @@ export function controlDesk(opts: { len: number; depth?: number; top?: number; t
     // The plinth each pedestal stands on, set back so the desk reads as having a toe space.
     body.push(new THREE.BoxGeometry(depth - 0.24, 0.09, 0.5).translate(depth / 2 + 0.07, 0.045, z));
   }
-  g.add(merged(body, new THREE.MeshStandardMaterial({ color: 0xcdd3d4, roughness: 0.55, metalness: 0.1 })));
+  g.add(merged(body, new THREE.MeshStandardMaterial({ color: 0xa9b2b6, roughness: 0.6, metalness: 0.1 })));
   // The nosing: a rounded front edge along the whole run, which is the one line that tells you the
   // top is a made thing and not a slab.
   const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, len, 10), new THREE.MeshStandardMaterial({ color: 0x2f3940, roughness: 0.5, metalness: 0.3 }));

@@ -106,7 +106,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // warm light, declared in lighting.ts at the head's own height.
   const lamp = grounded(store.model('desk_lamp'));
   // Turned so the head looks back over the folder toward the lens. At -2.24 it faced the window.
-  place(lamp, DESK.x + 0.35, TOP, FILE.z + 0.55, 0.9);
+  // It stands on the worktop, not on the line the instrument tier stands on: at x -67.15 its base
+  // was buried in the tier and the lamp read as hanging in the air over the desk.
+  place(lamp, DESK.back - 0.22, TOP, FILE.z + 0.5, 0.9);
   await add(lamp);
 
   // The anchor a pinned panel would hang off, half a metre in front of the folder. Nothing in the

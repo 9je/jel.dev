@@ -20,6 +20,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The shift board in the dispatch office reads the commit streak out of
+      # src/content/streak.json, so it is refreshed into the build context before the image is
+      # built. The script keeps the committed snapshot if github.com does not answer.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Refresh the commit streak
+        run: node scripts/streak.mjs
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3

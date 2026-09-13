@@ -1,5 +1,5 @@
 import type { Placement } from '../../rig';
-import { H, SEALED, Z1 } from './layout';
+import { H, SEALED, TABLE, Z1 } from './layout';
 
 /**
  * One cold spot over the aisle, one red spot behind the sealed door, and a warm point in the lamp.
@@ -31,6 +31,6 @@ export function lights(): Placement[] {
   return [
     { kind: 'spot', position: [-79, H - 0.2, 14], target: [-79, 0, 14], color: 0xdff0f6, intensity: 78, distance: 22, angle: Math.PI / 2.6, penumbra: 0.7, decay: 1.7 },
     { kind: 'spot', position: [SEALED.x, 1.2, Z1 + 0.6], target: [SEALED.x, 0, Z1 - 3], color: 0xd7383a, intensity: 40, distance: 12, angle: Math.PI / 3, penumbra: 0.9, decay: 1.7 },
-    { kind: 'point', position: [-80.6, 1.28, 12.05], color: 0xffc98a, intensity: 6, distance: 3.2, decay: 2 },
+    { kind: 'point', position: [TABLE.x + 0.12, 1.28, TABLE.z - 0.05], color: 0xffc98a, intensity: 6, distance: 3.2, decay: 2 },
   ];
 }

@@ -14,4 +14,15 @@ describe('buildTickerLines', () => {
     expect(lines).toEqual(['kayou bot closed source']);
     for (const l of lines) expect(l).not.toMatch(/[—–;]/);
   });
+
+  it('runs the commit streak at the head of the list when there is one', () => {
+    const lines = buildTickerLines([{ title: 'torn.bet', status: 'operational' }], 40);
+    expect(lines[0]).toBe('40 days without a missed commit');
+    expect(lines).toHaveLength(2);
+  });
+
+  it('says nothing about a streak of one day or none', () => {
+    expect(buildTickerLines([{ title: 'torn.bet', status: 'operational' }], 1)).toHaveLength(1);
+    expect(buildTickerLines([{ title: 'torn.bet', status: 'operational' }])).toHaveLength(1);
+  });
 });
