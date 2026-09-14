@@ -1,7 +1,8 @@
 ---
+import { TICKER_SEP } from '../content/ticker';
 interface Props { lines: string[] }
 const { lines } = Astro.props;
-const text = lines.join('   •   ');
+const text = lines.join(TICKER_SEP);
 ---
 <div class="ticker" data-ticker aria-hidden="true">
   <div class="ticker-track"><span>{text}</span><span>{text}</span></div>

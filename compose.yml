@@ -5,3 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8005:80"
+    volumes:
+      # Written by refresh-streak.sh on a timer. Read only to the container, and absent on a host
+      # that has no timer set up, where the page falls back to the figure baked into the build.
+      - ./live:/usr/share/nginx/html/live:ro

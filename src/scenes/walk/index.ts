@@ -3,6 +3,8 @@ import type { WalkHandle } from './scene';
 import type { ScrollController } from './scroll';
 import { STOPS, stopAt, tForStop, type StopId } from './path';
 import type { Hotspot } from './stages/types';
+import { onStreak, startStreakFeed } from './streak-feed';
+import { retickStreak } from '../../content/ticker';
 
 export interface WalkElements {
   root: HTMLElement; canvas: HTMLCanvasElement; dock: HTMLElement; preloader: HTMLElement; spacer: HTMLElement; sections: HTMLElement[]; hotspotLabel: HTMLElement | null; card: HTMLElement | null;
@@ -465,9 +467,21 @@ function teardown() {
   if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
 }
 
+/** The banner is server rendered, so its streak line is as old as the last deploy. The live figure
+ *  arrives a moment later and the text is rewritten in place, before the bay ever reads it. */
+function wireStreak() {
+  startStreakFeed();
+  onStreak((d) => {
+    for (const span of document.querySelectorAll<HTMLElement>('[data-ticker] span')) {
+      span.textContent = retickStreak(span.textContent ?? '', d.current);
+    }
+  });
+}
+
 async function init() {
   const els = queryElements();
   if (!els) return;
+  wireStreak();
   const input = readTierInput();
   const tier = decideTier(input);
   // Readable from devtools on a machine that runs badly: which tier it got and why.

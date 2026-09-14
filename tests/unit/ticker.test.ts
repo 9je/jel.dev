@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTickerLines } from '../../src/content/ticker';
+import { buildTickerLines, retickStreak } from '../../src/content/ticker';
 
 describe('buildTickerLines', () => {
   it('turns projects into lower-case status lines', () => {
@@ -24,5 +24,25 @@ describe('buildTickerLines', () => {
   it('says nothing about a streak of one day or none', () => {
     expect(buildTickerLines([{ title: 'torn.bet', status: 'operational' }], 1)).toHaveLength(1);
     expect(buildTickerLines([{ title: 'torn.bet', status: 'operational' }])).toHaveLength(1);
+  });
+});
+
+describe('retickStreak', () => {
+  const text = '40 days without a missed commit   •   torn.bet operational   •   ezkey.io in flight';
+
+  it('replaces the streak line the build wrote with the live one', () => {
+    expect(retickStreak(text, 41)).toBe('41 days without a missed commit   •   torn.bet operational   •   ezkey.io in flight');
+  });
+
+  it('adds the line to a banner that was built without one', () => {
+    expect(retickStreak('torn.bet operational', 7)).toBe('7 days without a missed commit   •   torn.bet operational');
+  });
+
+  it('takes the line away the day the run ends', () => {
+    expect(retickStreak(text, 0)).toBe('torn.bet operational   •   ezkey.io in flight');
+  });
+
+  it('never says it twice', () => {
+    expect(retickStreak(retickStreak(text, 41), 42).match(/without a missed commit/g)).toHaveLength(1);
   });
 });

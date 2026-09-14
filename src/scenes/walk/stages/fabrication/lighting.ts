@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { radialTexture } from '../../textures';
 import { createLedTicker } from '../../ticker';
+import { onStreak } from '../../streak-feed';
+import { splitTickerText, withStreakLine } from '../../../../content/ticker';
 import { instances, repeat, place, type Spot } from '../../merge';
 import { beacon } from '../../labs/props';
 import { lightShaft } from '../../labs/fixtures';
@@ -73,9 +75,12 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   // The LED board on the far wall: it faces the whole approach down the hall, and it is the wall
   // the camera is looking at through the fabrication hold before it turns.
   const spans = Array.from(document.querySelectorAll<HTMLElement>('[data-ticker] span'));
-  const raw = spans[0]?.textContent ?? '';
-  const lines = raw.split('•').map((s) => s.trim()).filter(Boolean);
-  const led = createLedTicker(lines.length ? lines : ['jel labs'], { width: 2048, height: 128 });
+  const lines = splitTickerText(spans[0]?.textContent ?? '');
+  const run = lines.length ? lines : ['jel labs'];
+  const led = createLedTicker(run, { width: 2048, height: 128 });
+  // The board says the streak as it goes past, so it reprints if the live figure lands after the
+  // bay was built. One canvas fill on an event that happens at most once a page.
+  onStreak((d) => led.setLines(withStreakLine(run, d.current)));
   const board = new THREE.Mesh(new THREE.PlaneGeometry(16, 1), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.6, emissiveMap: led.texture, map: led.texture }));
   board.position.set(4, 8.6, Z0 + 0.12); root.add(board);
 

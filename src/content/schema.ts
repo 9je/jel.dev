@@ -1,17 +1,11 @@
 import { z } from 'astro/zod';
+import { WINGS, STATUSES } from './status';
 
-export const WINGS = ['operations', 'fabrication', 'recreation', 'containment'] as const;
-export const STATUSES = ['operational', 'in-flight', 'pending-release', 'restricted', 'closed-source'] as const;
-export type Wing = (typeof WINGS)[number];
-export type Status = (typeof STATUSES)[number];
+// The wings, the statuses and their labels moved to ./status so the walk can read them without
+// dragging zod into the browser bundle. Re-exported here, where every page already looks for them.
+export { WINGS, STATUSES, STATUS_LABEL } from './status';
+export type { Wing, Status } from './status';
 
-export const STATUS_LABEL: Record<Status, string> = {
-  operational: 'Operational',
-  'in-flight': 'In flight',
-  'pending-release': 'Pending release',
-  restricted: 'Restricted',
-  'closed-source': 'Closed source',
-};
 
 export const projectSchema = z.object({
   title: z.string().min(1),
