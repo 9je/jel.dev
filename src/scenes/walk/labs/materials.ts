@@ -15,13 +15,29 @@ export function labWall(store: AssetStore, w: number, h: number, tint: number = 
   const m = surface(store.texture('wall_panel'), w, h, 3); m.color.setHex(tint); return m;
 }
 /**
- * A dado band with a thin line on top, as two geometries already placed. Merge many.
+ * How high the blue goes, everywhere in the building.
  *
- * `h` is how high the blue goes, 1.2 m by default, which is a skirt and is right in a room with a
- * 3.4 m wall. The credentials hall's walls are 7 m, and a 1.2 m band on a 7 m wall is not a dado at
- * all, it is a stripe with five and a half metres of bare grey over it. Jordan's read of that
- * corridor was that the blue and the grey did not make sense together, and they did not: the height
- * has to be a share of the wall it is painted on.
+ * One number, not one per room, and that is the whole point of it. It was 1.2 m, which is a skirt:
+ * right in a room with a 3.4 m wall and a stripe along the floor in the credentials hall's 7 m one,
+ * which is what Jordan read as the blue and the grey not making sense together. The obvious answer
+ * was to make the height a share of the wall it is painted on, so that hall went to 2.3.
+ *
+ * That was wrong, and it took him three goes to get me to see why. Rooms in this building are not
+ * looked at one at a time. Every one of them is seen through a doorway into the next, and a dado
+ * that is 2.3 m on one side of an opening and 1.2 m on the other does not read as two rooms with
+ * their own proportions, it reads as a wall that changed its mind. Per room heights cannot be made
+ * to work here: every junction in the walk joins two rooms of different heights, so any scheme that
+ * scales with the room breaks at all five of them.
+ *
+ * 1.6 m is the compromise, and it is a real dado height: chest high, which is where a painted lower
+ * wall goes in a building that expects trolleys. In the tall hall it is still short of a third of
+ * the wall, and what carries the rest of that wall is the service run and the panels on it rather
+ * than more paint.
+ */
+export const DADO_H = 1.6;
+
+/**
+ * A dado band with a thin line on top, as two geometries already placed. Merge many.
  *
  * The run is inset two millimetres at each end of `len`, and the size of that number is the whole
  * of it. A band flush with the end of its wall puts its end cap on whatever plane closes the wall
@@ -33,7 +49,7 @@ export function labWall(store: AssetStore, w: number, h: number, tint: number = 
  * is under a pixel at any distance the walk ever reads a wall from, and still fifteen times the
  * separation the depth buffer needs at these ranges.
  */
-export function dadoBands(len: number, x: number, z: number, ry: number, h = 1.2): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
+export function dadoBands(len: number, x: number, z: number, ry: number, h = DADO_H): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
   const run = Math.max(0.1, len - 0.004);
   const band = new THREE.BoxGeometry(run, h, 0.03); band.rotateY(ry); band.translate(x, h / 2, z);
   const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, h + 0.05, z);

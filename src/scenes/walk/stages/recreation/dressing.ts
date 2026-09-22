@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { cableTray, papers } from '../../labs/props';
-import { arcadeCabinet, canteenChair, canteenTable, crtBracket, drinksMachine, fridge, kitchenette, locker, poster, splashback } from '../../labs/furniture';
+import { arcadeCabinet, canteenChair, canteenTable, crtBracket, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
 import { screenFace } from '../../labs/textures';
@@ -48,7 +48,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(splashback(3.2, 0.62), -24.2, 1.19, Z0 + 0.05));
   await add(once(prop('microwave'), -23.4, 0.905, Z0 + 0.33, 0.15));
   await add(once(prop('kettle'), -25.6, 0.905, Z0 + 0.28, -0.4));
-  await add(once(prop('tea_set'), -25.2, 0.905, Z0 + 0.24, 0.9));
+  // Mugs, not a tea set. A bone china pot and cups is not what a facility canteen drinks out of,
+  // and there is a kettle beside them already.
+  await add(place(mug(), -25.15, 0.9, Z0 + 0.22, 0.9));
+  await add(place(mug(0xcfd8dd), -24.95, 0.9, Z0 + 0.34, -1.2));
   await add(place(poster('WASH YOUR HANDS', 0.44, 0.62, 5), -25.5, 1.6, Z0 + 0.06));
   // The clock hangs over the counter, not on the far wall: it is the one thing that fills the bare
   // metre of wall between the cupboards and the ceiling on the side of the frame the copy leaves.
@@ -114,16 +117,24 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   //
   // The ends only. A chair on the south side of either table would stand its back 2.4 m off the
   // walked line, inside the 2.6 m this room keeps clear either side of it.
+  // Three chairs to a table: one at each end and one on the long side, every one of them square to
+  // the table and facing it. Two chairs at the ends and nothing else still read as spun, because a
+  // chair seen from the side tells you nothing about which way it is pointed: it is the one on the
+  // long side, facing the table front on, that makes the other two legible as a set.
+  //
+  // The table stands 0.95 m off the wall rather than 0.62 to make room for it, which puts the long
+  // side chair's back 1.9 m from the walked line. That is inside the 2.6 m this room otherwise
+  // keeps clear, and it is the right trade: the camera is a point, 1.9 m is nowhere near it, and a
+  // canteen with nobody sitting at the long side of any table is not a canteen.
   for (const tx of MESS_TABLES) {
-    await add(place(canteenTable(1.6, 0.8), tx, 0, Z1 - 0.62, 0));
-    await add(place(canteenChair(), tx - 1.02, 0, Z1 - 0.62, Math.PI / 2));
-    await add(place(canteenChair(), tx + 1.02, 0, Z1 - 0.62, -Math.PI / 2));
+    await add(place(canteenTable(1.6, 0.8), tx, 0, Z1 - 0.95, 0));
+    await add(place(canteenChair(), tx - 1.02, 0, Z1 - 0.95, Math.PI / 2));
+    await add(place(canteenChair(), tx + 1.02, 0, Z1 - 0.95, -Math.PI / 2));
+    await add(place(canteenChair(), tx - 0.28, 0, Z1 - 1.78, 0));
   }
-  // One pushed back and turned out from the table, and one on its side where it went over. Both are
-  // placed rather than scattered: the room is meant to read as left in a hurry, not as never having
-  // been laid out at all.
-  await add(place(canteenChair(), -30.1, 0, Z1 - 1.3, -1.1));
-  const fallen = place(canteenChair(), -31.1, 0.24, Z1 - 1.15, 1.2);
+  // One on its side where it went over, for the room's abandonment layer. It is the only chair in
+  // here that is not square, so it reads as one that fell rather than as the set being careless.
+  const fallen = place(canteenChair(), -30.4, 0.24, Z1 - 1.5, 1.2);
   fallen.rotation.z = Math.PI / 2; await add(fallen);
   await add(place(poster('SAFETY FIRST !', 0.6, 0.85, 3), -33.4, 1.85, Z1 - 0.04, Math.PI));
   await add(once(prop('sofa'), -34.6, 0, Z1 - 0.62, Math.PI + 0.05));
@@ -143,7 +154,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // of it is 2 m. Along the wall it is the same three pieces and it keeps the gangway.
   const LOW_H = 0.42;
   await add(place(canteenTable(1.2, 0.6, LOW_H), -52.9, 0, Z0 + 0.62, 0.08));
-  await add(once(prop('tea_set'), -52.9, LOW_H, Z0 + 0.58, 1.4));
+  await add(place(mug(), -53.15, LOW_H, Z0 + 0.58, 1.4));
+  await add(papers([[-52.6, LOW_H, Z0 + 0.66, 0.5]]));
 
   // North wall, east to west: the notices, the bin, a bench, the board, the television the sofas
   // face across the room, and the table people ate at.

@@ -293,6 +293,22 @@ export function canteenChair(shade = 0x2f5d8c): THREE.Group {
   return g;
 }
 
+/**
+ * A mug: a straight sided cylinder with a handle, origin at the base, handle toward +x. The break
+ * room had a bone china tea set on the counter and another on the low table, which is not what a
+ * facility canteen drinks out of, and the second one was floating off a surface it had been placed
+ * on by a model's own origin rather than by its base.
+ */
+export function mug(shade = 0xdfe3e2): THREE.Group {
+  const g = new THREE.Group();
+  const m = new THREE.MeshStandardMaterial({ color: shade, roughness: 0.42 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.037, 0.095, 14), m);
+  body.position.y = 0.0475; g.add(body);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.007, 6, 14), m);
+  handle.position.set(0.048, 0.052, 0); handle.rotation.y = Math.PI / 2; g.add(handle);
+  return g;
+}
+
 export interface ArcadeSpec {
   title: string;
   accent: string;

@@ -6,7 +6,7 @@ import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, labSteel,
 import { glassRoom } from '../../labs/props';
 import { doorway } from '../../labs/signage';
 import { battens, lightShaft, troffer, lensMaterial, fixtureSteel } from '../../labs/fixtures';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, DADO_H, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
+import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
@@ -49,14 +49,14 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const wallSegment = (x: number, ry: number, z0: number, z1: number) => {
     const len = z1 - z0, midZ = (z0 + z1) / 2;
     const m = plane(len, H, labWall(store, len, H)); m.rotation.y = ry; m.position.set(x, H / 2, midZ);
-    const b = dadoBands(len, x + (x === X0 ? 0.02 : -0.02), midZ, Math.PI / 2, DADO_H);
+    const b = dadoBands(len, x + (x === X0 ? 0.02 : -0.02), midZ, Math.PI / 2);
     bandGeoms.push(b.band); lineGeoms.push(b.line);
   };
   wallSegment(X0, Math.PI / 2, Z0, Z1);
   wallSegment(X1, -Math.PI / 2, GATE_Z1, Z1);
   /** A band on an end wall, turned to face down the hall. */
   const endBand = (len: number, x: number, z: number) => {
-    const b = dadoBands(len, x, z, 0, DADO_H); bandGeoms.push(b.band); lineGeoms.push(b.line);
+    const b = dadoBands(len, x, z, 0); bandGeoms.push(b.band); lineGeoms.push(b.line);
   };
 
   // The south end, closed. It was open, which is the black wall beside the desk in Jordan's shot of

@@ -12,16 +12,6 @@ export const X0 = -83, X1 = -75, Z0 = -30, Z1 = 6, H = 7;
 export const W = X1 - X0, D = Z1 - Z0, XC = (X0 + X1) / 2, ZC = (Z0 + Z1) / 2;
 export const LAB = { x: XC, z: -19, w: 7.2, d: 12, h: 3.2, sill: 0.6, doorX: -79.2, doorW: 2.4 };
 
-/**
- * How high the blue goes in this hall. Every other room takes the kit's 1.2 m, which is a skirt on
- * a 3.4 m wall. These walls are 7 m, and a skirt on a wall that tall reads as a stripe with nothing
- * over it: a corridor of bare grey with a blue line along the floor. At 2.3 m it is a painted lower
- * wall, which is what the reference actually has, and it takes a metre of the blank grey with it.
- *
- * The hall's own fittings sit above it: the service run at 3.9 m and the panels at 3.1 m break the
- * rest of the grey, so no stretch of this corridor is more than two metres of nothing.
- */
-export const DADO_H = 2.3;
 /** The service run down both long walls above the dado, and the panels hung under it. */
 export const SERVICE_Y = 3.9, PANEL_Y = 3.1;
 /** Where the panels hang along the corridor north of the lab, as z. */
