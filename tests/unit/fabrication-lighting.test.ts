@@ -45,7 +45,7 @@ describe('the loading bay lighting', () => {
 
 describe('the dispatch board', () => {
   it('lists the three products on the plinths against a bay', () => {
-    for (const name of ['conch.gg', 'ezkey.io', 'gc-bridge']) {
+    for (const name of ['conch.gg', 'ezkey.io', 'earworm.games']) {
       const row = DISPATCH_ROWS.find((r) => r.product === name);
       expect(row, name).toBeDefined();
       expect(row?.bay).toMatch(/^bay \d$/);

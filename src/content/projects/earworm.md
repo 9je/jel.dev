@@ -1,16 +1,14 @@
 ---
 title: earworm.games
-wing: recreation
+wing: fabrication
 status: operational
-summary: A guess-the-song game. A tenth of a second of a track, then longer slices until you name it.
+summary: A guess-the-song game, built because the ones that already existed did not fit how my friends play.
 stack: [SvelteKit, TypeScript, Python, SQLite]
 links:
   - label: earworm.games
     href: https://earworm.games
-order: 15
+order: 30
 ---
-A clip plays for a tenth of a second and you guess the song from a search box. Every wrong guess or skip unlocks a longer slice, up to sixteen seconds. Solo, endless, no accounts to make.
+A clip plays for a tenth of a second and you guess the song. Every wrong guess unlocks a longer slice, up to sixteen seconds.
 
-The harder half is the library behind it. A Python pipeline resolves each track against Deezer for canonical metadata and cover art, rips the audio, trims the leading silence so a fade in survives but dead air does not, and normalises every clip to the same loudness, because a quiet seventies recording next to a modern one gives the decade away by volume alone. Each clip is encoded twice, since iOS Safari cannot decode Opus through the Web Audio API.
-
-Nothing the browser receives says what the song is. Clips are served under a per round id, the files on disk are named by a hash, and every guess is checked on the server against the round it belongs to.
+Games like it already existed. None of them had the library my friends actually listen to, so this one has a bigger pool behind it and an interface that gets out of the way. The part I did not expect to learn was audio: every clip is normalised to one loudness and encoded twice, because a quiet seventies record next to a modern one gives the decade away by volume alone.

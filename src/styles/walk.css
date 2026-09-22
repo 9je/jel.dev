@@ -21,6 +21,9 @@
 .colophon { margin: 2.5rem 0 0; color: var(--text-dim); font-size: 0.75rem; max-width: var(--measure); }
 .colophon a { color: inherit; }
 .stop-body { max-width: 1100px; }
+/* A wing whose every project shares one status says it once, here, instead of printing the same
+   plate down the side of every row. */
+.list-note { margin: 0 0 0.25rem; padding: 0 0.5rem; color: var(--text-dim); font-size: 0.9rem; font-stretch: 75%; letter-spacing: 0.04em; text-transform: uppercase; }
 /* Scroll cue. The booth is the only stop that carries one: nothing has moved yet, so the first
    gesture needs naming. It repeats the lead's own last line, so it is aria-hidden, it appears only
    once scroll is actually driving a camera, and it goes on the first pixel of it. The lead stays. */
@@ -232,6 +235,7 @@
   max-width: min(34ch, calc(100vw - 2rem));
   max-height: 62vh;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 0.9rem 1.1rem 1rem;
   /* Solid: this one hangs over the lit plate it describes, and the room read through it. */
   background: var(--surface);

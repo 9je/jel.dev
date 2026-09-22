@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { merged } from '../../merge';
 import { LABS } from '../../labs/materials';
+import { canvas, own } from '../../labs/textures';
 
 /**
  * The three products on the dispatch office plinths. Each is built at exhibition scale, four to
@@ -99,55 +100,76 @@ export function key(): THREE.Group {
 }
 
 /**
- * gc-bridge: a bridge. A scale model suspension bridge spanning the plinth, towers and deck in the
- * console's indigo, main cables hung between the tower tops in a parabola with a hanger every six
- * centimetres, and concrete abutments at each end. The adapter box it replaces read as a network
- * switch twice over. Five draw calls.
+ * earworm.games: a cassette. The product is a web page, so the exhibit is the thing the game is
+ * made of rather than the thing it runs on: a tape at five times life size, leaned back on the
+ * stand with its label facing the camera. Hubs, spools wound to different diameters, the window
+ * between them and the screws in the corners are what makes a shape this plain read as a cassette
+ * at three metres. Four draw calls and one printed label.
  */
-export function bridge(): THREE.Group {
+export function cassette(): THREE.Group {
+  const W = 0.9, D = 0.56, T = 0.09;
   const g = new THREE.Group();
-  const HALF = 0.62, TX = 0.33, TH = 0.44, DECK = 0.12, SAG = 0.26, W = 0.15;
-  const indigo = shell(0x46398f, 0.45, 0.1);
-  // Towers: two legs each with a cross beam at the top and one under the deck, on a pier block.
-  const towers: THREE.BufferGeometry[] = [];
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) towers.push(new THREE.BoxGeometry(0.03, TH, 0.03).translate(sx * TX, TH / 2, sz * (W / 2 + 0.005)));
-    towers.push(new THREE.BoxGeometry(0.03, 0.025, W + 0.04).translate(sx * TX, TH - 0.0125, 0));
-    towers.push(new THREE.BoxGeometry(0.03, 0.02, W + 0.04).translate(sx * TX, TH * 0.68, 0));
-    towers.push(new THREE.BoxGeometry(0.03, 0.02, W + 0.04).translate(sx * TX, DECK - 0.03, 0));
-  }
-  g.add(merged(towers, indigo));
-  // The deck: a slab with a kerb down each side, carried the full span between the abutments.
-  const deck = [
-    new THREE.BoxGeometry(HALF * 2, 0.018, W).translate(0, DECK, 0),
-    new THREE.BoxGeometry(HALF * 2, 0.014, 0.012).translate(0, DECK + 0.016, W / 2 - 0.006),
-    new THREE.BoxGeometry(HALF * 2, 0.014, 0.012).translate(0, DECK + 0.016, -(W / 2 - 0.006)),
-  ];
-  g.add(merged(deck, shell(0x2f2a5e, 0.6, 0.1)));
-  // Main cables: from the anchor at each end up to the tower top, then a parabola to the far tower.
-  const cableY = (x: number) => Math.abs(x) >= TX
-    ? TH - ((Math.abs(x) - TX) / (HALF - TX)) * (TH - 0.03)
-    : TH - SAG * (1 - (x / TX) ** 2);
-  const cables: THREE.BufferGeometry[] = [];
-  const hangers: THREE.BufferGeometry[] = [];
-  for (const sz of [-1, 1]) {
-    const pts: THREE.Vector3[] = [];
-    for (let x = -HALF; x <= HALF + 1e-6; x += 0.02) pts.push(new THREE.Vector3(x, cableY(x), sz * (W / 2 + 0.005)));
-    cables.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, 0.005, 6, false));
-    for (let x = -TX + 0.06; x < TX - 0.03; x += 0.06) {
-      const top = cableY(x), h = top - DECK;
-      hangers.push(new THREE.CylinderGeometry(0.002, 0.002, h, 4).translate(x, DECK + h / 2, sz * (W / 2 + 0.005)));
+  const pivot = T * Math.cos(RAKE) + (D / 2) * Math.sin(RAKE) + 0.002;
+  const tilt = new THREE.Group(); tilt.rotation.x = RAKE; tilt.position.y = pivot; g.add(tilt);
+
+  // The shell, with the two flats either side of the window that a cassette has.
+  tilt.add(merged([
+    new THREE.BoxGeometry(W, T, D).translate(0, -T / 2, 0),
+    new THREE.BoxGeometry(W - 0.06, 0.012, D - 0.06).translate(0, 0.004, 0),
+  ], shell(0x20262d, 0.62, 0.12)));
+
+  // Hubs and spools. Two teeth rings, the left wound fuller than the right, which is the detail
+  // that says a tape has been played rather than pressed.
+  const hubs: THREE.BufferGeometry[] = [];
+  const tape: THREE.BufferGeometry[] = [];
+  for (const [sx, r] of [[-1, 0.125], [1, 0.082]] as [number, number][]) {
+    hubs.push(new THREE.CylinderGeometry(0.048, 0.048, 0.02, 16).translate(sx * 0.2, 0.006, 0.07));
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      hubs.push(new THREE.BoxGeometry(0.016, 0.024, 0.02).translate(sx * 0.2 + Math.cos(a) * 0.04, 0.008, 0.07 + Math.sin(a) * 0.04));
     }
+    tape.push(new THREE.CylinderGeometry(r, r, 0.016, 28).translate(sx * 0.2, 0.002, 0.07));
   }
-  g.add(merged(cables, shell(0xc0c8ce, 0.4, 0.7)));
-  g.add(merged(hangers, shell(0xc0c8ce, 0.4, 0.7)));
-  // Abutments and piers: concrete blocks the deck lands on and the towers stand on.
-  const blocks = [
-    new THREE.BoxGeometry(0.1, DECK - 0.009, W + 0.06).translate(-HALF + 0.05, (DECK - 0.009) / 2, 0),
-    new THREE.BoxGeometry(0.1, DECK - 0.009, W + 0.06).translate(HALF - 0.05, (DECK - 0.009) / 2, 0),
-    new THREE.BoxGeometry(0.08, 0.05, W + 0.08).translate(-TX, 0.025, 0),
-    new THREE.BoxGeometry(0.08, 0.05, W + 0.08).translate(TX, 0.025, 0),
-  ];
-  g.add(merged(blocks, shell(0x8f9aa2, 0.85, 0.05)));
+  tilt.add(merged(tape, shell(0x14181d, 0.85, 0.05)));
+  tilt.add(merged(hubs, shell(0xb8c0c6, 0.4, 0.5)));
+
+  // The window over the spools, and five screws.
+  const win = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.01, 0.2), acrylic());
+  win.position.set(0, 0.012, 0.07); tilt.add(win);
+  const screws: THREE.BufferGeometry[] = [];
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 1]] as [number, number][]) {
+    screws.push(new THREE.CylinderGeometry(0.014, 0.014, 0.014, 8).translate(sx * 0.4, 0.006, sz * 0.24));
+  }
+  tilt.add(merged(screws, shell(0x8f979d, 0.45, 0.6)));
+
+  // The label, in the upper half where a cassette carries one.
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.26), new THREE.MeshStandardMaterial({
+    map: cassetteLabel(), roughness: 0.85, emissive: 0xffffff, emissiveMap: cassetteLabel(), emissiveIntensity: 0.18,
+  }));
+  label.rotation.x = -Math.PI / 2; label.position.set(0, 0.013, -0.15); tilt.add(label);
+
+  stand(g, tilt, pivot, { w: W + 0.06, back: T + 0.01, from: -D / 2 });
   return g;
+}
+
+/** The printed label: a stock card with the name set across it, a ruled line for a side and a run
+ *  time, and the accent down the head. 768 by 256 for a plate 0.78 by 0.26. */
+function cassetteLabel(): THREE.CanvasTexture {
+  const W = 768, H = 256;
+  const [c, ctx] = canvas(W, H);
+  ctx.fillStyle = '#e9e4d6'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#8b5fc4'; ctx.fillRect(0, 0, W, 34);
+  ctx.fillStyle = 'rgba(30,36,44,0.18)'; ctx.fillRect(0, H - 6, W, 6);
+  ctx.fillStyle = '#1b2530'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.font = '600 66px Michroma, system-ui, sans-serif';
+  ctx.fillText('earworm', W / 2, 108);
+  ctx.font = '600 30px Michroma, system-ui, sans-serif';
+  ctx.fillStyle = '#5b6770'; ctx.fillText('.GAMES', W / 2, 156);
+  // The two ruled lines somebody would have written on.
+  ctx.strokeStyle = 'rgba(27,37,48,0.35)'; ctx.lineWidth = 2;
+  for (const y of [196, 226]) { ctx.beginPath(); ctx.moveTo(48, y); ctx.lineTo(W - 48, y); ctx.stroke(); }
+  ctx.textAlign = 'left'; ctx.font = '600 22px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#1b2530';
+  ctx.fillText('SIDE A', 54, 184);
+  ctx.textAlign = 'right'; ctx.fillText('0.1 SEC', W - 54, 184);
+  return own(c);
 }

@@ -10,12 +10,12 @@ import { papers, glassRoom } from '../../labs/props';
 import { paperSheet } from '../../labs/textures';
 import { signBox } from '../../labs/signage';
 import { OFFICE, SODIUM } from './layout';
-import { controller, key, bridge } from './exhibits';
+import { controller, key, cassette } from './exhibits';
 import { nameplateFace, numberTag, dispatchBoardFace, consoleKeys } from './boards';
 import { streakBoard } from './streak';
 
 /** What each product is, in three words, for the line under its name. */
-const SUBTITLES: Record<string, string> = { 'conch.gg': 'GameCube netplay', 'ezkey.io': 'Key store', 'gc-bridge': 'Controller bridge' };
+const SUBTITLES: Record<string, string> = { 'conch.gg': 'GameCube hardware', 'ezkey.io': 'Key store', 'earworm.games': 'Guess the song' };
 
 /**
  * A museum nameplate, standing at the back of a plinth: a brushed steel plate on two standoffs,
@@ -253,7 +253,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   const exhibits: [string, string, number, () => THREE.Group][] = [
     ['conch', 'conch.gg', 3.0, () => controller(store.model('gamecube_controller'))],
     ['ezkey', 'ezkey.io', 0.4, key],
-    ['gc-bridge', 'gc-bridge', -2.2, bridge],
+    ['earworm', 'earworm.games', -2.2, cassette],
   ];
   const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;

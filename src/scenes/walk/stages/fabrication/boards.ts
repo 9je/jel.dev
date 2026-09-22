@@ -101,7 +101,7 @@ export interface DispatchRow { product: string; bay: string; status: string; dat
 export const DISPATCH_ROWS: DispatchRow[] = [
   { product: 'conch.gg', bay: 'bay 1', status: 'shipped', date: '09 SEP', tick: true },
   { product: 'ezkey.io', bay: 'bay 2', status: 'in flight', date: '12 SEP', tick: true },
-  { product: 'gc-bridge', bay: 'bay 3', status: 'in flight', date: '14 SEP' },
+  { product: 'earworm.games', bay: 'bay 3', status: 'shipped', date: '21 SEP', tick: true },
   { product: 'spares', bay: 'bay 4', status: 'held', date: '07 SEP', struck: true },
 ];
 

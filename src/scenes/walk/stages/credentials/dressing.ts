@@ -48,6 +48,22 @@ export function plateFace(name: string, issuer: string, index: number): THREE.Ca
   const glow = ctx.createRadialGradient(W / 2, by, 40, W / 2, by, W * 0.62);
   glow.addColorStop(0, 'rgba(255,255,255,0.75)'); glow.addColorStop(0.55, 'rgba(255,255,255,0.18)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, W, Hpx);
+  // The mount the badge sits in. Six vendors draw their badge six ways, and hung as they come the
+  // wall reads as an export from a badge site rather than as a set of things that were earned. One
+  // frame around all six is what makes them a collection: a ruled window, a shade cooler than the
+  // acrylic, with the vendor's own artwork centred in it.
+  const mount = PLATE.badge * ppm * 0.62;
+  const mx0 = W / 2 - mount, my0 = by - mount;
+  ctx.fillStyle = 'rgba(210,224,232,0.5)';
+  ctx.fillRect(mx0, my0, mount * 2, mount * 2);
+  ctx.strokeStyle = 'rgba(30,44,58,0.22)'; ctx.lineWidth = 2;
+  ctx.strokeRect(mx0 + 1, my0 + 1, mount * 2 - 2, mount * 2 - 2);
+  // A corner tick at each corner of the window, the way a mount is scored before it is cut.
+  ctx.strokeStyle = 'rgba(30,44,58,0.35)'; ctx.lineWidth = 3;
+  const tick = mount * 0.16;
+  for (const [cx, cy, sx, sy] of [[mx0, my0, 1, 1], [mx0 + mount * 2, my0, -1, 1], [mx0, my0 + mount * 2, 1, -1], [mx0 + mount * 2, my0 + mount * 2, -1, -1]] as [number, number, number, number][]) {
+    ctx.beginPath(); ctx.moveTo(cx + sx * tick, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * tick); ctx.stroke();
+  }
   // Frosting: a fine grain, half light and half dark, at an alpha the eye reads as texture and not
   // as dirt. Seeded per plate so no two faces carry the same grain.
   const r = rng(101 + index * 17);
@@ -93,8 +109,9 @@ export function plateFace(name: string, issuer: string, index: number): THREE.Ca
   // A hairline, then the issuer in a small sans.
   const ruleY = nameY + ((lines.length - 1) / 2) * lead + px * 0.95;
   ctx.fillStyle = 'rgba(30,44,58,0.28)'; ctx.fillRect(W / 2 - 120, ruleY, 240, 2);
-  ctx.fillStyle = INK_SOFT; ctx.font = '500 34px Inter, "Segoe UI", system-ui, sans-serif'; spacing(2);
-  ctx.fillText(issuer, W / 2, ruleY + 46);
+  // The issuer, tracked out in caps under the rule: it is the authority, not a caption.
+  ctx.fillStyle = INK_SOFT; ctx.font = '600 30px Inter, "Segoe UI", system-ui, sans-serif'; spacing(7);
+  ctx.fillText(issuer.toUpperCase(), W / 2, ruleY + 46);
   spacing(0);
   // The foot line.
   ctx.fillStyle = accent; ctx.fillRect(0, Hpx - 5, W, 5);

@@ -2,15 +2,15 @@
 import type { CollectionEntry } from 'astro:content';
 import { render } from 'astro:content';
 import StatusPlate from './StatusPlate.astro';
-interface Props { entry: CollectionEntry<'projects'> }
-const { entry } = Astro.props;
+interface Props { entry: CollectionEntry<'projects'>; hideStatus?: boolean }
+const { entry, hideStatus } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 ---
 <details class="row" data-project={entry.id}>
   <summary class="row-summary">
     <span class="row-title">{d.title}</span>
-    <StatusPlate status={d.status} />
+    {!hideStatus && <StatusPlate status={d.status} />}
     <span class="row-line">{d.summary}</span>
   </summary>
   <div class="row-body">
@@ -29,6 +29,7 @@ const d = entry.data;
   .row-summary {
     display: grid;
     grid-template-columns: minmax(10rem, 16rem) auto 1fr;
+    /* A list that says its status once leaves the middle column empty, so the summary takes it. */
     gap: 1rem 1.5rem;
     align-items: center;
     padding: 1rem 0.5rem;

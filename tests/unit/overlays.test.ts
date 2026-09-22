@@ -5,35 +5,29 @@ import { cardLeft, cardSide, cardTop } from '../../src/scenes/walk/overlays';
 const VW = 1600, CARD = 300;
 
 describe('where an exhibit card hangs', () => {
-  it('hangs outward: an exhibit left of centre gets its card to its left', () => {
+  it('hangs against the outer margin on the side its exhibit is on', () => {
     expect(cardSide(500, VW)).toBe('left');
-    expect(cardLeft(500, 60, CARD, VW)).toBe(500 - 60 - 16 - CARD);
-  });
-
-  it('hangs outward: an exhibit right of centre gets its card to its right', () => {
+    expect(cardLeft(500, CARD, VW)).toBe(16);
     expect(cardSide(1100, VW)).toBe('right');
-    expect(cardLeft(1100, 60, CARD, VW)).toBe(1100 + 60 + 16);
+    expect(cardLeft(1100, CARD, VW)).toBe(VW - CARD - 16);
   });
 
   it('leaves the middle of the frame, where the room is, clear of the card', () => {
-    // Either side of the centre line, the card is further out than the exhibit it belongs to.
-    expect(cardLeft(790, 40, CARD, VW) + CARD).toBeLessThan(790);
-    expect(cardLeft(810, 40, CARD, VW)).toBeGreaterThan(810);
+    // A row of exhibits stands across the middle. Wherever in it the reader clicks, the card is
+    // out at the frame's edge rather than over the machine next to the one they picked.
+    expect(cardLeft(700, CARD, VW) + CARD).toBeLessThan(700);
+    expect(cardLeft(900, CARD, VW)).toBeGreaterThan(900);
   });
 
-  it('clears the exhibit by its own reach, not by a fixed gap', () => {
-    const near = cardLeft(500, 20, CARD, VW);
-    const wide = cardLeft(500, 100, CARD, VW);
-    expect(near - wide).toBe(80);
-  });
-
-  it('never hangs off the frame, however little room the outer side has', () => {
-    expect(cardLeft(100, 60, CARD, VW)).toBe(16);
-    expect(cardLeft(1500, 60, CARD, VW)).toBe(VW - CARD - 16);
+  it('never hangs off the frame', () => {
+    expect(cardLeft(100, CARD, VW)).toBe(16);
+    expect(cardLeft(1500, CARD, VW)).toBe(VW - CARD - 16);
+    // A card as wide as the frame still starts on it.
+    expect(cardLeft(1500, VW, VW)).toBe(16);
   });
 
   it('stays out of the dock rail down the right of the frame', () => {
-    expect(cardLeft(1500, 60, CARD, VW, 16, 176)).toBe(VW - 176 - CARD - 16);
+    expect(cardLeft(1500, CARD, VW, 16, 176)).toBe(VW - 176 - CARD - 16);
   });
 
   it('centres on the anchor vertically and stays inside the frame', () => {

@@ -1,6 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import * as THREE from 'three';
-import { controller, key, bridge } from '../../src/scenes/walk/stages/fabrication/exhibits';
+import type { cassette as Cassette, controller as Controller, key as Key } from '../../src/scenes/walk/stages/fabrication/exhibits';
+
+// The cassette prints its own label, and vitest runs in node with no DOM. A stub canvas is enough:
+// nothing here reads a pixel back, only the shapes the products are built from are measured.
+let controller: typeof Controller, key: typeof Key, cassette: typeof Cassette;
+beforeAll(async () => {
+  const context = () => new Proxy({} as Record<string | symbol, unknown>, {
+    get: (t, k) => (k in t ? t[k] : () => ({ width: 100, addColorStop() {} })),
+    set: (t, k, v) => { t[k] = v; return true; },
+  });
+  (globalThis as unknown as { document: unknown }).document = {
+    createElement: () => { const ctx = context(); return { width: 0, height: 0, getContext: () => ctx }; },
+  };
+  ({ controller, key, cassette } = await import('../../src/scenes/walk/stages/fabrication/exhibits'));
+});
 
 // The office stands each product at the plinth top, face toward +z, on a cap 1.0 m across and
 // 1.4 m long. These hold the three to that cap at a scale that reads from the hold, three metres
@@ -12,7 +26,7 @@ const gamecube = () => { const m = new THREE.Group(); const mesh = new THREE.Mes
 const controllerExhibit = () => controller(gamecube());
 
 describe('fabrication exhibits', () => {
-  it.each([['controller', controllerExhibit], ['key', key], ['bridge', bridge]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
+  it.each([['controller', () => controllerExhibit()], ['key', () => key()], ['cassette', () => cassette()]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
     const b = box(make());
     // The controller and the adapter are wide, the key is long and raked up: the biggest dimension
     // is what the eye sizes it by.
@@ -26,14 +40,17 @@ describe('fabrication exhibits', () => {
     expect(b.min.x).toBeGreaterThan(-0.7); expect(b.max.x).toBeLessThan(0.7);
     expect(b.max.y).toBeLessThan(0.75);
   });
-  it('leans the controller and the key toward the camera, and spans the bridge flat', () => {
+  it('leans every product toward the camera at the hold', () => {
     const face = (g: THREE.Group) => { const t = g.children.find((c) => c.rotation.x !== 0); return t?.rotation.x ?? 0; };
     expect(face(controllerExhibit())).toBeGreaterThan(0.4);
     expect(face(key())).toBeGreaterThan(0.4);
-    expect(face(bridge())).toBe(0);
-    const b = box(bridge());
-    expect(b.max.x - b.min.x).toBeGreaterThan(1.1);
-    expect(b.max.y).toBeGreaterThan(0.4);
+    expect(face(cassette())).toBeGreaterThan(0.4);
+  });
+  it('stands the cassette on the cap rather than sinking it into one', () => {
+    const b = box(cassette());
+    expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
+    // A tape at five times life size: wide enough to carry a label that reads from the hold.
+    expect(b.max.x - b.min.x).toBeGreaterThan(0.8);
   });
   it('fits the controller model to the cap whatever scale it arrives at', () => {
     const b = box(controllerExhibit());
@@ -41,7 +58,7 @@ describe('fabrication exhibits', () => {
     expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
   });
   it('keeps each product to a handful of draw calls', () => {
-    for (const make of [controllerExhibit, key, bridge]) {
+    for (const make of [() => controllerExhibit(), () => key(), () => cassette()]) {
       let n = 0; make().traverse((o) => { if ((o as THREE.Mesh).isMesh) n++; });
       expect(n).toBeLessThanOrEqual(10);
     }

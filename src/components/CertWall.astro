@@ -16,8 +16,9 @@ const certs = await getCollection('certs');
     {certs.map(({ data: c }) => (
       <li class="badge" data-cert={c.id}>
         <img src={c.badgeImage} alt="" width="96" height="96" loading="lazy" />
-        <span class="badge-name">{c.verifyUrl ? <a href={c.verifyUrl} rel="noopener">{c.name}</a> : c.name}</span>
+        <span class="badge-name">{c.name}</span>
         <span class="badge-issuer">{c.issuer}</span>
+        {c.verifyUrl && <a class="badge-verify" href={c.verifyUrl} rel="noopener">Verify</a>}
       </li>
     ))}
   </ul>
@@ -32,22 +33,37 @@ const certs = await getCollection('certs');
   .wall-head { list-style: none; cursor: pointer; }
   .wall-head::-webkit-details-marker { display: none; }
   .wall-title { font-size: 1.3rem; margin-bottom: 1rem; }
-  .wall-list {
-    list-style: none; margin: 0; padding: 0;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;
-  }
+  /* A register rather than a grid of badges. Six tiles of centred artwork read as a dump of what
+     a badge site hands out. Ruled rows with the plate small, the name set against it and the
+     issuer tracked out under it read as a record of what was earned, which is the point of the
+     room. The verification link is its own control at the end of the row, where a reader looks
+     for it, rather than hidden under the name. */
+  .wall-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--surface-edge); }
   .badge {
-    display: grid; justify-items: center; gap: 0.35rem;
-    padding: 1rem 0.5rem;
-    background: var(--surface);
-    border-top: 1px solid var(--surface-edge);
-    border-radius: var(--radius);
-    text-align: center;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 1.1rem;
+    padding: 0.85rem 0.5rem;
+    border-bottom: 1px solid var(--surface-edge);
   }
-  .badge img { width: 96px; height: 96px; object-fit: contain; }
-  .badge-name { font-weight: 600; font-size: 0.95rem; }
-  .badge-issuer { color: var(--text-dim); font-size: 0.85rem; }
-  .wall[data-size='hall'] .wall-list { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
-  .wall[data-size='hall'] .badge img { width: 160px; height: 160px; }
+  .badge img { grid-row: span 2; width: 56px; height: 56px; object-fit: contain; }
+  .badge-name { grid-column: 2; align-self: end; font-weight: 600; font-size: 1.02rem; }
+  .badge-issuer {
+    grid-column: 2; align-self: start;
+    color: var(--text-dim); font-size: 0.72rem; font-stretch: 75%;
+    letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .badge-verify {
+    grid-column: 3; grid-row: span 2;
+    padding: 0.2em 0.7em;
+    border: 1px solid var(--surface-edge); border-radius: var(--radius);
+    color: var(--text-dim); font-size: 0.78rem; font-stretch: 75%;
+    letter-spacing: 0.08em; text-decoration: none;
+  }
+  .badge-verify:hover, .badge-verify:focus-visible { color: var(--panel-white); border-color: var(--wing-light, var(--surface-edge)); }
+  .wall[data-size='hall'] .badge { padding: 1rem 0.6rem; column-gap: 1.4rem; }
+  .wall[data-size='hall'] .badge img { width: 76px; height: 76px; }
+  .wall[data-size='hall'] .badge-name { font-size: 1.12rem; }
   .wall[data-size='hall'] .wall-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>

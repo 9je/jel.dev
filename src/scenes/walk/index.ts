@@ -399,7 +399,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
     // The camera moves every frame, so the panels pinned to world anchors have to follow it.
-    pinCard = () => { if (handle && els.card && !els.card.hidden) pinOverlays(els.card, handle.anchors, handle.anchorRadii, handle.camera); };
+    pinCard = () => { if (handle && els.card && !els.card.hidden) pinOverlays(els.card, handle.anchors, handle.camera); };
     const pin = () => { if (!handle) return; pinCard?.(); pinRaf = requestAnimationFrame(pin); };
     pin();
     scroll = createScroll();

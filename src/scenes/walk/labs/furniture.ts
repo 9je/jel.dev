@@ -28,8 +28,22 @@ export function kitchenette(len: number): THREE.Group {
   const xs = Array.from({ length: bays }, (_, i) => -len / 2 + (i + 0.5) * pitch);
   const white = carcass(0xccd6dc, 0.58);
   const handle = new THREE.MeshStandardMaterial({ color: 0x323d46, roughness: 0.45, metalness: 0.5 });
-  g.add(instances(new THREE.BoxGeometry(pitch - 0.012, 0.86, 0.6), white, xs.map((x) => [x, 0.43, 0] as Spot)));
-  g.add(instances(new THREE.BoxGeometry(pitch * 0.5, 0.022, 0.022), handle, xs.map((x) => [x, 0.76, 0.313] as Spot)));
+  // A run of fitted units is a dark carcass with doors hung on the front of it, not a row of white
+  // boxes standing on the floor. The kick recess under the doors and the reveal around each one are
+  // the whole of what makes it read as fitted from across a room: without them this end of the
+  // break room was a white slab, which is the note Jordan has now made twice.
+  const KICK = 0.1, DOOR = 0.02;
+  g.add(merged([
+    new THREE.BoxGeometry(len, KICK, 0.5).translate(0, KICK / 2, -0.05),
+    new THREE.BoxGeometry(len, 0.86 - KICK, 0.6).translate(0, KICK + (0.86 - KICK) / 2, 0),
+  ], carcass(0x39434b, 0.72)));
+  // Doors: proud of the carcass by their own thickness, with a reveal all round. The top bay of the
+  // pair is a drawer front, so the run is not four identical doors either.
+  const doorH = 0.86 - KICK - 0.03;
+  g.add(instances(new THREE.BoxGeometry(pitch - 0.03, doorH - 0.2, DOOR), white, xs.map((x) => [x, KICK + 0.015 + (doorH - 0.2) / 2, 0.3 + DOOR / 2] as Spot)));
+  g.add(instances(new THREE.BoxGeometry(pitch - 0.03, 0.17, DOOR), white, xs.map((x) => [x, KICK + doorH - 0.07, 0.3 + DOOR / 2] as Spot)));
+  g.add(instances(new THREE.BoxGeometry(pitch * 0.5, 0.022, 0.022), handle, xs.map((x) => [x, KICK + doorH - 0.07, 0.335] as Spot)));
+  g.add(instances(new THREE.BoxGeometry(pitch * 0.5, 0.022, 0.022), handle, xs.map((x) => [x, KICK + 0.055 + (doorH - 0.2), 0.335] as Spot)));
 
   const steel = labSteel(0x9aa5ad);
   const top = new THREE.Mesh(new THREE.BoxGeometry(len, 0.045, 0.66), steel);
@@ -128,7 +142,14 @@ export function vendingMachine(spec: VendingSpec): THREE.Group {
   return g;
 }
 
-export interface ArcadeSpec { title: string; accent: string; seed: number }
+export interface ArcadeSpec {
+  title: string;
+  accent: string;
+  seed: number;
+  /** What the machine is, printed across the head of its attract screen. Two Discord bots stood in
+   *  the row with nothing to say so, and from three metres a cabinet is a cabinet. */
+  kind?: string;
+}
 
 /** The cabinet silhouette as a side panel: full depth to the elbow, set back above it. A plain
  *  rectangle of side art floating behind the head of a cabinet is the tell that a room was built
@@ -173,15 +194,23 @@ export function arcadeCabinet(spec: ArcadeSpec): THREE.Group {
   g.add(instances(button(), carcass(0xd7383a, 0.4), [[-0.08, 1.015, 0.291], [0.0, 1.015, 0.291], [0.08, 1.015, 0.291]]));
   g.add(instances(button(), carcass(0x3d7be0, 0.4), [[-0.08, 1.032, 0.359], [0.0, 1.032, 0.359], [0.08, 1.032, 0.359]]));
 
-  const face = attractScreen(spec.title, spec.accent, spec.seed);
+  // The glass stands proud of the head in its own bezel. Raked back at z 0.17 the top quarter of
+  // it was inside the cabinet: the head box's front face is at 0.15, so everything above the
+  // middle of the screen was occluded by the machine it belongs to, and the line at the top of
+  // the attract screen has never been visible on any cabinet in the room.
+  const face = attractScreen(spec.title, spec.accent, spec.seed, spec.kind);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.5, 0.03), carcass(0x0b1117, 0.6));
+  bezel.position.set(0, 1.41, 0.19); bezel.rotation.x = -0.2; g.add(bezel);
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.44), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.15, emissiveMap: face, map: face }));
-  screen.position.set(0, 1.41, 0.17); screen.rotation.x = -0.2; g.add(screen);
+  screen.position.set(0, 1.408, 0.212); screen.rotation.x = -0.2; g.add(screen);
   const lamp = marqueeFace(spec.title, spec.accent);
   // A backlit plate is its own light, not a white card under the room's. Held near the composer's
   // 0.85 bloom threshold on the emissive pass, and nearly black on the diffuse one so the ceiling
   // spot cannot add to it: above that threshold the plate blooms and ACES rolls the colour off
   // toward white, taking the lettering with it. Yellow went first, having the most luminance.
-  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, map: lamp, emissive: 0xffffff, emissiveMap: lamp, emissiveIntensity: 0.9 }));
+  // 0.64 by 0.18 on a 0.76 wide cabinet. It was 0.7 by 0.2, which read as a plate with a machine
+  // under it once the lettering was carrying properly: "readable, but getting kinda big i guess".
+  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.18), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, map: lamp, emissive: 0xffffff, emissiveMap: lamp, emissiveIntensity: 0.9 }));
   marquee.position.set(0, 1.79, 0.153); marquee.name = 'marquee'; g.add(marquee);
   return g;
 }
@@ -296,13 +325,19 @@ export function arcadeSide(accent = '#3D7BE0'): THREE.CanvasTexture {
 /** A cabinet's attract screen: the game's name, the table it is holding and the coin prompt. The
  *  scores are drawn from `seed`, so the row reads as four different machines and never changes
  *  between loads. Emissive map. */
-export function attractScreen(title: string, accent = '#3D7BE0', seed = 1): THREE.CanvasTexture {
+export function attractScreen(title: string, accent = '#3D7BE0', seed = 1, kind?: string): THREE.CanvasTexture {
   const [c, ctx] = canvas(512, 400); const r = rng(seed);
   ctx.fillStyle = '#06101a'; ctx.fillRect(0, 0, 512, 400);
   ctx.fillStyle = accent; ctx.fillRect(0, 0, 512, 8);
   ctx.textBaseline = 'top'; ctx.textAlign = 'center';
-  ctx.fillStyle = '#CFE6EE'; ctx.font = '600 44px Michroma, system-ui, sans-serif';
-  ctx.fillText(title, 256, 34);
+  // The head of the screen says what the machine is, not what it is called: the marquee a hand's
+  // width above it already carries the name, and two of these are Discord bots that looked like
+  // any other cabinet in the row.
+  const head = kind ?? title;
+  let px = kind ? 38 : 44;
+  ctx.fillStyle = kind ? accent : '#CFE6EE';
+  do { ctx.font = `600 ${px}px Michroma, system-ui, sans-serif`; px -= 2; } while (ctx.measureText(head).width > 452 && px > 18);
+  ctx.fillText(head, 256, 34);
   ctx.font = '600 22px Michroma, system-ui, sans-serif'; ctx.fillStyle = accent;
   ctx.fillText('HIGH SCORES', 256, 116);
   ctx.fillStyle = '#8fa6b4'; ctx.font = '600 24px Michroma, system-ui, sans-serif';

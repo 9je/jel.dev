@@ -58,20 +58,18 @@ export const PANEL: [number, number] = [1.2, 0.28];
 export const CABINET_Z = Z0 + 0.45;
 /**
  * The row, east to west, in the order the copy column lists them: a cabinet stands where its
- * project sits in the list, so reading one and looking at the other agree. 0.96 apart on a 0.76
- * wide cabinet, and the run is centred on -28.1, which is where the camera parks, so the hold looks
- * straight down the middle of it rather than at one end.
+ * project sits in the list, so reading one and looking at the other agree. Three of them, 1.2 apart
+ * on a 0.76 wide cabinet so the row still fills the wall it is centred on, and that centre is
+ * -28.1, where the camera parks, so the hold looks straight down the middle rather than at one end.
  */
-export const CABINETS: [string, string, number, string, number][] = [
-  ['torn-bet', 'torn.bet', -26.18, '#3D7BE0', 0],
-  ['earworm', 'earworm.games', -27.14, '#B86FE0', 0],
-  ['faction-tools', 'faction.tools', -28.10, '#E8B923', 0],
-  ['kayou-bot', 'Kayou', -29.06, '#D7383A', 0],
-  ['character-bot', 'character bot', -30.02, '#3FD47A', 0],
+export const CABINETS: [string, string, number, string, number, string][] = [
+  ['torn-bet', 'torn.bet', -26.9, '#3D7BE0', 0, 'CASINO'],
+  ['kayou-bot', 'Kayou', -28.1, '#D7383A', 0, 'DISCORD BOT'],
+  ['character-bot', 'character bot', -29.3, '#3FD47A', 0, 'DISCORD BOT'],
 ];
 /** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a
  *  blue machine on a blue wall has no edge. `[x, width, height]`. */
-export const ROW_PANEL = { x: -28.1, w: 5.6, h: 2.5 };
+export const ROW_PANEL = { x: -28.1, w: 4.3, h: 2.5 };
 
 export const ACCENT = '#3D7BE0';
 

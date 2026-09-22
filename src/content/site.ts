@@ -6,7 +6,7 @@ export const site = {
   fullName: 'Jordan Eldridge Labs',
   description: 'Jordan Eldridge Labs: automation for MSPs, shipped products, community tooling, and security work, all in one facility.',
   intro:
-    'JEL is where I keep everything I build. I build the platform a compliance MSP runs on and automate whatever I can reach. Outside work I ship products, build tools for the communities I play in, and do security research. Pick a wing.',
+    'JEL is where I keep everything I build. I build the platform a compliance MSP runs on and automate whatever I can reach. Outside work I ship products, build tools for the communities I play in, and do security research.',
   wings: {
     operations: {
       name: 'Operations',
@@ -16,7 +16,7 @@ export const site = {
     fabrication: {
       name: 'Fabrication',
       tagline: 'Products I ship.',
-      summary: 'Things built to be used by strangers: a SaaS, a hardware business, and open source that other people depend on.',
+      summary: 'Things built to be used by strangers: a SaaS, a hardware business, a game, and the utilities I open sourced along the way.',
     },
     recreation: {
       name: 'Recreation',
@@ -34,7 +34,7 @@ export const site = {
     fabrication: { title: 'Fabrication', lead: 'Products built to be used by strangers.' },
     recreation: { title: 'Recreation', lead: 'Tools for the games and communities I am part of.' },
     operations: { title: 'Operations', lead: 'Platform development and automation at a compliance MSP.' },
-    credentials: { title: 'Credentials', lead: 'Six plates on the wall. Each one earned.' },
+    credentials: { title: 'Credentials', lead: 'Six plates on the wall: networking, endpoints and offensive security.' },
     containment: { title: 'Containment', lead: 'Offensive security work. Most of it stays sealed until disclosure clears.' },
     file: { title: 'Personnel file', lead: 'Who is behind the door.' },
   } satisfies Record<StopId, { title: string; lead: string }>,

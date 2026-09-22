@@ -10,11 +10,19 @@ import { site } from '../content/site';
 import { buildTickerLines } from '../content/ticker';
 import streak from '../content/streak.json';
 import type { Wing } from '../content/schema';
+import { STATUS_LABEL, type Status } from '../content/status';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 const byWing = (w: Wing) => projects.filter((p) => p.data.wing === w);
 const tickerLines = buildTickerLines(projects.map((p) => ({ title: p.data.title, status: p.data.status })), streak.current);
 const stop = (id: (typeof STOPS)[number]['id']) => STOPS.find((s) => s.id === id)!;
+/**
+ * A wing where every project carries the same status says it once, at the head of the list, and the
+ * rows drop their plates. Four identical plates down the left of the Operations room read as a
+ * stack of the same component rather than as four pieces of work.
+ */
+const sharedStatus = (list: { data: { status: Status } }[]) =>
+  list.length > 1 && list.every((e) => e.data.status === list[0]!.data.status) ? list[0]!.data.status : null;
 const a = site.about;
 
 const wingStops = (['fabrication', 'recreation', 'operations'] as Wing[]).map((w) => {
@@ -33,14 +41,18 @@ const containmentRest = containmentList.filter((p) => p !== containmentFlagship)
     <p class="intro">{site.intro}</p>
   </StopSection>
 
-  {wingStops.map(({ w, flagship, rest }) => (
+  {wingStops.map(({ w, flagship, rest }) => {
+    const shared = sharedStatus([...(flagship ? [flagship] : []), ...rest]);
+    return (
     <StopSection id={w} title={site.stops[w].title} lead={site.stops[w].lead} wing={w} light={stop(w).light}>
       <div data-project-list>
-        {flagship && <FlagshipBay entry={flagship} />}
-        {rest.map((e) => <ProjectPlate entry={e} />)}
+        {shared && <p class="list-note">Everything in this wing is {STATUS_LABEL[shared].toLowerCase()}.</p>}
+        {flagship && <FlagshipBay entry={flagship} hideStatus={!!shared} />}
+        {rest.map((e) => <ProjectPlate entry={e} hideStatus={!!shared} />)}
       </div>
     </StopSection>
-  ))}
+    );
+  })}
 
   <StopSection id="credentials" title={site.stops.credentials.title} lead={site.stops.credentials.lead} light={stop('credentials').light}>
     <div data-project-list><CertWall size="hall" /></div>

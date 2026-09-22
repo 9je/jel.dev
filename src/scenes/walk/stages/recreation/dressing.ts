@@ -65,8 +65,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   rail.position.set(ROW_PANEL.x, ROW_PANEL.h + 0.02, Z0 + 0.07); await add(rail);
 
   const hotspots: Hotspot[] = [];
-  for (const [key, title, x, accent, ry] of CABINETS) {
-    const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7 }), x, 0, CABINET_Z, ry);
+  for (const [key, title, x, accent, ry, kind] of CABINETS) {
+    const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7, kind }), x, 0, CABINET_Z, ry);
     await add(cabinet);
     hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
     // Off the cabinet's own x, so a card still lands on its machine when the row is re-spaced.
@@ -151,7 +151,7 @@ function statusBoard(tv: THREE.Object3D): THREE.Group {
   const size = new THREE.Box3().setFromObject(tv).getSize(new THREE.Vector3());
   const face = new THREE.Mesh(new THREE.PlaneGeometry(size.x * 0.76, size.y * 0.66), new THREE.MeshStandardMaterial({
     color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.05,
-    emissiveMap: screenFace(['torn.bet  operational', 'Kayou  1,500 members', 'faction.tools  in flight'], ACCENT, 512, 360),
+    emissiveMap: screenFace(['torn.bet  operational', 'Kayou  1,500 members', 'character bot  in flight'], ACCENT, 512, 360),
   }));
   face.position.set(0, size.y * 0.54, size.z / 2 + 0.005); tv.add(face);
   return crtBracket(tv, size.x * 0.92);

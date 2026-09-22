@@ -9,4 +9,4 @@ exhibit:
   anchor: bug-bounty-1
 order: 10
 ---
-This bay is sealed until disclosure. What can be said now: the report was accepted, and the fix has shipped on the vendor's side.
+This bay is sealed until disclosure. What can be said now: the report was accepted, and the finding ends at a root shell over SSH on a host that was never meant to offer one. No fix is in flight on the vendor's side yet, so everything else stays in the bay.

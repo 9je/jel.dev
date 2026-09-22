@@ -19,7 +19,7 @@ const Heading = level === 1 ? 'h1' : 'h2';
         <span class="stop-more-handle" aria-hidden="true"></span>
         <span class="stop-more-label" data-stop-more-label>More</span>
       </summary>
-      <div class="stop-body"><slot /></div>
+      <div class="stop-body" data-lenis-prevent><slot /></div>
     </details>
   </div>
 </section>

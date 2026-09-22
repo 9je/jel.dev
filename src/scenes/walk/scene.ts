@@ -18,9 +18,6 @@ export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; 
 export interface WalkHandle {
   setProgress(t: number): void;
   anchors: Map<string, THREE.Vector3>;
-  /** How far each anchored exhibit reaches from its anchor, in metres. Zero for the anchors a stage
-   *  placed by hand, which already sit clear of the prop they belong to. */
-  anchorRadii: Map<string, number>;
   /** Registers where an exhibit's card should hang, measured off the prop, unless the stage that
    *  built it already named a point by hand. */
   ensureAnchor(h: Hotspot): void;
@@ -74,7 +71,6 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   let disposed = false;
   const store = await AssetStore.open(opts.tier);
   const anchors = new Map<string, THREE.Vector3>();
-  const anchorRadii = new Map<string, number>();
   const pacer = createPacer(4);
   const ctx: StageContext = { scene, tier: opts.tier, anchors, store, typeface: await typefaceReady, pace: pacer.pace };
   const grey = greybox(ctx);
@@ -303,14 +299,12 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
 
   return {
     setProgress(t) { target = t; stream(t); },
-    anchors, anchorRadii, camera, store,
+    anchors, camera, store,
     ensureAnchor(h) {
       if (anchors.has(h.id) || disposed) return;
       const box = new THREE.Box3().setFromObject(h.object);
       if (box.isEmpty()) return;
-      const sphere = box.getBoundingSphere(new THREE.Sphere());
-      anchors.set(h.id, sphere.center.clone());
-      anchorRadii.set(h.id, sphere.radius);
+      anchors.set(h.id, box.getCenter(new THREE.Vector3()));
     },
     hotspots,
     pick(nx, ny) {

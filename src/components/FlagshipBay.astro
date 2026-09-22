@@ -3,8 +3,8 @@ import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import { render } from 'astro:content';
 import StatusPlate from './StatusPlate.astro';
-interface Props { entry: CollectionEntry<'projects'> }
-const { entry } = Astro.props;
+interface Props { entry: CollectionEntry<'projects'>; hideStatus?: boolean }
+const { entry, hideStatus } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 const sealed = d.status === 'pending-release';
@@ -14,7 +14,7 @@ const sealed = d.status === 'pending-release';
 <details class="bay" data-flagship={entry.id} data-sealed={sealed || undefined} open>
   <summary class="bay-head">
     <h3 class="bay-title">{d.title}</h3>
-    <StatusPlate status={d.status} />
+    {!hideStatus && <StatusPlate status={d.status} />}
   </summary>
   <div class="bay-visual" aria-hidden="true">
     {d.image && !sealed ? <Image src={d.image} alt="" width={960} height={540} loading="eager" /> : <div class="bay-hex"></div>}
