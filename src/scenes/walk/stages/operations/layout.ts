@@ -47,6 +47,24 @@ export const FIRE_NORTH = 5;
  * curving north toward the credentials door, so the north one sits further up the hall than its
  * mirror: at z -28.6 it would have been 1.3 m off the walked line.
  */
+/**
+ * The service trunk overhead: one run the length of the hall, over the south cage line.
+ *
+ * Its z is the whole of it and it is here rather than buried in the dressing so a test can hold it
+ * to its reason. The walk stops at the east end of this hall and looks west, and the trunk runs
+ * west, so the trunk lies along the camera's own axis and its near end is at the camera's own x.
+ * Anything on that axis foreshortens without limit: over the aisle it was an ochre wedge laid
+ * across the top of the frame rather than a pipe, and nudging it 1.8 m off the walked line moved
+ * the wedge without shrinking it. Turning it into an L took the wedge away and put a bar across the
+ * whole top of the frame instead, which is the same object being loud in a new direction.
+ *
+ * The answer is lateral distance, not routing. At 4.8 m off the line the near end sits square
+ * beside the lens and falls outside the frame entirely, and what is left is a line entering at the
+ * right edge and running away to the west wall. That is also where the pipe belongs: over the cage
+ * in front of the south rack row, above the tray it feeds, rather than over the walkway.
+ */
+export const TRUNK = { y: 4.2, z: CAGE_Z.south };
+
 export const TAPE_Y = 0.95;
 export const STANCHIONS: [number, number][] = [[-73.4, -33.3], [-73.4, -27.2], [-74.7, -35.5], [-74.7, -25.5]];
 /** Post to post, both ends. Each run used to start on a point out by the west wall with nothing at

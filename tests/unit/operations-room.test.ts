@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CatmullRomCurve3, Vector3 } from 'three';
-import { CONTROL_POINTS } from '../../src/scenes/walk/path';
+import { CONTROL_POINTS, STOPS, cameraAt } from '../../src/scenes/walk/path';
 import { lights } from '../../src/scenes/walk/stages/operations/lighting';
-import { BATTEN_ROWS, BATTEN_XS, BATTEN_Y, CARTONS, STANCHIONS, TAPE_RUNS, X0 } from '../../src/scenes/walk/stages/operations/layout';
+import { BATTEN_ROWS, BATTEN_XS, BATTEN_Y, CARTONS, RACK_Z, STANCHIONS, TAPE_RUNS, TRUNK, X0 } from '../../src/scenes/walk/stages/operations/layout';
 
 // The walked line, as the path builds it, sampled finely enough to measure a clearance against.
 const curve = new CatmullRomCurve3(CONTROL_POINTS.map((p) => new Vector3(...p)), false, 'centripetal', 0.5);
@@ -33,6 +33,22 @@ describe('the server hall', () => {
       const x = a[0] + (b[0] - a[0]) * (k / 10), z = a[1] + (b[1] - a[1]) * (k / 10);
       expect(clearance(x, z)).toBeGreaterThanOrEqual(2.2);
     }
+  });
+
+  // The trunk runs west along the walk's own sight line and the hold parks on that line, so the
+  // trunk's near end sits at the camera's own x however long the pipe is. There is no distance
+  // along the run to buy: the only thing that keeps a 0.32 m cylinder from foreshortening into a
+  // wedge across the frame is how far off to the side it hangs. Over the aisle it was 1.8 m off and
+  // filled the top of the shot. Four metres puts the near end past the edge of a 50 degree frame.
+  it('hangs the trunk far enough off the walked line to clear the frame', () => {
+    const stop = STOPS.find((s) => s.id === 'operations')!;
+    const [t0, t1] = stop.hold;
+    for (let k = 0; k <= 20; k++) {
+      const { position } = cameraAt(t0 + (t1 - t0) * (k / 20));
+      expect(Math.abs(TRUNK.z - position.z)).toBeGreaterThanOrEqual(4);
+    }
+    // And it feeds the tray it hangs over, so the drops into it stay short.
+    expect(Math.abs(TRUNK.z - RACK_Z.south)).toBeLessThanOrEqual(2);
   });
 
   it('strings no tape through the flagship desk', () => {

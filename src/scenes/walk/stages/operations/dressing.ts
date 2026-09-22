@@ -8,7 +8,7 @@ import { labSteel } from '../../labs/materials';
 import { stanchion, tapeStrip } from '../../labs/signage';
 import { canvas, own, rng } from '../../labs/textures';
 import { radialTexture } from '../../textures';
-import { X0, W, XC, ZC, Z0, Z1, RACK_Z, CAGE_Z, RACK_XS, GATE_X, FIRE_NORTH, TAPE_Y, TAPE_RUNS, STANCHIONS, CARTONS } from './layout';
+import { X0, W, XC, ZC, Z0, Z1, RACK_Z, TRUNK, CAGE_Z, RACK_XS, GATE_X, FIRE_NORTH, TAPE_Y, TAPE_RUNS, STANCHIONS, CARTONS } from './layout';
 
 /** One rack's unit material and the seed that gives it its own beat. */
 export interface Blink { material: THREE.MeshStandardMaterial; seed: number }
@@ -83,23 +83,22 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // ---- Overhead -------------------------------------------------------------------------------
   // The trunk is the one warm line in the room and it runs wall to wall, so it reads as a service
-  // passing through rather than a pipe that stops in mid air. It hangs 1.8 m north of the walked
-  // line rather than over it: on the centreline the walk looks straight up the pipe's own axis and
-  // an 18 m cylinder foreshortens into a yellow wedge hanging in front of the lens. Off to one side
-  // it is a line running away to the far wall, which is the whole point of it. 1.8 m and no further,
-  // though: the hold already looks 2 m south of the line, and on a phone's 22 degrees of half frame
-  // anything much north of that is out of shot for the length of the room.
+  // passing through rather than a pipe that stops in mid air. `TRUNK.z` in the layout carries why
+  // it hangs where it does, which is the only thing about it that ever mattered.
   //
-  // The bundles leave it for the tray over every third rack on each side. They land on the tray
-  // rather than on the rack top, which is where a chord from the trunk would have wanted to go: the
-  // cages stand 2.6 m and a cable slung from the trunk to a 2.1 m rack top crosses the cage plane at
+  // The bundles leave it for the tray over the south rack row, every third rack along. They land on
+  // the tray rather than on the rack top, which is where a chord from the trunk would have wanted
+  // to go: the cages stand 2.6 m and a cable slung to a 2.1 m rack top crosses the cage plane at
   // about 2.3 m, which is a cable run straight through a wall of mesh. Over the top and into the
-  // tray is what the reference does and the only route that clears.
-  const trunkZ = ZC + 1.8;
-  await add(place(trunkPipe(W - 0.2), XC, 4.2, trunkZ));
-  for (const z of [RACK_Z.south, RACK_Z.north]) {
-    const sign = Math.sign(z - trunkZ);
-    for (const x of RACK_XS.filter((_, i) => i % 3 === 0)) await add(cableBundle([x, 4.05, trunkZ + sign * 0.15], [x, 4.06, z - sign * 0.18]));
+  // tray is what the reference does and the only route that clears. Only the south row is fed, now
+  // that the trunk sits over it. Slinging the same bundles 11 m to the north tray would hang six
+  // catenaries across the one clear band of ceiling the room has, to say a thing the north tray's
+  // own cable fill already says.
+  const { y: trunkY, z: trunkZ } = TRUNK;
+  await add(place(trunkPipe(W - 0.2), XC, trunkY, trunkZ));
+  const sign = Math.sign(RACK_Z.south - trunkZ);
+  for (const x of RACK_XS.filter((_, i) => i % 3 === 0)) {
+    await add(cableBundle([x, 4.05, trunkZ + sign * 0.15], [x, 4.06, RACK_Z.south - sign * 0.18]));
   }
 
   // ---- The service walls ----------------------------------------------------------------------
