@@ -320,7 +320,15 @@ export function attractScreen(title: string, accent = '#3D7BE0', seed = 1): THRE
  *  on one plane, rather than a lit panel with a stencil plane in front of it. Colour and emissive. */
 export function marqueeFace(title: string, accent = '#3D7BE0'): THREE.CanvasTexture {
   const [c, ctx] = canvas(512, 146);
-  ctx.fillStyle = accent; ctx.fillRect(0, 0, 512, 146);
+  // The plate is darkened until white lettering has something to sit on. Every marquee in the row
+  // keeps white letters, which is the arcade look, so the plate is what gives way: yellow carries
+  // nearly twice the luminance of blue, and white on it was the one pair in the row that could not
+  // be read. Anything already dark enough is printed as it was chosen.
+  const rgb = [1, 3, 5].map((n) => parseInt(accent.slice(n, n + 2), 16) / 255);
+  const lum = 0.21 * rgb[0]! + 0.72 * rgb[1]! + 0.07 * rgb[2]!;
+  const k = lum > 0.5 ? 0.5 / lum : 1;
+  ctx.fillStyle = `rgb(${rgb.map((v) => Math.round(v * k * 255)).join(',')})`;
+  ctx.fillRect(0, 0, 512, 146);
   ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, 512, 10); ctx.fillRect(0, 136, 512, 10);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   // A long title is condensed rather than shrunk. Michroma is a wide face, so setting a name like

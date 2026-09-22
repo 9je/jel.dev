@@ -149,8 +149,11 @@ export function signBox(text: string, opts: { w: number; h: number; accent?: num
   // the composer's bloom threshold, ACES rolled it off to paper white, and the name went with it.
   // A dark sign is the other way round and is nothing but the light that falls on it.
   const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({
-    color: opts.on ? 0x2c2c2c : 0xffffff, map, roughness: 0.4,
-    emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: opts.on ? 0.82 : 0,
+    // Rough, because a lit face at 0.4 takes a specular sheen off the nearest spot and the sheen
+    // is not multiplied by the base colour: it swept across the arcade sign and lifted the half of
+    // the name it crossed. Acrylic in a bay this old is dusty and does not gloss.
+    color: opts.on ? 0x2c2c2c : 0xffffff, map, roughness: opts.on ? 0.92 : 0.5,
+    emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: opts.on ? 0.7 : 0,
   }));
   face.name = 'face'; g.add(face);
   const strip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.03), new THREE.MeshStandardMaterial({
