@@ -69,6 +69,13 @@ export const CABINETS: [string, string, number, string, number, string][] = [
 ];
 /** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a
  *  blue machine on a blue wall has no edge. `[x, width, height]`. */
+/**
+ * The two mess tables against the north wall, as x. A chair stands at each end of each, one metre
+ * either side, and both of them face the table: `canteenChair` is built seated toward +z, so the
+ * chair west of a table turns +PI/2 and the chair east of it turns -PI/2.
+ */
+export const MESS_TABLES = [-27.2, -32.4];
+
 export const ROW_PANEL = { x: -28.1, w: 4.3, h: 2.5 };
 
 export const ACCENT = '#3D7BE0';

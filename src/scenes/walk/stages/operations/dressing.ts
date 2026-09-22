@@ -244,8 +244,11 @@ function scorch(rack: THREE.Group): { glow: THREE.MeshBasicMaterial } {
   const top = new THREE.PlaneGeometry(0.66, 0.8).rotateX(-Math.PI / 2).translate(0, 2.106, 0.15);
   const smudge = merged([front, top], soot); smudge.renderOrder = 1; rack.add(smudge);
 
-  const glow = new THREE.MeshBasicMaterial({ color: 0xff7a1e, alphaMap: radialTexture(64, 0.1), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
-  const ember = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.9).rotateX(-Math.PI / 2), glow);
+  // The pool of light the fire lays on the rack top. Bigger and stronger than it was: the room has
+  // no light to spare for the fire, so everything the fire lights is drawn, and at 0.35 on a
+  // 0.56 by 0.9 patch it lit almost nothing.
+  const glow = new THREE.MeshBasicMaterial({ color: 0xff7a1e, alphaMap: radialTexture(64, 0.1), transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending, depthWrite: false });
+  const ember = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 1.15).rotateX(-Math.PI / 2), glow);
   ember.position.set(0, 2.112, 0.05); ember.renderOrder = 2; ember.name = 'ember'; rack.add(ember);
   return { glow };
 }

@@ -62,14 +62,18 @@ export const FILE = { x: -67.85, z: 31.0 };
  * would actually have put them. The knocked mug moves further south again to make the room.
  *
  * That is out of the middle of the lamp's pool, which is where they were put so the cigar's smoke
- * would rise through the one warm light in the room. It still does: the lamp stands 0.8 m north of
- * the ashtray with its head turned down on the file, and the plume rises three quarters of a metre
- * into the spill off it.
+ * would rise through the one warm light in the room. It still does: the lamp stands a metre north
+ * of the ashtray with its head turned down on the file, and the plume rises three quarters of a
+ * metre into the spill off it.
+ *
+ * The first move south was not far enough. The folder is turned 1.14 rad to face the lens and its
+ * loose sheets slide out past the fold, so its footprint reaches most of a half metre south west of
+ * where the file itself stands, and the ashtray was inside that.
  */
-export const ASHTRAY: [number, number] = [-67.80, 30.72];
-export const GLASS: [number, number] = [-67.95, 30.45];
+export const ASHTRAY: [number, number] = [-67.72, 30.46];
+export const GLASS: [number, number] = [-67.93, 30.20];
 /** The mug, on its side where somebody knocked it. */
-export const MUG: [number, number] = [-67.85, 29.92];
+export const MUG: [number, number] = [-67.85, 29.62];
 
 /** The ceiling grid the glass room hangs, which is where the one cold ceiling spot has to sit:
  *  `lighting.ts` enumerates the lit troffers from these numbers exactly the way `ceilingGrid` does,

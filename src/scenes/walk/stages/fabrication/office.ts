@@ -263,9 +263,20 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
     // plinths are built per exhibit rather than as one instanced batch for exactly that reason.
     // The plinth's long side faces the camera, so its front plate turns with it.
     const exhibit = new THREE.Group(); exhibit.name = key;
+    // Plinth, plate and product all on one heading, and the product on the plinth's own centre line.
+    // It stood 0.14 m east of it and turned 0.35 rad off it, and both of those read as a thing
+    // somebody put down carelessly. The turn was the worse of the two: the row runs along the glass
+    // and the camera parks four metres off it, so the heading from the near plinth to the lens and
+    // the heading from the far one are 63 degrees apart. One shared turn cannot face all three at
+    // the camera, and the compromise faced none of them and left every product skew on its own cap.
+    // Square to the row is what a run of pedestals against a glass wall actually looks like, and at
+    // this spacing it puts every face within 40 degrees of the lens.
+    //
+    // The offset was there to keep the controller's cable clear of the plate's standoffs. The cable
+    // is shorter now instead.
     exhibit.add(place(plinth(store, i + 1), ex, 0, dz, Math.PI / 2));
     exhibit.add(place(nameplate(label), ex - 0.34, 1.045, dz, Math.PI / 2));
-    exhibit.add(place(make(), ex + 0.14, 1.045, dz, Math.PI / 2 + 0.35));
+    exhibit.add(place(make(), ex, 1.045, dz, Math.PI / 2));
     g.add(exhibit);
     hotspots.push({ id: key, kind: 'project', label, object: exhibit, stop: 'fabrication' });
     // The plate hangs to the right of its anchor, so the anchor sits past the product's right edge.

@@ -221,7 +221,7 @@ export function personnelSheet(lines: string[]): THREE.CanvasTexture {
   const [name = '', role = '', origin = '', ...records] = lines;
   // Buff rather than white. Under the lamp the form is the brightest thing in the room by a long
   // way, and a white ground clips to flat paper with nothing on it at all.
-  ctx.fillStyle = '#ddd2b6'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#cbbf9e'; ctx.fillRect(0, 0, w, h);
   ctx.textBaseline = 'middle';
   // Header band. Black, full bleed, a fifth of the sheet, the name reversed out of it.
   ctx.fillStyle = '#0c1014'; ctx.fillRect(0, 0, w, 86);
@@ -230,8 +230,8 @@ export function personnelSheet(lines: string[]): THREE.CanvasTexture {
   // The photograph: a head and shoulders blocked out on grey inside a heavy black border. At the
   // size the form is read from the hold this is the one element that says personnel file at all.
   ctx.fillStyle = '#0c1014'; ctx.fillRect(20, 110, 152, 186);
-  ctx.fillStyle = '#9d9787'; ctx.fillRect(28, 118, 136, 170);
-  ctx.fillStyle = '#5d584e'; ctx.beginPath(); ctx.arc(96, 176, 38, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7d776a'; ctx.fillRect(28, 118, 136, 170);
+  ctx.fillStyle = '#3a3730'; ctx.beginPath(); ctx.arc(96, 176, 38, 0, Math.PI * 2); ctx.fill();
   ctx.fillRect(52, 222, 88, 66);
   // Two fields beside it, each a value on a heavy rule.
   [role, origin].forEach((value, i) => {

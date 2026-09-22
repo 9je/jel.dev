@@ -182,7 +182,10 @@ export function crtSet(face: THREE.Texture): THREE.Group {
   for (const fx of [-1, 1]) for (const fz2 of [-1, 1]) {
     put(new THREE.CylinderGeometry(0.022, 0.026, 0.018, 8), fx * (W / 2 - 0.05), 0.009, fz2 * (D / 2 - 0.05));
   }
-  g.add(merged(body, carcass(0x2a2b28, 0.68)));
+  // Light grey, not near black. A set moulded in 0x2a2b28 in a room lit at dusk is a black
+  // rectangle with a bright patch on it, which is Jordan's "hard to tell its even a crt": the
+  // silhouette carries all of what the object is, and a silhouette needs a value to be read at.
+  g.add(merged(body, carcass(0x8d9089, 0.66)));
 
   // The knobs, the grille slots and the handle, in the lighter plastic the trim was always moulded
   // in. A set like this has one big tuning knob and one small one, and the speaker under them.
@@ -194,18 +197,99 @@ export function crtSet(face: THREE.Texture): THREE.Group {
   // The handle: a bar on two posts, folded flat along the top the way it travels.
   trim.push(new THREE.BoxGeometry(0.2, 0.018, 0.022).translate(0, H + 0.014, -0.02));
   for (const hx of [-1, 1]) trim.push(new THREE.BoxGeometry(0.02, 0.03, 0.022).translate(hx * 0.11, H + 0.006, -0.02));
-  g.add(merged(trim, carcass(0x7f7a6e, 0.6)));
+  g.add(merged(trim, carcass(0x3a3c38, 0.55)));
 
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(open.w, open.h), new THREE.MeshStandardMaterial({
-    map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.7, roughness: 0.28, metalness: 0,
+    map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 1.0, roughness: 0.28, metalness: 0,
   }));
   screen.position.set(-0.06, H / 2, fz - 0.002); screen.name = 'screen'; g.add(screen);
+  const badge = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.056), new THREE.MeshStandardMaterial({ map: crtBadge(), roughness: 0.6 }));
+  badge.position.set(-0.06, H / 2 - open.h / 2 - 0.045, fz + 0.002); g.add(badge);
   // The glass over it: one pane catching the room, which is what stops a lit rectangle reading as a
   // sticker on the front of a box.
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(open.w + 0.01, open.h + 0.01), new THREE.MeshPhysicalMaterial({
     color: 0x0b1117, transparent: true, opacity: 0.12, roughness: 0.06, metalness: 0, depthWrite: false,
   }));
   glass.position.set(-0.06, H / 2, fz + 0.012); glass.renderOrder = 2; g.add(glass);
+  return g;
+}
+
+/** The bar under a portable set's screen, with the maker's name on it. Small, and the only graphic
+ *  on the whole object: it is what tells a viewer which way up a grey box is. */
+function crtBadge(): THREE.CanvasTexture {
+  const [c, ctx] = canvas(256, 48);
+  ctx.fillStyle = '#2b2d2a'; ctx.fillRect(0, 0, 256, 48);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(0, 0, 256, 2);
+  ctx.fillStyle = '#c9cdc6'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '600 20px Michroma, system-ui, sans-serif';
+  ctx.fillText('JEL', 78, 25);
+  ctx.fillStyle = '#6f746d'; ctx.font = '600 13px Michroma, system-ui, sans-serif';
+  ctx.fillText('PORTABLE COLOUR', 168, 26);
+  return own(c);
+}
+
+/**
+ * A canteen table: a pale laminate top with a dark edge band on a steel tube frame, origin at the
+ * floor on its own centre, long axis along x. Three draw calls.
+ *
+ * The break room ate off Poly Haven's wooden table under a gingham cloth, with white plastic garden
+ * chairs round it, which is what Jordan meant by the furniture not making sense: that is a pub
+ * garden, and this is the canteen of a facility whose every other surface is laminate, steel and
+ * painted block. Nothing else had to change for the room to stop reading as somebody's patio.
+ */
+export function canteenTable(w = 1.6, d = 0.8, h = 0.74): THREE.Group {
+  const g = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.026, d), carcass(0xd8dcd6, 0.42));
+  top.position.y = h - 0.013; g.add(top);
+  // The edge band, a shade under the top so it reads as a lipping rather than as a second slab.
+  const band = new THREE.Mesh(new THREE.BoxGeometry(w + 0.008, 0.016, d + 0.008), carcass(0x39434b, 0.6));
+  band.position.y = h - 0.033; g.add(band);
+  const steel: THREE.BufferGeometry[] = [];
+  const legX = w / 2 - 0.11, legZ = d / 2 - 0.09;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    steel.push(new THREE.CylinderGeometry(0.022, 0.022, h - 0.04, 8).translate(sx * legX, (h - 0.04) / 2, sz * legZ));
+    steel.push(new THREE.CylinderGeometry(0.026, 0.03, 0.012, 8).translate(sx * legX, 0.006, sz * legZ));
+  }
+  // A rail down each side and one across, which is what stops a tube frame reading as four sticks.
+  for (const sz of [-1, 1]) steel.push(new THREE.CylinderGeometry(0.016, 0.016, legX * 2, 8).rotateZ(Math.PI / 2).translate(0, h * 0.34, sz * legZ));
+  steel.push(new THREE.CylinderGeometry(0.016, 0.016, legZ * 2, 8).rotateX(Math.PI / 2).translate(0, h * 0.34, 0));
+  g.add(merged(steel, labSteel(0x8e9aa2)));
+  return g;
+}
+
+/**
+ * A canteen chair: a moulded polypropylene shell on a splayed steel tube frame, origin at the floor
+ * on its own centre, seated facing +z. Two draw calls.
+ *
+ * Facing is the whole of why it is here rather than a model off the shelf. A chair is the one piece
+ * of furniture in a room that tells you which way a person was pointed, and the break room's were
+ * turned to headings nobody had checked: both chairs at each table faced away from the table they
+ * belonged to, which is what Jordan read as random directions. A chair built with a stated facing
+ * can be aimed at the thing it belongs to and a test can hold it there.
+ */
+export function canteenChair(shade = 0x2f5d8c): THREE.Group {
+  const g = new THREE.Group();
+  const SEAT = 0.45, W = 0.42, D = 0.42;
+  const shell = new THREE.MeshStandardMaterial({ color: shade, roughness: 0.55, metalness: 0.05 });
+  const moulded: THREE.BufferGeometry[] = [
+    // The pan, dished by tipping it back a couple of degrees, and a lip along its front edge.
+    new THREE.BoxGeometry(W, 0.032, D).rotateX(-0.05).translate(0, SEAT, 0),
+    new THREE.BoxGeometry(W, 0.028, 0.05).rotateX(0.35).translate(0, SEAT - 0.012, D / 2 - 0.01),
+    // The back, leaned and standing off the pan on its own two stubs.
+    new THREE.BoxGeometry(W, 0.36, 0.03).rotateX(0.16).translate(0, SEAT + 0.24, -D / 2 - 0.03),
+  ];
+  for (const sx of [-1, 1]) moulded.push(new THREE.BoxGeometry(0.05, 0.1, 0.03).rotateX(0.16).translate(sx * 0.16, SEAT + 0.05, -D / 2 - 0.015));
+  g.add(merged(moulded, shell));
+
+  const steel: THREE.BufferGeometry[] = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    // Splayed: the foot stands 4 cm outside the seat corner it hangs from, which is the difference
+    // between a chair and a stool with a back on it.
+    const lean = 0.09 * (sz > 0 ? 1 : -1);
+    steel.push(new THREE.CylinderGeometry(0.016, 0.016, SEAT, 8).rotateX(lean).rotateZ(-0.07 * sx).translate(sx * (W / 2 - 0.04), SEAT / 2, sz * (D / 2 - 0.05)));
+  }
+  for (const sz of [-1, 1]) steel.push(new THREE.CylinderGeometry(0.013, 0.013, W - 0.08, 8).rotateZ(Math.PI / 2).translate(0, SEAT * 0.4, sz * (D / 2 - 0.05)));
+  g.add(merged(steel, labSteel(0x8e9aa2)));
   return g;
 }
 
@@ -709,70 +793,140 @@ export function pinboard(w: number, h: number, label = 'ROSTER'): THREE.Group {
 }
 
 /**
- * A manila folder standing open on a desk: two leaves hinged at the fold, the near one propped up
- * on the fold with the form on it, a cut tab on the propped leaf, a clip across its head and a few
- * loose sheets fanned out from under the flat one. Origin at the desk top on the fold, leaves along
- * z, the propped one toward +z and facing +z. The form is a child named `page`, so a room can aim a
- * lamp at it and a test can find it. Five draw calls.
+ * A leaf of card or paper, laid in the xz plane and bowed. `bow` is how far the free edge lifts off
+ * flat at its centre, and `fromFold` says which end of `d` the fold is at, since a leaf curls away
+ * from where it is held and flattens where it is creased.
  *
- * The lift is fifty degrees rather than the eight it was drawn with. A folder lying flat on a desk
- * is read from seven metres back at fifteen degrees off the horizontal, and at that angle an A4
- * leaf is a seventy by twenty pixel sliver with nothing on it anybody can see. Propped, the same
- * leaf is a card facing the lens, and a room turns the whole folder so that card faces the camera.
- * The leaves are 0.44 by 0.32, which is a dossier rather than a document wallet: at the distance
- * the control room parks the camera it is the difference between a form a hundred and forty pixels
- * across and one a hundred and ten across, and the form is the point of the room.
+ * This is the whole difference between paper and a panel. Card is never flat: held at one edge it
+ * takes a shallow cylindrical curve, and it is the moving highlight across that curve that says
+ * paper. A box says laminate.
+ */
+function leaf(w: number, d: number, bow: number, fromFold = true): THREE.BufferGeometry {
+  const g = new THREE.PlaneGeometry(w, d, 12, 10).rotateX(-Math.PI / 2);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const u = (2 * pos.getX(i)) / w;
+    const t = (pos.getZ(i) + d / 2) / d;
+    const v = fromFold ? t : 1 - t;
+    pos.setY(i, bow * (1 - u * u) * v * v);
+  }
+  pos.needsUpdate = true; g.computeVertexNormals();
+  return g;
+}
+
+/** The printed label on the folder's cut tab. */
+function fileTab(): THREE.CanvasTexture {
+  const [c, ctx] = canvas(256, 72);
+  ctx.fillStyle = '#c8b183'; ctx.fillRect(0, 0, 256, 72);
+  ctx.fillStyle = '#f0ead8'; ctx.fillRect(10, 12, 236, 48);
+  ctx.fillStyle = '#8a3a2c'; ctx.fillRect(10, 12, 236, 6);
+  ctx.fillStyle = '#12171d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '600 24px Michroma, system-ui, sans-serif';
+  ctx.fillText('PERSONNEL', 128, 42);
+  return own(c);
+}
+
+/**
+ * A manila folder standing open on a desk: two bowed leaves hinged at a soft fold, the near one
+ * propped up with the form on it, a printed tab standing above its head, a clip on one corner, a
+ * second page on the flat leaf and loose sheets sliding out from under it. Origin at the desk top
+ * on the fold, leaves along z, the propped one toward +z and facing +z. The form is a child named
+ * `page`, so a room can aim a lamp at it and a test can find it. Six draw calls.
  *
- * Which is also what went wrong with it. A rectangle propped at fifty degrees behind a flat
- * rectangle is a laptop, and that is what Jordan has called it every time he has seen it: "i cant
- * read the laptop", then "i wanna make the laptop look better". The silhouette was doing all the
- * talking and it was saying the wrong word. So the silhouette is broken on purpose: the tab stands
- * above the top edge where no lid has anything, the clip crosses the head, the loose sheets slide
- * out past the fold at angles no hinge would allow, and the leaves are thick enough to read as a
- * wad of paper rather than a panel. The angle stays, because the form still has to be read.
+ * The lift is fifty degrees. A folder lying flat on a desk is read from four metres at fifteen
+ * degrees off the horizontal, and at that angle a leaf is a sliver with nothing on it anybody can
+ * see. Propped, the same leaf is a card facing the lens. The leaves are 0.44 by 0.32, a dossier
+ * rather than a document wallet, because the form is the point of the room.
+ *
+ * Which is also everything that has gone wrong with it. Propped, it read as a laptop, so it got a
+ * tab and a clip and loose sheets to break the silhouette, and Jordan's next note was that the
+ * object itself was "cheap and blocky". Both are the same fault seen twice: it was built out of
+ * boxes. A box has six flat faces and twelve hard edges, and there is no lighting and no texture
+ * that will make one look like paper.
+ *
+ * So there are no boxes in it. Every leaf and every sheet is a bowed surface, because card held at
+ * one edge takes a shallow cylindrical curve and it is the highlight travelling across that curve
+ * that reads as paper. The fold is a soft round rather than a mitre. The clip is a bent strip. The
+ * leaves carry no thickness at all, which is what a sheet of card looks like from four metres, and
+ * the bulk that thickness was standing in for comes from the paper in the folder instead.
  */
 export function openFile(page?: THREE.Texture): THREE.Group {
   const g = new THREE.Group();
-  const LEAF = 0.44, DEEP = 0.32, THICK = 0.013;
-  const card = new THREE.MeshStandardMaterial({ color: 0xc2a469, roughness: 0.92, side: THREE.DoubleSide });
-  const paper = new THREE.MeshStandardMaterial({ color: 0xe8e4d8, roughness: 0.95, side: THREE.DoubleSide });
+  const LEAF = 0.44, DEEP = 0.32;
+  // Deeper manila than it was. The room's one warm light sits 0.4 m over this folder at close
+  // range, so everything on it runs two stops hot: at 0xc2a469 the card clipped to the same near
+  // white as the form lying on it and the two merged into one cream blob with no edge between them.
+  // A folder has to be darker than its contents or it is not a folder.
+  const card = new THREE.MeshStandardMaterial({ color: 0x9c7c3e, roughness: 0.92, side: THREE.DoubleSide });
+  const paper = new THREE.MeshStandardMaterial({ color: 0xbdb7a6, roughness: 0.95, side: THREE.DoubleSide });
 
-  // The loose sheets first, so the flat leaf lies on top of them and they read as the bottom of the
-  // wad rather than as litter beside it. Each slides out past the fold on its own bearing, which is
-  // the thing no laptop has.
+  // The loose sheets first, so the flat leaf lies over them. Each slides out past the fold on its
+  // own bearing and takes its own curl, which is the thing no laptop has.
+  // Two, spread and turned well apart. Three stacked nearly on top of each other at the same size
+  // merged into one pale puddle under the folder with no sheet readable in it.
   const loose: THREE.BufferGeometry[] = [];
-  for (const [dx, dz, turn] of [[0.03, -0.09, 0.14], [-0.05, -0.05, -0.1], [0.01, -0.14, 0.05]] as [number, number, number][]) {
-    loose.push(new THREE.BoxGeometry(LEAF - 0.02, 0.002, DEEP - 0.02).rotateY(turn).translate(dx, 0.001, -DEEP / 2 + dz));
+  for (const [dx, dz, turn, bow] of [[-0.09, -0.06, -0.26, 0.008], [0.07, -0.15, 0.19, 0.01]] as [number, number, number, number][]) {
+    loose.push(leaf(LEAF - 0.07, DEEP - 0.06, bow, false).rotateY(turn).translate(dx, 0.001, -DEEP / 2 + dz));
   }
   g.add(merged(loose, paper));
 
-  const flat = new THREE.Mesh(new THREE.BoxGeometry(LEAF, THICK, DEEP), card);
-  flat.position.set(0, THICK / 2, -DEEP / 2); g.add(flat);
+  // The flat leaf, bowed up a little toward its free edge the way card lifts off a desk.
+  const flat = new THREE.Mesh(leaf(LEAF, DEEP, 0.012, false), card);
+  flat.position.set(0, 0.004, -DEEP / 2); g.add(flat);
+  // A second page on it, turned a couple of degrees off square the way a loose sheet sits. The leaf
+  // was bare, and a bare panel under a propped one is the last thing still saying laptop: it reads
+  // as the deck a keyboard would be on.
+  // A page on the flat leaf, well off square and overhanging its front corner. Laid straight it
+  // filled the leaf edge to edge, and a white rectangle under a propped one is a keyboard deck.
+  const under = new THREE.Mesh(
+    leaf(LEAF * 0.8, DEEP * 0.8, 0.012, false).rotateY(0.22),
+    new THREE.MeshStandardMaterial({ map: paperSheet(4), roughness: 0.94, side: THREE.DoubleSide }),
+  );
+  under.position.set(0.05, 0.007, -DEEP / 2 - 0.05); g.add(under);
+
   // The propped leaf swings about the fold, so it hangs off a pivot at the fold rather than sitting
   // at its own centre and turning, which would drive its hinge edge down through the desk.
-  const hinge = new THREE.Group(); hinge.rotation.x = -0.87; g.add(hinge);
-  const lifted = new THREE.Mesh(new THREE.BoxGeometry(LEAF, THICK, DEEP), card);
-  lifted.position.set(0, THICK / 2, DEEP / 2); hinge.add(lifted);
-  // The cut tab, standing above the leaf's far edge where a folder carries its label, and the clip
-  // across the head of the form. Between them they are most of what says "folder" from four metres.
-  const trim: THREE.BufferGeometry[] = [];
-  trim.push(new THREE.BoxGeometry(0.15, THICK, 0.045).translate(-0.11, THICK / 2, DEEP + 0.02));
-  hinge.add(merged(trim, card));
-  // The clip sits at negative x, which is the right hand end of the printed head: the form is laid
-  // on with a half turn about its own normal so the type is not upside down, and that turn puts the
-  // sheet's right at the leaf's -x. At +x the clip landed on the name.
-  const clip: THREE.BufferGeometry[] = [
-    new THREE.BoxGeometry(0.06, 0.006, 0.05).translate(-0.165, THICK + 0.013, DEEP - 0.05),
-    new THREE.BoxGeometry(0.06, 0.02, 0.008).translate(-0.165, THICK + 0.005, DEEP - 0.026),
-  ];
-  hinge.add(merged(clip, labSteel(0x8f979d)));
-  // Half a turn about the sheet's own normal before it is laid down, or the form is typed upside
-  // down on the leaf: laying a plane flat maps the top of its canvas toward the fold, which is the
-  // bottom of the card once the leaf is propped.
-  const form = new THREE.PlaneGeometry(LEAF * 0.92, DEEP * 0.92).rotateZ(Math.PI).rotateX(-Math.PI / 2);
-  const sheet = new THREE.Mesh(form, new THREE.MeshStandardMaterial({ map: page, roughness: 0.9 }));
-  sheet.position.set(0, THICK + 0.002, DEEP / 2); sheet.name = 'page';
-  hinge.add(sheet);
+  // Sixty eight degrees, not fifty. Fifty is the angle a laptop lid sits at, and every note this
+  // object has ever attracted has come back to that silhouette. Near upright it reads as a folder
+  // somebody stood up to read, and it is also the better angle for the form: the hold looks down
+  // fifteen degrees, so at this lift the sheet faces the lens within about seven.
+  const hinge = new THREE.Group(); hinge.rotation.x = -1.18; g.add(hinge);
+  const lifted = new THREE.Mesh(leaf(LEAF, DEEP, 0.016), card);
+  lifted.position.set(0, 0.004, DEEP / 2); hinge.add(lifted);
+  // The form, on the same bow as the leaf under it so the type curves with the card.
+  const sheet = new THREE.Mesh(
+    // Half a turn about the sheet's own normal before it is laid down, or the form is typed upside
+    // down: laying a plane flat maps the top of its canvas toward the fold, which is the bottom of
+    // the card once the leaf is propped.
+    //
+    // And the bow is built from the far end, because that half turn will invert it. Built the same
+    // way round as the leaf, the form came out curling up at the fold while the leaf curled up at
+    // the free edge, so the two crossed and the card arched over the top third of the form: the
+    // black head of the sheet disappeared behind a wave of manila.
+    leaf(LEAF * 0.92, DEEP * 0.92, 0.016, false).rotateY(Math.PI),
+    new THREE.MeshStandardMaterial({ map: page, roughness: 0.9, side: THREE.DoubleSide }),
+  );
+  sheet.position.set(0, 0.008, DEEP / 2); sheet.name = 'page'; hinge.add(sheet);
+
+  // The cut tab above the head of the propped leaf, with its label printed on it.
+  const tab = new THREE.Mesh(leaf(0.15, 0.05, 0.003).rotateY(Math.PI), new THREE.MeshStandardMaterial({ map: fileTab(), roughness: 0.92, side: THREE.DoubleSide }));
+  tab.position.set(-0.11, 0.004, DEEP + 0.023); hinge.add(tab);
+
+  // The clip: a strip of steel bent over the corner. At negative x, which is the right hand end of
+  // the printed head, because the form is laid on with a half turn and that turn puts the sheet's
+  // right at the leaf's -x. At +x the clip landed on the name.
+  // Straddling the head of the leaf rather than sitting inside it. At 0.042 down it was a grey
+  // square in the middle of the form's printed name band, which reads as a sticker: a clip has to
+  // be seen to be gripping an edge.
+  const jaw = leaf(0.045, 0.035, 0.003).translate(-0.168, 0.015, DEEP - 0.004);
+  const nose = new THREE.CylinderGeometry(0.007, 0.007, 0.045, 8).rotateZ(Math.PI / 2).translate(-0.168, 0.011, DEEP + 0.013);
+  // Dark steel, not bright. Under this lamp 0x9aa5ad clipped to a flat white square and read as a
+  // sticker rather than as a clip.
+  hinge.add(merged([jaw, nose], labSteel(0x59626a)));
+
+  // The fold: a soft round along the crease rather than the mitre two boxes meet at.
+  const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, LEAF, 10, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), card);
+  spine.position.y = 0.004; g.add(spine);
   return g;
 }
 

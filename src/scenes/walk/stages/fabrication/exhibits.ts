@@ -46,7 +46,7 @@ function stand(g: THREE.Group, tilt: THREE.Group, pivot: number, opts: { w: numb
  * props one.
  */
 export function controller(model: THREE.Object3D): THREE.Group {
-  const WIDTH = 0.66, LEAN = 0.45;
+  const WIDTH = 0.66, LEAN = 0.8;
   const g = new THREE.Group();
   model.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(model);
@@ -58,17 +58,24 @@ export function controller(model: THREE.Object3D): THREE.Group {
   // to the cap. The real grips sit a touch inside that corner, which is a millimetre or two of air.
   const pivot = thick * Math.cos(LEAN) + half * Math.sin(LEAN) + 0.002;
   const tilt = new THREE.Group(); tilt.rotation.x = LEAN; tilt.position.y = pivot; tilt.add(model); g.add(tilt);
-  const riser = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.14), shell(0x1b2129, 0.7, 0.2));
-  riser.position.set(0, 0.07, -0.23); g.add(riser);
-  // The cable, off the top of the shell and away across the cap short of the label plate.
+  // The riser is cut to the shell rather than fixed at 0.14: the lean sets where the back underside
+  // of the controller ends up, so a block of a fixed height either holds it off the cap or stands
+  // clear of it under a bigger lean. This one reaches from the cap to that corner exactly.
+  const backY = 2 * half * Math.sin(LEAN) + 0.002;
+  const backZ = -thick * Math.sin(LEAN) - half * Math.cos(LEAN);
+  const riser = new THREE.Mesh(new THREE.BoxGeometry(0.34, backY, 0.14), shell(0x1b2129, 0.7, 0.2));
+  riser.position.set(0, backY / 2, backZ); g.add(riser);
+  // The cable, off the top of the shell and away across the cap short of the label plate. It used
+  // to run to -0.36, which is where the plate's standoffs stand now the product sits on the
+  // plinth's own centre line.
   const top = new THREE.Vector3(0, 0, -half).applyAxisAngle(new THREE.Vector3(1, 0, 0), LEAN).add(new THREE.Vector3(0, pivot, 0));
-  const end = new THREE.Vector3(0, 0.012, -0.36);
+  const end = new THREE.Vector3(0, 0.012, -0.26);
   const run = end.clone().sub(top), len = run.length();
   const lead = new THREE.CylinderGeometry(0.009, 0.009, len, 8);
   lead.rotateX(Math.atan2(run.z, run.y));
   const cable = new THREE.Mesh(lead, shell(0x9aa4ac, 0.7, 0.1)); cable.position.copy(top.clone().add(end).multiplyScalar(0.5)); g.add(cable);
   const curl = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.009, 6, 18, Math.PI * 1.45).rotateX(Math.PI / 2), shell(0x9aa4ac, 0.7, 0.1));
-  curl.position.set(0.06, 0.012, -0.4); g.add(curl);
+  curl.position.set(0.06, 0.012, -0.3); g.add(curl);
   return g;
 }
 
@@ -80,7 +87,12 @@ export function controller(model: THREE.Object3D): THREE.Group {
  */
 export function key(): THREE.Group {
   const g = new THREE.Group();
-  const LEAN = 0.6, PIVOT = 0.15;
+  // Raked to 1.15 rather than 0.6. At 0.6 the key is 34 degrees off the cap, which from the hold is
+  // a key seen almost down its own plane: the bow foreshortens into a sliver and the bits along the
+  // shaft disappear. Near upright it is the silhouette a key is recognised by, presented flat to
+  // the lens. The old note against standing it up was about standing it on its end, which turns it
+  // into a lollipop, not about raising the rake.
+  const LEAN = 1.15, PIVOT = 0.2;
   const tilt = new THREE.Group(); tilt.rotation.x = LEAN; tilt.position.y = PIVOT; g.add(tilt);
   const steel = [
     new THREE.TorusGeometry(0.105, 0.03, 10, 28).translate(-0.22, 0, 0),

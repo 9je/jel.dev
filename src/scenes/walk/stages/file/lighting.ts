@@ -35,7 +35,12 @@ export function lights(): Placement[] {
   return [
     { kind: 'spot', position: [X1 + 6, 3.4, ZC + 1], target: [XC + 4.5, 0.4, ZC + 1.5], color: 0xe0813a, intensity: 11, distance: 20, angle: Math.PI / 8, penumbra: 0.85, decay: 1.6 },
     { kind: 'spot', position: [XC + 0.5, H - 0.1, ZC], target: [XC + 0.5, 0, ZC], color: 0xbcd2dc, intensity: 13, distance: 10, angle: Math.PI / 2.6, penumbra: 0.9, decay: 1.7 },
-    { kind: 'point', position: [FILE.x - 0.2, DESK.top + 0.4, FILE.z - 0.12], color: 0xffc98a, intensity: 1.9, distance: 1.6, decay: 2 },
+    // 1.15, down from 1.9. Everything within half a metre of this lamp was running two stops hot:
+    // a mid manila folder clipped to pale cream, the form's buff ground to flat white with the type
+    // gone out of it, and a steel clip to a white square. The point of the lamp is that the file is
+    // the one warm thing in a cold room, not that it is the one blown thing in it, and the room
+    // still reads warm at this level because nothing else in it is lit at all.
+    { kind: 'point', position: [FILE.x - 0.2, DESK.top + 0.4, FILE.z - 0.12], color: 0xffc98a, intensity: 1.15, distance: 1.7, decay: 2 },
     { kind: 'point', position: [DESK.x + 0.3, DESK.top + 0.36, 33.2], color: 0x6ec1d6, intensity: 1.4, distance: 1.8, decay: 2 },
   ];
 }

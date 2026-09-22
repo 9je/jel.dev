@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { cableTray, papers } from '../../labs/props';
-import { arcadeCabinet, crtBracket, drinksMachine, fridge, kitchenette, locker, poster, splashback } from '../../labs/furniture';
+import { arcadeCabinet, canteenChair, canteenTable, crtBracket, drinksMachine, fridge, kitchenette, locker, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
 import { screenFace } from '../../labs/textures';
-import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, ROW_PANEL } from './layout';
+import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
 
@@ -75,7 +75,11 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The sign over the row, on the wall above the marquees. A lit box at the head of an aisle is how
   // a building this size tells you what a corner of a room is for, and it is what makes the row the
   // thing you look at on the way in rather than the machines.
-  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'BREAK ROOM' }), -28.1, 2.28, Z0 + 0.13));
+  // The eyebrow reads JEL LABS, the way every other lit sign in the building does. It said BREAK
+  // ROOM, which is the room the sign is hanging in: a facility signs the thing you are walking up
+  // to, not the room you are already standing in, and "BREAK ROOM / ARCADE" read as a label for the
+  // whole room rather than for the three machines under it.
+  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'JEL LABS' }), -28.1, 2.28, Z0 + 0.13));
 
   // ---- South wall, west of the row: the machines --------------------------------------------------
   // Past the cabinets, where they are the backdrop the row stands against and the light that leaks
@@ -103,10 +107,24 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // ---- North wall: the quiet side ---------------------------------------------------------------
   await add(place(statusBoard(prop('tv')), -29.6, 2.05, Z1 - 0.02, Math.PI));
 
-  await add(once(prop('table'), -27.2, 0, Z1 - 0.55, Math.PI));
-  await add(once(prop('table'), -32.4, 0, Z1 - 0.55, Math.PI + 0.06));
-  await add(repeat(prop('chair'), [[-28.5, 0, Z1 - 0.6, -Math.PI / 2], [-25.9, 0, Z1 - 0.5, Math.PI / 2 + 0.2], [-33.7, 0, Z1 - 0.6, -Math.PI / 2 - 0.15]]));
-  const fallen = once(prop('chair'), -31.1, 0.29, Z1 - 0.85, 1.2); fallen.rotation.z = Math.PI / 2; await add(fallen);
+  // Two canteen tables against the wall with a chair at each end, and every chair turned to face
+  // the table it belongs to. Both chairs at both tables used to face away from theirs, which is
+  // what reads as random: a chair is the one piece of furniture in a room that says which way a
+  // person was pointed, so a wrong heading on one is louder than a wrong heading on anything else.
+  //
+  // The ends only. A chair on the south side of either table would stand its back 2.4 m off the
+  // walked line, inside the 2.6 m this room keeps clear either side of it.
+  for (const tx of MESS_TABLES) {
+    await add(place(canteenTable(1.6, 0.8), tx, 0, Z1 - 0.62, 0));
+    await add(place(canteenChair(), tx - 1.02, 0, Z1 - 0.62, Math.PI / 2));
+    await add(place(canteenChair(), tx + 1.02, 0, Z1 - 0.62, -Math.PI / 2));
+  }
+  // One pushed back and turned out from the table, and one on its side where it went over. Both are
+  // placed rather than scattered: the room is meant to read as left in a hurry, not as never having
+  // been laid out at all.
+  await add(place(canteenChair(), -30.1, 0, Z1 - 1.3, -1.1));
+  const fallen = place(canteenChair(), -31.1, 0.24, Z1 - 1.15, 1.2);
+  fallen.rotation.z = Math.PI / 2; await add(fallen);
   await add(place(poster('SAFETY FIRST !', 0.6, 0.85, 3), -33.4, 1.85, Z1 - 0.04, Math.PI));
   await add(once(prop('sofa'), -34.6, 0, Z1 - 0.62, Math.PI + 0.05));
   await add(once(prop('bin'), -30.4, 0, Z1 - 0.5));
@@ -123,10 +141,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The low table stands beside the sofas rather than in front of them: 2.6 m of clearance either
   // side of the walk leaves 1.4 m of depth against the wall, and a sofa and a coffee table in front
   // of it is 2 m. Along the wall it is the same three pieces and it keeps the gangway.
-  const low = prop('table');
-  const topY = new THREE.Box3().setFromObject(low).max.y;
-  await add(once(low, -52.9, 0, Z0 + 0.55, 0.08));
-  await add(once(prop('tea_set'), -52.9, topY, Z0 + 0.5, 1.4));
+  const LOW_H = 0.42;
+  await add(place(canteenTable(1.2, 0.6, LOW_H), -52.9, 0, Z0 + 0.62, 0.08));
+  await add(once(prop('tea_set'), -52.9, LOW_H, Z0 + 0.58, 1.4));
 
   // North wall, east to west: the notices, the bin, a bench, the board, the television the sofas
   // face across the room, and the table people ate at.
@@ -139,11 +156,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(poster('NOTICE', 1.0, 0.72, 7), -46.5, 1.72, Z1 - 0.07, Math.PI));
   await add(place(statusBoard(prop('tv')), -49.45, 2.05, Z1 - 0.02, Math.PI));
   await add(deadPlant(once(prop('plant'), -50.4, 0, Z1 - 0.5, 1.1)));
-  await add(once(prop('table'), -53.5, 0, Z1 - 0.48, Math.PI + 0.04));
-  // Two chairs at the ends of the table and one dragged clear of it. None of the three stands on the
-  // south side: a chair tucked under that edge would either poke through the table top or eat into
-  // the 2.6 m the walk keeps either side of the line.
-  await add(repeat(prop('chair'), [[-54.9, 0, Z1 - 0.55, -Math.PI / 2], [-52.1, 0, Z1 - 0.55, Math.PI / 2 + 0.15], [-51.4, 0, Z1 - 0.95, 0.8]]));
+  await add(place(canteenTable(1.6, 0.8), -53.5, 0, Z1 - 0.62, 0));
+  // Two chairs at the ends, both facing the table, and one dragged clear and left turned out. None
+  // of the three stands on the south side, for the clearance the walk keeps either side of the line.
+  await add(place(canteenChair(), -54.52, 0, Z1 - 0.62, Math.PI / 2));
+  await add(place(canteenChair(), -52.48, 0, Z1 - 0.62, -Math.PI / 2));
+  await add(place(canteenChair(), -51.4, 0, Z1 - 1.25, 0.8));
 
   // The clock on the west end wall, south of the doorway, so the far end of the room has something
   // to read rather than being the place the light runs out.

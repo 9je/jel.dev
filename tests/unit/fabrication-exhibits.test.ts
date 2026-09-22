@@ -46,13 +46,20 @@ describe('fabrication exhibits', () => {
     expect(face(key())).toBeGreaterThan(0.4);
     expect(face(cassette())).toBeGreaterThan(0.4);
   });
-  // A cassette is a flat object whose whole content is on one face, so it cannot share the rake a
-  // controller resting on its grips wants. At 0.95 the face was so foreshortened from the hold that
-  // the tape read as a wedge. Near upright is the only thing that lets a printed face carry.
-  it('stands the cassette nearer upright than the products that rest on their own shape', () => {
+  // Every product on this row is read from one place, four metres off the glass, and a product laid
+  // back toward the cap is read down its own plane: the cassette's face foreshortened into a wedge
+  // at 0.95 and the key's bow into a sliver at 0.6. They all stand near upright now. Nothing here
+  // goes past 1.4, because past that a product is a card standing on edge and stops reading as an
+  // object somebody could pick up.
+  it('stands every product up toward the lens rather than laid back on the cap', () => {
     const rake = (g: THREE.Group) => g.children.find((c) => c.rotation.x !== 0)!.rotation.x;
-    expect(rake(cassette())).toBeGreaterThan(1.2);
-    expect(rake(cassette())).toBeGreaterThan(rake(key()) + 0.3);
+    for (const make of [() => controllerExhibit(), () => key(), () => cassette()]) {
+      expect(rake(make())).toBeGreaterThan(0.75);
+      expect(rake(make())).toBeLessThan(1.4);
+    }
+    // The flat object stands the straightest: it has the most to lose to foreshortening.
+    expect(rake(cassette())).toBeGreaterThan(rake(key()));
+    expect(rake(key())).toBeGreaterThan(rake(controllerExhibit()));
   });
   it('stands the cassette on the cap rather than sinking it into one', () => {
     const b = box(cassette());

@@ -324,7 +324,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The flight cases that stood on the floor are gone. Three road cases, one of them orange, are
   // load out kit in a room that is otherwise sterile: "boxes feel kinda out of place". A second
   // draped trolley and a drip stand belong to the room the lamp is over.
-  await add(place(sheetedTrolley(), -77.4, 0, -13.2, -0.4));
+  // 1.3 m further south than it was drawn. A gurney is 2 m long and this one is turned 0.4 rad, so
+  // it reaches 1.08 m either side of its own centre along z: at -13.2 it put most of a metre of
+  // itself through the lab's north glass, which stands at -13.
+  await add(place(sheetedTrolley(), -77.4, 0, -14.5, -0.4));
   // The stand belongs beside a table, not on its own out in the middle of the floor, which is what
   // "senter prop a bit weird" is about.
   await add(place(dripStand(), -82.3, 0, -19.5, 0.6));
