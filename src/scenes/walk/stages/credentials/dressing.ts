@@ -186,43 +186,6 @@ function steelBench(len: number, depth: number, h: number): THREE.Mesh {
   m.name = 'bench'; return m;
 }
 
-/**
- * A trolley with a sheet thrown over it. The frame is steel on castors; the sheet is a cloth, a
- * plane draped over the deck whose vertices past the deck's edge fall down its sides, with a fold
- * or two across the top, so it reads as linen laid over a trolley rather than as a white slab with
- * a flap. 0.8 by 2.0 on plan, origin at floor centre, long axis along z. Three draw calls.
- */
-function sheetedTrolley(): THREE.Group {
-  const g = new THREE.Group();
-  const steel = labSteel(0x9aa5ad);
-  const deckY = 0.66, hx = 0.36, hz = 0.95;
-  const frame: THREE.BufferGeometry[] = [new THREE.BoxGeometry(hx * 2, 0.05, hz * 2).translate(0, deckY - 0.025, 0)];
-  for (const x of [-0.3, 0.3]) {
-    frame.push(new THREE.BoxGeometry(0.025, 0.025, hz * 2 - 0.2).translate(x, 0.16, 0));
-    for (const z of [-0.85, 0.85]) frame.push(new THREE.CylinderGeometry(0.018, 0.018, deckY - 0.1, 8).translate(x, 0.1 + (deckY - 0.1) / 2, z));
-  }
-  g.add(merged(frame, steel));
-  const wheels: Spot[] = [];
-  for (const x of [-0.3, 0.3]) for (const z of [-0.85, 0.85]) wheels.push([x, 0.05, z]);
-  g.add(instances(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 12).rotateZ(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x1b2229, roughness: 0.7 }), wheels));
-  // The sheet. Built flat in xz, then every vertex past the deck's edge is pulled back to the edge
-  // and dropped by the distance it overhung, which is a sheet hanging straight off the side. On the
-  // deck it rises over a folded body of linen, with a little noise so no edge is a ruled line.
-  const geo = new THREE.PlaneGeometry(1.24, 2.6, 26, 52); geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position as THREE.BufferAttribute;
-  const r = rng(23);
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i);
-    const ox = Math.max(0, Math.abs(x) - hx), oz = Math.max(0, Math.abs(z) - hz);
-    const over = Math.max(ox, oz);
-    const fold = 0.09 * Math.exp(-((z * z) / 0.5)) * Math.max(0, 1 - (x * x) / (hx * hx));
-    const y = deckY + (over > 0 ? -over * 0.98 + 0.005 : fold + 0.012) + (r() - 0.5) * 0.012;
-    pos.setXYZ(i, ox > 0 ? Math.sign(x) * (hx + 0.012 + ox * 0.08) : x, Math.max(0.12, y), oz > 0 ? Math.sign(z) * (hz + 0.012 + oz * 0.08) : z);
-  }
-  pos.needsUpdate = true; geo.computeVertexNormals();
-  g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xcfd8de, roughness: 0.95, side: THREE.DoubleSide })));
-  return g;
-}
 
 /**
  * An operating theatre lamp on a ceiling pendant: a stem, a yoke, a shallow dish and the ring of
@@ -249,23 +212,6 @@ function theatreLamp(): THREE.Group {
   return g;
 }
 
-/** A drip stand: a five leg base on castors, a pole and a hook with a bag on it. Origin at the
- *  floor. Three draw calls. */
-function dripStand(): THREE.Group {
-  const g = new THREE.Group();
-  const steel = new THREE.MeshStandardMaterial({ color: 0xc3ccd1, roughness: 0.4, metalness: 0.5 });
-  const parts: THREE.BufferGeometry[] = [new THREE.CylinderGeometry(0.022, 0.022, 1.9, 10).translate(0, 0.95, 0)];
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    parts.push(new THREE.BoxGeometry(0.026, 0.026, 0.3).rotateY(-a).translate(Math.sin(a) * 0.15, 0.05, Math.cos(a) * 0.15));
-    parts.push(new THREE.CylinderGeometry(0.028, 0.028, 0.03, 8).rotateZ(Math.PI / 2).translate(Math.sin(a) * 0.29, 0.028, Math.cos(a) * 0.29));
-  }
-  parts.push(new THREE.TorusGeometry(0.05, 0.01, 6, 12).rotateY(Math.PI / 2).translate(0, 1.86, 0.05));
-  g.add(merged(parts, steel));
-  const bag = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.26, 0.05), new THREE.MeshStandardMaterial({ color: 0xdfe8ea, roughness: 0.5, transparent: true, opacity: 0.75 }));
-  bag.position.set(0, 1.68, 0.08); g.add(bag);
-  return g;
-}
 
 export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<Dressing> {
   const { store, pace } = ctx;
@@ -310,7 +256,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // instruments on it and a stool pushed back from it. The trolley sits at x -81.4 rather than on
   // the lab's centre line, where `cameraAt` puts the walk within 0.1 m of it, and a metre south of
   // where it first stood so its sheet stays under the near plate's frame at the hold.
-  await add(place(sheetedTrolley(), -81.4, 0, -20.4, Math.PI + 0.15));
+  await add(place(steelBench(2.0, 0.6, 0.9), -81.6, 0, -20.4, Math.PI / 2));
+  await add(place(grounded(store.model('tote')), -81.6, 0.9, -21.0, 0.5));
+  await add(place(grounded(store.model('medical_box')), -81.55, 0.9, -19.8, Math.PI / 2 - 0.3));
   // The theatre lamp, on its pendant from the lab ceiling, with the room's second point light in the
   // dish. Jordan's read of the room was that it is "like a room surgeries are performed in", which
   // is the right instinct for a white glass box with a draped trolley in it, and one fitting says it
@@ -320,17 +268,17 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // it stands past the last pair of plates, framed in the gap between the two rows, and what the
   // hold reads is a lit table at the end of the room.
   const lamp = theatreLamp();
-  lamp.position.set(-77.4, LAB.h, -13.0); await add(lamp);
-  // The flight cases that stood on the floor are gone. Three road cases, one of them orange, are
-  // load out kit in a room that is otherwise sterile: "boxes feel kinda out of place". A second
-  // draped trolley and a drip stand belong to the room the lamp is over.
-  // 1.3 m further south than it was drawn. A gurney is 2 m long and this one is turned 0.4 rad, so
-  // it reaches 1.08 m either side of its own centre along z: at -13.2 it put most of a metre of
-  // itself through the lab's north glass, which stands at -13.
-  await add(place(sheetedTrolley(), -77.4, 0, -14.5, -0.4));
-  // The stand belongs beside a table, not on its own out in the middle of the floor, which is what
-  // "senter prop a bit weird" is about.
-  await add(place(dripStand(), -82.3, 0, -19.5, 0.6));
+  // Over the bench, not on the lab's own north glass. At z -13.0 the pendant hung in the plane of
+  // that wall and the dish cut straight through its frame, which is the light Jordan caught
+  // clipping. The lab runs z -25 to -13, so anything on its ceiling has to stand clear of both ends.
+  lamp.position.set(-77.4, LAB.h, -15.4); await add(lamp);
+  // No hospital in here any more. The room had two sheeted gurneys, a drip stand, a wheelchair and
+  // an old bed frame in it, all of which came straight off the Terragroup labs reference and none
+  // of which belong in a hall about certifications: "the hospital beds dont even make sense idk if
+  // that was carried over from the labs reference images". They are gone. What is left is what a
+  // test bench area actually has, which is benches, instruments, stools and stock in totes.
+  await add(place(steelBench(1.6, 0.6, 0.9), -77.6, 0, -15.4, -Math.PI / 2));
+  await add(place(grounded(store.model('tote')), -77.55, 0.9, -15.9, -0.4));
 
   // The bench: 2.2 m along the east glass, south of the east plates so nothing stands under them,
   // its top 0.9 up. The microscope and the chemistry set on it, the medical box at its end, and the
@@ -353,16 +301,17 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(cableCoil(), -76.4, H - 1.8, -9, 0));
   await add(place(tarpWall(8, 3.2), X1 - 0.1, 1.9, -8, -Math.PI / 2));
 
-  // A stool knocked over up the hall, a wheelchair parked further on and a stripped bed frame stood
-  // on its edge against the west wall: the room was cleared out in a hurry.
+  // A stool knocked over up the hall, and stock left standing in the corridor. The wheelchair and
+  // the bed frame that stood here are gone with the rest of the hospital, and the bed frame was
+  // half inside the west wall besides: 2 m of frame stood on its edge 0.6 m off a wall reaches
+  // through it whichever way it is turned.
   const tipped = store.model('stool_2'); tipped.rotation.x = Math.PI / 2;
   await add(place(grounded(tipped), -77.5, HALL_FLOOR, -9.7, 1.1));
-  await add(place(grounded(store.model('wheelchair')), -76.2, HALL_FLOOR, 2.2, 2.4));
-  const leaning = store.model('bed_frame'); leaning.rotation.z = Math.PI / 2 - 0.22;
-  await add(place(grounded(leaning), -82.4, HALL_FLOOR, -8, Math.PI / 2));
 
   const tote = (x: number, z: number, ry: number) => place(grounded(store.model('tote')), x, HALL_FLOOR, z, ry);
   await add(tote(X1 - 1.2, -12, 0.3));
+  await add(tote(X1 - 0.95, 1.9, -0.4));
+  await add(tote(X0 + 1.0, -7.6, 0.9));
 
   // Papers on the hall floor, which sits 6 mm up: laid on that, they clear it by the kit's own lift.
   await add(papers([[X1 - 2.4, HALL_FLOOR, -9.2, 0.5], [X1 - 2.0, HALL_FLOOR, -6.4, 1.3], [X0 + 2.2, HALL_FLOOR, -11.6, 0.9]]));

@@ -57,9 +57,22 @@ export function dadoBands(len: number, x: number, z: number, ry: number, h = DAD
 }
 export const dadoMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.8 });
 export const dadoLineMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.6 });
-/** Clear glass: reflective, barely tinted, no depth write. Give the mesh `renderOrder = 2`. */
+/**
+ * Clear glass: reflective, barely tinted, no depth write. Give the mesh `renderOrder = 2`.
+ *
+ * Barely tinted is the point, and it was not. At 0.16 opacity in a cyan tint with the reflections
+ * turned up to 1.6, one pane laid enough blue over what was behind it to turn the grey wall above a
+ * dado blue, and the clean lab's panes stack two and three deep across a frame. The credentials
+ * hall came out with the same wall reading in two or three different blues, with a hard step at
+ * every pane edge, and Jordan read that as the wall jumping. It was not the wall: it was how much
+ * of this material was sitting in front of it.
+ *
+ * Half the opacity, half the reflection, and a tint two thirds of the way from that cyan to white.
+ * A pane is still visible by its edge, its specular and the room it mirrors, which is all a pane
+ * has to do.
+ */
 export function labGlass(): THREE.MeshPhysicalMaterial {
-  return new THREE.MeshPhysicalMaterial({ color: LABS.glassTint, transparent: true, opacity: 0.16, roughness: 0.06, metalness: 0, envMapIntensity: 1.6, depthWrite: false });
+  return new THREE.MeshPhysicalMaterial({ color: 0xeaf2f5, transparent: true, opacity: 0.08, roughness: 0.06, metalness: 0, envMapIntensity: 0.8, depthWrite: false });
 }
 export function labSteel(color: number = LABS.steel): THREE.MeshStandardMaterial { return new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.35 }); }
 
