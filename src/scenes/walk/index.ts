@@ -88,6 +88,7 @@ let pinCard: (() => void) | null = null;
 // that never finishes still has to hand them back, so they keep their own.
 let unwire: (() => void) | null = null;
 let sheetOff: (() => void) | null = null;
+let columnOff: (() => void) | null = null;
 
 function setPreloader(els: WalkElements, ratio: number) {
   els.preloader.style.setProperty('--progress', String(Math.min(1, ratio)));
@@ -439,6 +440,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
       });
     }
     unwire = wirePointer(els, coarse, interact);
+    columnOff = wireColumnScroll(els);
     activate(els, initial);
     if (initial !== 'booth') scroll.jumpTo(initial, true);
     els.preloader.dataset.state = 'done';
@@ -456,6 +458,7 @@ function teardown() {
   generation++;
   unwire?.(); unwire = null;
   sheetOff?.(); sheetOff = null;
+  columnOff?.(); columnOff = null;
   if (focusTimer) { clearTimeout(focusTimer); focusTimer = null; }
   // The card's source row, so a swapped page does not hold the old one's DOM alive.
   cardSource = null;
@@ -465,6 +468,25 @@ function teardown() {
   pinCard = null;
   if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
   if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
+}
+
+/**
+ * A copy column keeps the wheel for itself only while it has somewhere left to scroll. The card is
+ * a panel and holds its wheel unconditionally, but the column stands over a third of the frame:
+ * holding the wheel there when its three rows already fit would make that third of the screen dead
+ * to the scroll that drives the whole walk.
+ */
+function wireColumnScroll(els: WalkElements): () => void {
+  const bodies = Array.from(els.root.querySelectorAll<HTMLElement>('.stop-body'));
+  const sync = (el: HTMLElement) => { el.toggleAttribute('data-lenis-prevent', el.scrollHeight > el.clientHeight + 1); };
+  const enter = (e: Event) => sync(e.currentTarget as HTMLElement);
+  const all = () => bodies.forEach(sync);
+  for (const b of bodies) { b.addEventListener('pointerenter', enter); b.addEventListener('toggle', all, true); }
+  window.addEventListener('resize', all);
+  return () => {
+    for (const b of bodies) { b.removeEventListener('pointerenter', enter); b.removeEventListener('toggle', all, true); b.removeAttribute('data-lenis-prevent'); }
+    window.removeEventListener('resize', all);
+  };
 }
 
 /** The banner is server rendered, so its streak line is as old as the last deploy. The live figure
