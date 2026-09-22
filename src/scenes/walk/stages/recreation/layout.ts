@@ -64,7 +64,7 @@ export const CABINET_Z = Z0 + 0.45;
  */
 export const CABINETS: [string, string, number, string, number, string][] = [
   ['torn-bet', 'torn.bet', -26.9, '#3D7BE0', 0, 'CASINO'],
-  ['kayou-bot', 'Kayou', -28.1, '#D7383A', 0, 'DISCORD BOT'],
+  ['kayou-bot', 'MLPEKAYOU', -28.1, '#D7383A', 0, 'DISCORD BOT'],
   ['character-bot', 'character bot', -29.3, '#3FD47A', 0, 'DISCORD BOT'],
 ];
 /** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a

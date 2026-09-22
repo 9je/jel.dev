@@ -1,5 +1,3 @@
-import { STATUS_LABEL, type Status } from './status';
-
 /** What the banner puts between two lines, in the markup and in the LED board alike. */
 export const TICKER_SEP = '   •   ';
 
@@ -11,27 +9,29 @@ export function streakLine(days: number): string {
 
 const IS_STREAK = /^\d+ days without a missed commit$/;
 
+/** What the banner says when there is no run worth reading out, so it never scrolls nothing. */
+export const TICKER_IDLE = 'jel labs';
+
 /** The banner text back as the lines it was built from. */
 export function splitTickerText(text: string): string[] {
   return text.split('•').map((s) => s.trim()).filter(Boolean);
 }
 
-/** The lines with the streak said once, at the head, and only when there is a run worth saying. */
+/** The lines with the streak said once, at the head, and only when there is a run worth saying.
+ *  Anything else on the banner is kept after it. With nothing to say, the idle line. */
 export function withStreakLine(lines: string[], days: number): string[] {
-  const rest = lines.filter((l) => !IS_STREAK.test(l));
-  return days > 1 ? [streakLine(days), ...rest] : rest;
+  const rest = lines.filter((l) => !IS_STREAK.test(l) && l !== TICKER_IDLE);
+  const out = days > 1 ? [streakLine(days), ...rest] : rest;
+  return out.length ? out : [TICKER_IDLE];
 }
 
 /**
- * The lines the banner runs: every project that is not restricted, with its status, and the commit
- * streak at the head of the list when there is one worth reading out. The board in the dispatch
- * office is the place the streak is drawn in full. This is the line that says it on the way past.
+ * The lines the banner runs: the commit streak and nothing else. It used to read out every project
+ * with its status as well, and Jordan cut it back to the one line: "please just have days without
+ * missed commit". The board in the dispatch office is where the streak is drawn in full.
  */
-export function buildTickerLines(items: { title: string; status: Status }[], streakDays = 0): string[] {
-  const lines = items
-    .filter((i) => i.status !== 'restricted')
-    .map((i) => `${i.title} ${STATUS_LABEL[i.status]}`.toLowerCase());
-  return withStreakLine(lines, streakDays);
+export function buildTickerLines(streakDays = 0): string[] {
+  return withStreakLine([], streakDays);
 }
 
 /**

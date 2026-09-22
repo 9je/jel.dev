@@ -4,7 +4,7 @@ wing: operations
 status: restricted
 flagship: true
 summary: Platform Developer on the team that builds and rolls out what a compliance-focused MSP runs on.
-stack: [PowerShell, Power Automate, Rewst, Pia]
+stack: [PowerShell, Power Automate, Rewst, Pia, ConnectWise]
 exhibit:
   anchor: operations
 order: 10

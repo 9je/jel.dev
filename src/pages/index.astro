@@ -14,7 +14,7 @@ import { STATUS_LABEL, type Status } from '../content/status';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 const byWing = (w: Wing) => projects.filter((p) => p.data.wing === w);
-const tickerLines = buildTickerLines(projects.map((p) => ({ title: p.data.title, status: p.data.status })), streak.current);
+const tickerLines = buildTickerLines(streak.current);
 const stop = (id: (typeof STOPS)[number]['id']) => STOPS.find((s) => s.id === id)!;
 /**
  * A wing where every project carries the same status says it once, at the head of the list, and the

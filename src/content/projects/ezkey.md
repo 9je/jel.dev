@@ -13,4 +13,4 @@ exhibit:
 started: 2025-08
 order: 10
 ---
-MSPs hold hundreds of vendor API keys across dozens of clients, usually in places they should not be. ezkey is a purpose-built store with per-client scoping, rotation, and an audit trail, run as a service so a small shop does not have to host one more thing.
+MSPs hold hundreds of vendor API keys across dozens of clients, usually in places they should not be. ezkey is a purpose-built store with per-client scoping, rotation, and an audit trail, lightweight for those who don't require a full PAM solution.

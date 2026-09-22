@@ -6,22 +6,22 @@ export const site = {
   fullName: 'Jordan Eldridge Labs',
   description: 'Jordan Eldridge Labs: automation for MSPs, shipped products, community tooling, and security work, all in one facility.',
   intro:
-    'JEL is where I keep everything I build. I build the platform a compliance MSP runs on and automate whatever I can reach. Outside work I ship products, build tools for the communities I play in, and do security research.',
+    'JEL is where I keep everything I make. At work, I build the platform a CMMC compliant MSP runs on and automate whatever I can reach. In my free time, I ship products, build tools for the communities I play in, and do security research.',
   wings: {
     operations: {
       name: 'Operations',
-      tagline: 'Platform development and automation at a compliance MSP.',
-      summary: 'The day job. Platform development at a compliance-focused MSP: rollouts, automation, R&D and the tooling in between. Work here is described at the level of outcomes. No client names.',
+      tagline: 'Platform development and automation at a CMMC compliant MSP.',
+      summary: 'The day job. Platform development at a compliance-focused MSP: rollouts, automation, R&D and the tooling in between. Work here is shared at high level detail, with client names omitted.',
     },
     fabrication: {
       name: 'Fabrication',
       tagline: 'Products I ship.',
-      summary: 'Things built to be used by strangers: a SaaS, a hardware business, a game, and the utilities I open sourced along the way.',
+      summary: 'Things built to be used by the world: a SaaS, a hardware business, a game, and the utilities I open sourced along the way.',
     },
     recreation: {
       name: 'Recreation',
-      tagline: 'Tools for the games and communities I am part of.',
-      summary: 'Built for players first. Some of these have more daily users than anything else I run.',
+      tagline: 'Tools for the games and communities I am part of and care about.',
+      summary: "If I see a need in a community I'm passionate about, I strive to build the solution.",
     },
     containment: {
       name: 'Containment',
@@ -31,9 +31,9 @@ export const site = {
   } satisfies Record<Wing, { name: string; tagline: string; summary: string }>,
   stops: {
     booth: { title: 'Jordan Eldridge Labs', lead: 'One person, one facility. Everything I build lives here. Scroll to walk it.' },
-    fabrication: { title: 'Fabrication', lead: 'Products built to be used by strangers.' },
-    recreation: { title: 'Recreation', lead: 'Tools for the games and communities I am part of.' },
-    operations: { title: 'Operations', lead: 'Platform development and automation at a compliance MSP.' },
+    fabrication: { title: 'Fabrication', lead: 'Products built to be used by the world.' },
+    recreation: { title: 'Recreation', lead: "Tools for the games and communities I'm passionate about." },
+    operations: { title: 'Operations', lead: 'Platform development and automation at a CMMC compliant MSP.' },
     credentials: { title: 'Credentials', lead: 'Six plates on the wall: networking, endpoints and offensive security.' },
     containment: { title: 'Containment', lead: 'Offensive security work. Most of it stays sealed until disclosure clears.' },
     file: { title: 'Personnel file', lead: 'Who is behind the door.' },
@@ -48,9 +48,9 @@ export const site = {
     // whole of it rather than the last of it: the products are all 2026, but the C++ engine is
     // 2022 and there has been something every year in between.
     timeline: [
-      { when: '2022', what: 'A metaverse engine in C++, and the first sites I put live.' },
-      { when: '2024', what: 'Earned eJPT and ISC2 CC. The API work the Torn projects sit on.' },
-      { when: '2026', what: 'Six products shipped. First bug bounty accepted. jel.dev live.' },
+      { when: '2022', what: 'First open source contributions.' },
+      { when: '2024', what: 'Got hired at MSP and began gathering credentials.' },
+      { when: '2026', what: 'Began shipping products. First bug bounty accepted. jel.dev live.' },
     ],
     email: 'eldridge.dev@outlook.com',
     github: 'https://github.com/9je',
