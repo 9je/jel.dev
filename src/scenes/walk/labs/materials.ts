@@ -15,7 +15,13 @@ export function labWall(store: AssetStore, w: number, h: number, tint: number = 
   const m = surface(store.texture('wall_panel'), w, h, 3); m.color.setHex(tint); return m;
 }
 /**
- * A dado band to 1.2 m with a thin line on top, as two geometries already placed. Merge many.
+ * A dado band with a thin line on top, as two geometries already placed. Merge many.
+ *
+ * `h` is how high the blue goes, 1.2 m by default, which is a skirt and is right in a room with a
+ * 3.4 m wall. The credentials hall's walls are 7 m, and a 1.2 m band on a 7 m wall is not a dado at
+ * all, it is a stripe with five and a half metres of bare grey over it. Jordan's read of that
+ * corridor was that the blue and the grey did not make sense together, and they did not: the height
+ * has to be a share of the wall it is painted on.
  *
  * The run is inset two millimetres at each end of `len`, and the size of that number is the whole
  * of it. A band flush with the end of its wall puts its end cap on whatever plane closes the wall
@@ -27,10 +33,10 @@ export function labWall(store: AssetStore, w: number, h: number, tint: number = 
  * is under a pixel at any distance the walk ever reads a wall from, and still fifteen times the
  * separation the depth buffer needs at these ranges.
  */
-export function dadoBands(len: number, x: number, z: number, ry: number): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
+export function dadoBands(len: number, x: number, z: number, ry: number, h = 1.2): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
   const run = Math.max(0.1, len - 0.004);
-  const band = new THREE.BoxGeometry(run, 1.2, 0.03); band.rotateY(ry); band.translate(x, 0.6, z);
-  const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, 1.25, z);
+  const band = new THREE.BoxGeometry(run, h, 0.03); band.rotateY(ry); band.translate(x, h / 2, z);
+  const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, h + 0.05, z);
   return { band, line };
 }
 export const dadoMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.8 });

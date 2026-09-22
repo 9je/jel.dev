@@ -3,9 +3,10 @@ import type { Hotspot, StageContext } from '../types';
 import { grounded, place, merged, instances, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
 import { tripodCamera, cableCoil, tarpWall } from '../../labs/furniture';
+import { wallPanel } from '../../labs/plant';
 import { labSteel, LABS } from '../../labs/materials';
 import { canvas, own, rng } from '../../labs/textures';
-import { X0, X1, H, LAB, PLATE_X, PLATE_Z, PLATE_TURN } from './layout';
+import { X0, X1, Z1, H, LAB, PANEL_Y, PANEL_Z, PLATE_X, PLATE_Z, PLATE_TURN, SERVICE_Y } from './layout';
 import certs from '../../../../content/certs.json';
 
 /** Whatever the dressing has to clean up itself. The badge textures load out of band, so the stage
@@ -362,6 +363,37 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // Papers on the hall floor, which sits 6 mm up: laid on that, they clear it by the kit's own lift.
   await add(papers([[X1 - 2.4, HALL_FLOOR, -9.2, 0.5], [X1 - 2.0, HALL_FLOOR, -6.4, 1.3], [X0 + 2.2, HALL_FLOOR, -11.6, 0.9]]));
+
+  // ---- The corridor walls ------------------------------------------------------------------------
+  // Nineteen metres of hall runs north from the lab to the containment door with 7 m walls on both
+  // sides, and until now there was nothing on any of it: a blue skirt along the floor and bare grey
+  // the whole way up. Jordan's read was that the blue and the grey did not make sense together, and
+  // the height of the blue was only half of it. A wall that tall needs something at head height and
+  // above, or the only thing the eye can measure is the ratio.
+  //
+  // So: a service run down both walls above the dado, and three panels hung under it on each side.
+  // Both are things the building would actually have, both carry a horizontal line the length of
+  // the corridor, and between them no stretch of this wall is more than two metres of nothing. Two
+  // draw calls for the pipes and two for the panels, because every one of them is the same object
+  // at a different z.
+  const pipes: THREE.BufferGeometry[] = [], straps: THREE.BufferGeometry[] = [];
+  const RUN_Z0 = -13, RUN_Z1 = Z1 - 0.1, runLen = RUN_Z1 - RUN_Z0, runZ = (RUN_Z0 + RUN_Z1) / 2;
+  for (const [x, inward] of [[X0, 1], [X1, -1]] as [number, number][]) {
+    // Two conduits one above the other, the lower one fatter, turned along z.
+    for (const [dy, r] of [[0, 0.075], [0.22, 0.05]] as [number, number][]) {
+      pipes.push(new THREE.CylinderGeometry(r, r, runLen, 10).rotateX(Math.PI / 2).translate(x + inward * 0.14, SERVICE_Y + dy, runZ));
+    }
+    // The brackets they are strapped to the wall on, every two metres.
+    for (let z = RUN_Z0 + 1; z < RUN_Z1; z += 2) {
+      straps.push(new THREE.BoxGeometry(0.2, 0.42, 0.04).rotateY(Math.PI / 2).translate(x + inward * 0.08, SERVICE_Y + 0.11, z));
+    }
+  }
+  await add(merged(pipes, new THREE.MeshStandardMaterial({ color: 0x8e9aa2, roughness: 0.5, metalness: 0.45 })));
+  await add(merged(straps, labSteel(0x39434b)));
+
+  for (const [x, ry] of [[X0 + 0.08, Math.PI / 2], [X1 - 0.08, -Math.PI / 2]] as [number, number][]) {
+    for (const z of PANEL_Z) await add(place(wallPanel(0.7, 1.0), x, PANEL_Y, z, ry));
+  }
 
   // disposeObject() reaches the badge textures through their materials, so this is belt and braces
   // for the ones already assigned and the only cleanup for one still in flight.

@@ -10,6 +10,40 @@ export function own(c: HTMLCanvasElement, srgb = true): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.userData.owned = true; return t;
 }
 /** Deterministic noise so a room looks the same on every load and every screenshot. */
+/**
+ * Television static: a square of luminance noise that tiles, for a set with no signal on it.
+ *
+ * It is one still frame, not an animation. A canvas repainted every frame is a texture upload every
+ * frame, and static does not need one: the field is noise, so a random offset into a tiling noise
+ * texture is a new field of static, and moving the offset costs two numbers. The caller jumps
+ * `map.offset` on each update and the screen crawls exactly the way a dead channel does.
+ *
+ * The distribution matters more than the resolution. Real static is mostly mid grey with the tails
+ * pulled out, so the noise is the average of three samples, which bunches it toward the middle, and
+ * then a few per cent of pixels are driven to black or white to put the sparkle back.
+ */
+export function staticNoise(size = 256, seed = 3): THREE.DataTexture {
+  const r = rng(seed);
+  const data = new Uint8Array(size * size * 4);
+  for (let i = 0; i < size * size; i++) {
+    let v = Math.round(((r() + r() + r()) / 3) * 190);
+    const spike = r();
+    if (spike < 0.03) v = 245; else if (spike < 0.07) v = 8;
+    data[i * 4] = v; data[i * 4 + 1] = v; data[i * 4 + 2] = v; data[i * 4 + 3] = 255;
+  }
+  const t = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  // No mipmaps, and nearest magnification. Every other texture in the walk wants the opposite, and
+  // this one is the exception for the same reason it exists: mipmapped, the noise averages to its
+  // own mean the moment the screen is more than a couple of metres off, and a screen full of static
+  // becomes a flat white card. Static has to stay grainy at distance or it is not static, and the
+  // aliasing that costs is the artefact being drawn.
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
 export function rng(seed: number): () => number { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 /**

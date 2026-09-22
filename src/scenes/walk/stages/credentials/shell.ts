@@ -6,7 +6,7 @@ import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, labSteel,
 import { glassRoom } from '../../labs/props';
 import { doorway } from '../../labs/signage';
 import { battens, lightShaft, troffer, lensMaterial, fixtureSteel } from '../../labs/fixtures';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
+import { X0, X1, Z0, Z1, H, W, D, XC, ZC, DADO_H, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
@@ -49,12 +49,15 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const wallSegment = (x: number, ry: number, z0: number, z1: number) => {
     const len = z1 - z0, midZ = (z0 + z1) / 2;
     const m = plane(len, H, labWall(store, len, H)); m.rotation.y = ry; m.position.set(x, H / 2, midZ);
-    const b = dadoBands(len, x + (x === X0 ? 0.02 : -0.02), midZ, Math.PI / 2);
+    const b = dadoBands(len, x + (x === X0 ? 0.02 : -0.02), midZ, Math.PI / 2, DADO_H);
     bandGeoms.push(b.band); lineGeoms.push(b.line);
   };
   wallSegment(X0, Math.PI / 2, Z0, Z1);
   wallSegment(X1, -Math.PI / 2, GATE_Z1, Z1);
-  root.add(merged(bandGeoms, dadoMaterial()), merged(lineGeoms, dadoLineMaterial()));
+  /** A band on an end wall, turned to face down the hall. */
+  const endBand = (len: number, x: number, z: number) => {
+    const b = dadoBands(len, x, z, 0, DADO_H); bandGeoms.push(b.band); lineGeoms.push(b.line);
+  };
 
   // The south end, closed. It was open, which is the black wall beside the desk in Jordan's shot of
   // the server hall's far end: the gate is a doorway, and the rest of this end is wall. Two pieces:
@@ -75,6 +78,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   }
   const lintel = plane(NORTH_DOOR.w, H - NORTH_DOOR.h, labWall(store, NORTH_DOOR.w, H - NORTH_DOOR.h));
   lintel.rotation.y = Math.PI; lintel.position.set(NORTH_DOOR.x, (H + NORTH_DOOR.h) / 2, Z1);
+
+  // The blue turns the corner onto both ends rather than stopping dead where the long walls do. A
+  // hall painted on two walls and bare on the other two reads as two walls that were painted, which
+  // is the same note as the height: the treatment has to belong to the room, not to a wall.
+  endBand(southW, X0 + southW / 2, Z0 + 0.02);
+  for (const [w, x] of [[nd0 - X0, (X0 + nd0) / 2], [X1 - nd1, (nd1 + X1) / 2]] as [number, number][]) endBand(w, x, Z1 - 0.02);
+  root.add(merged(bandGeoms, dadoMaterial()), merged(lineGeoms, dadoLineMaterial()));
 
   const north = doorway({
     w: NORTH_DOOR.w, h: NORTH_DOOR.h, depth: NORTH_DOOR.depth, axis: 'z', sign: 'CONTAINMENT', tape: false,

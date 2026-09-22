@@ -39,6 +39,25 @@ export const ISLANDS: [number, number][] = [[-82.9, 8.5], [-82.9, 13], [-82.9, 1
 export const ISLAND_HALF = { x: 0.92 * 1.5, z: 0.37 };
 
 /**
+ * The television, on its side on the floor east of the aisle. The room had no moving part in it
+ * except the seam under the sealed door, which breathes so slowly it reads as still, and Jordan
+ * asked for one: a set that went over and is still playing static.
+ *
+ * It lies in the gap between the first and second switchgear islands on the west side, which is
+ * the one piece of floor in this room that is outside the aisle's clearance, in front of something
+ * rather than against a bare wall, and not already occupied. The east side has none: the cabinet
+ * bank starts at x -76.48 and the clearance line is at -76.8, so the two leave no floor between
+ * them, and the first placing put the set inside the bank.
+ *
+ * Seven metres up the room from the hold, three off the line, and well inside the cone the doorway
+ * leaves: near enough that the static reads as static rather than as a grey square, far enough that
+ * it is not the first thing in the frame. `ry` turns the screen back toward the doorway the walk
+ * arrives through and a little toward the aisle, so the light off it lies across the tile the walk
+ * is about to cross rather than into the wall behind it.
+ */
+export const CRT = { x: -81.9, z: 10.9, ry: Math.PI - 0.5 };
+
+/**
  * The table under the lamp, which is the one warm thing in the room. It stands against the front
  * of the second island's east cabinet, long side along the doors, rather than loose in the aisle
  * where it was drawn: a table on its own in the middle of a floor is furniture somebody dropped,

@@ -1,7 +1,12 @@
 // Screenshots of the walk at scroll positions against a running dev or preview server, rendered on
 // the real GPU. Made for a polish pass: point it at `astro dev` and it sees the working tree as it
 // is, no build step between an edit and a look at the room. Usage:
-//   node scripts/probe.mjs out/dir 0.2,0.4 [url=http://127.0.0.1:4322] [quality=high] [portrait]
+//   node scripts/probe.mjs out/dir 0.2,0.4 [url=http://127.0.0.1:4322] [quality=high] [portrait|WxH]
+// The last argument is the shape of the window. `landscape` is 1600x900, `portrait` is a phone, and
+// anything of the form 1220x1028 is that viewport exactly. The shape is not a detail: the camera
+// takes 55 degrees vertically and works its horizontal frame out from the aspect, so a nearly
+// square browser window sees a much narrower slice of a room than a 16 by 9 probe does, and a wall
+// that is a band across one is a slab across the other.
 // Each shot lands at out/dir/t0.40.png. A `look=x,y,z` fourth-position argument is not supported:
 // the camera is the walk's own, so what the probe shows is what a visitor sees at that t.
 import { chromium, devices } from '@playwright/test';
@@ -11,9 +16,13 @@ const [outDir = 'probe', list = '0.2', url = 'http://127.0.0.1:4322', quality = 
 const points = list.split(',').map(Number);
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist', '--enable-gpu-rasterization'] });
+const custom = /^(\d{3,4})x(\d{3,4})$/.exec(mode);
 const context = mode === 'portrait'
   ? await browser.newContext({ ...devices['iPhone 14 Pro Max'], deviceScaleFactor: 1 })
-  : await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
+  : await browser.newContext({
+    viewport: custom ? { width: Number(custom[1]), height: Number(custom[2]) } : { width: 1600, height: 900 },
+    deviceScaleFactor: 1,
+  });
 const page = await context.newPage();
 page.on('console', (m) => { if (m.type() === 'warning' || m.type() === 'error') console.log('[page]', m.text()); });
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));

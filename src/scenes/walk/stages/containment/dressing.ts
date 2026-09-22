@@ -4,13 +4,19 @@ import { grounded, merged, place, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
 import { cabinetBank, fallenTiles, switchCabinet, wallPanel } from '../../labs/plant';
 import { labSteel } from '../../labs/materials';
+import { crtSet } from '../../labs/furniture';
 import { signBox, tapeCross } from '../../labs/signage';
-import { chainlink, redactedSheet } from '../../labs/textures';
-import { X1, Z1, AISLE_CLEAR, BANK, HALL_DOOR, ISLANDS, MISSING, SEALED, TABLE } from './layout';
+import { chainlink, redactedSheet, staticNoise } from '../../labs/textures';
+import { X1, Z1, AISLE_CLEAR, BANK, CRT, HALL_DOOR, ISLANDS, MISSING, SEALED, TABLE } from './layout';
 import { holeAt } from './shell';
 
 /** What the room animates: the seam of red around the sealed door. */
-export interface Dressing { hotspots: Hotspot[]; pulse: THREE.MeshStandardMaterial[] }
+export interface Dressing {
+  hotspots: Hotspot[];
+  pulse: THREE.MeshStandardMaterial[];
+  /** The television's screen, for the stage to crawl its static. */
+  crt: { map: THREE.Texture; material: THREE.MeshStandardMaterial };
+}
 
 /** Terragroup's switchgear green, off the reference. */
 const GREEN = 0x3a5a4a;
@@ -171,6 +177,26 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // worse than no model. Here the sightline to it clears the end of the bank by half a metre.
   await add(place(prop('generator'), -74.8, 0, 22.5, -0.7));
 
+  // ---- The television ---------------------------------------------------------------------------
+  // On its right side where it went over, still playing static. The set is built upright with its
+  // base at y 0, so toppling it is a quarter turn about z inside a wrapper: after that turn the
+  // body runs along -x from the origin and the width straddles y, so it sits on the floor lifted by
+  // half its own width. The wrapper is what carries the heading, which keeps the two rotations from
+  // fighting over the order they compose in.
+  const fallen = new THREE.Group();
+  const tipped = new THREE.Group();
+  // Tipped back 10 degrees on top of the quarter turn, and lifted 5 cm so the low back corner still
+  // rests on the tile rather than through it. Square on the floor the set read as an appliance
+  // standing where somebody put it. A thing that went over comes to rest on a corner with its face
+  // looking up, and the tilt is also what turns the screen toward the walk instead of across it.
+  tipped.rotation.x = -0.18; tipped.position.y = 0.05;
+  const crtFace = staticNoise();
+  const set = crtSet(crtFace);
+  set.rotation.z = Math.PI / 2; set.position.y = 0.26;
+  tipped.add(set); fallen.add(tipped);
+  await add(place(fallen, CRT.x, 0, CRT.z, CRT.ry));
+  const crt = set.getObjectByName('screen') as THREE.Mesh;
+
   // The tiles that came down, on the floor under the gaps they came out of.
   const spots: Spot[] = [];
   for (const [i, j] of MISSING) {
@@ -186,5 +212,5 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     [-82.6, 0, 19.8, 2.2], [-79.6, 0, 23.4, 1.2],
   ]));
 
-  return { hotspots, pulse };
+  return { hotspots, pulse, crt: { map: crtFace, material: crt.material as THREE.MeshStandardMaterial } };
 }

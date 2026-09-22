@@ -142,6 +142,73 @@ export function vendingMachine(spec: VendingSpec): THREE.Group {
   return g;
 }
 
+/**
+ * A portable colour television of the sort that was in every break room and every guard post: a
+ * moulded plastic box 0.52 by 0.42 on the front, a funnel stepping back behind it, a recessed
+ * screen in a bezel, a control strip with two knobs and a speaker grille down its right side, a
+ * carry handle on top and four feet. Origin at the base centre, screen facing +z.
+ *
+ * The screen mesh is named `screen` and its material carries `staticNoise` as both map and emissive
+ * map. It lights itself, because a set with no signal on it is the brightest thing in a dark room
+ * and there is no light budget left in any room that would want one. The caller jumps the map's
+ * offset each frame to make the static crawl. Four draw calls.
+ */
+export function crtSet(face: THREE.Texture): THREE.Group {
+  const g = new THREE.Group();
+  const W = 0.52, H = 0.42, D = 0.3, BACK = 0.22;
+  const body: THREE.BufferGeometry[] = [];
+  const put = (geo: THREE.BufferGeometry, x: number, y: number, z: number) => { geo.translate(x, y, z); body.push(geo); };
+  // The front box and the funnel stepping back off it. Two boxes rather than a taper: from any
+  // distance this set is ever read from, the step is the silhouette a CRT has.
+  put(new THREE.BoxGeometry(W, H, D), 0, H / 2, 0);
+  put(new THREE.BoxGeometry(W - 0.14, H - 0.12, BACK), 0, H / 2, -(D + BACK) / 2 + 0.002);
+  put(new THREE.BoxGeometry(W - 0.26, H - 0.22, 0.05), 0, H / 2, -(D / 2 + BACK) - 0.02);
+  // The bezel: four bars around the opening, so the glass sits in a recess rather than on the face.
+  // Everything on the face stands proud of the body box rather than inside its depth. The front of
+  // the carcass is the plane at z D/2 and the box behind it is solid, so a screen a few millimetres
+  // short of that plane is not recessed, it is buried: the first build put the glass at D/2 - 0.005
+  // and the set played its static inside a sealed plastic box.
+  const open = { w: 0.33, h: 0.25 }, lip = 0.02, fz = D / 2 + lip / 2;
+  const sx = (W - open.w) / 2 - 0.06;
+  for (const [bw, bh, bx, by] of [
+    [W - 0.12, (H - open.h) / 2, -0.06, H / 2 + (open.h + (H - open.h) / 2) / 2],
+    [W - 0.12, (H - open.h) / 2, -0.06, H / 2 - (open.h + (H - open.h) / 2) / 2],
+    [sx, open.h, -(open.w + sx) / 2 - 0.06, H / 2],
+    [sx, open.h, (open.w + sx) / 2 - 0.06, H / 2],
+  ] as [number, number, number, number][]) put(new THREE.BoxGeometry(bw, bh, lip), bx, by, fz);
+  // The control strip down the right of the face, standing a little proud of the bezel.
+  put(new THREE.BoxGeometry(0.12, H - 0.04, lip + 0.01), W / 2 - 0.07, H / 2, fz);
+  // Four feet.
+  for (const fx of [-1, 1]) for (const fz2 of [-1, 1]) {
+    put(new THREE.CylinderGeometry(0.022, 0.026, 0.018, 8), fx * (W / 2 - 0.05), 0.009, fz2 * (D / 2 - 0.05));
+  }
+  g.add(merged(body, carcass(0x2a2b28, 0.68)));
+
+  // The knobs, the grille slots and the handle, in the lighter plastic the trim was always moulded
+  // in. A set like this has one big tuning knob and one small one, and the speaker under them.
+  const trim: THREE.BufferGeometry[] = [];
+  for (const [y, r] of [[H - 0.09, 0.028], [H - 0.16, 0.019]] as [number, number][]) {
+    trim.push(new THREE.CylinderGeometry(r, r * 0.86, 0.026, 12).rotateX(Math.PI / 2).translate(W / 2 - 0.07, y, fz + 0.02));
+  }
+  for (let k = 0; k < 6; k++) trim.push(new THREE.BoxGeometry(0.075, 0.008, 0.008).translate(W / 2 - 0.07, 0.07 + k * 0.018, fz + 0.014));
+  // The handle: a bar on two posts, folded flat along the top the way it travels.
+  trim.push(new THREE.BoxGeometry(0.2, 0.018, 0.022).translate(0, H + 0.014, -0.02));
+  for (const hx of [-1, 1]) trim.push(new THREE.BoxGeometry(0.02, 0.03, 0.022).translate(hx * 0.11, H + 0.006, -0.02));
+  g.add(merged(trim, carcass(0x7f7a6e, 0.6)));
+
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(open.w, open.h), new THREE.MeshStandardMaterial({
+    map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.7, roughness: 0.28, metalness: 0,
+  }));
+  screen.position.set(-0.06, H / 2, fz - 0.002); screen.name = 'screen'; g.add(screen);
+  // The glass over it: one pane catching the room, which is what stops a lit rectangle reading as a
+  // sticker on the front of a box.
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(open.w + 0.01, open.h + 0.01), new THREE.MeshPhysicalMaterial({
+    color: 0x0b1117, transparent: true, opacity: 0.12, roughness: 0.06, metalness: 0, depthWrite: false,
+  }));
+  glass.position.set(-0.06, H / 2, fz + 0.012); glass.renderOrder = 2; g.add(glass);
+  return g;
+}
+
 export interface ArcadeSpec {
   title: string;
   accent: string;
