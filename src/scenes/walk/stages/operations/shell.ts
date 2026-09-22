@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
 import { merged, type Spot } from '../../merge';
-import { labFloor, labWall, labSteel, dadoBands, dadoMaterial, dadoLineMaterial } from '../../labs/materials';
+import { labFloor, labWall, labSteel, dadoBands, backless, dadoMaterial, dadoLineMaterial } from '../../labs/materials';
 import { cableTray } from '../../labs/props';
 import { doorway } from '../../labs/signage';
 import { battens, lightShaft } from '../../labs/fixtures';
@@ -41,6 +41,17 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   door.position.set(HALL_DOOR.x, 0, HALL_DOOR.z); door.name = 'credentials-door'; root.add(door);
 
   const bands = [dadoBands(W, XC, Z0 + 0.02, 0), dadoBands(W, XC, Z1 - 0.02, 0)];
+  // And round both ends, either side of each doorway, so the blue belongs to the room rather than to
+  // its two long walls. Without it the only band on the west end was the credentials hall's, seen
+  // through the door, and the blue looked like it started at the doorway. The west wall north of
+  // the door stands in the metre this hall shares with the credentials hall, so that one run is
+  // inside that hall's volume and drops the back face it would show there.
+  for (const [x, open, inward] of [[X0 + 0.02, WEST_OPEN, 1], [X1 - 0.02, EAST_OPEN, -1]] as [number, typeof WEST_OPEN, number][]) {
+    bands.push(dadoBands(open.z0 - Z0, x, (Z0 + open.z0) / 2, Math.PI / 2));
+    const north = dadoBands(Z1 - open.z1, x, (open.z1 + Z1) / 2, Math.PI / 2);
+    if (inward === 1) { const west = new THREE.Vector3(-1, 0, 0); backless(north.band, west); backless(north.line, west); }
+    bands.push(north);
+  }
   root.add(merged(bands.map((b) => b.band), dadoMaterial()), merged(bands.map((b) => b.line), dadoLineMaterial()));
 
   // No suspended ceiling grid in this room: a dark steel plane with two rows of fluorescent battens

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, place, merged, instances, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
-import { tripodCamera, cableCoil, tarpWall } from '../../labs/furniture';
+import { tripodCamera, cableCoil } from '../../labs/furniture';
 import { wallPanel } from '../../labs/plant';
 import { labSteel, LABS } from '../../labs/materials';
 import { canvas, own, rng } from '../../labs/textures';
@@ -270,7 +270,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const lamp = theatreLamp();
   // Over the bench, not on the lab's own north glass. At z -13.0 the pendant hung in the plane of
   // that wall and the dish cut straight through its frame, which is the light Jordan caught
-  // clipping. The lab runs z -25 to -13, so anything on its ceiling has to stand clear of both ends.
+  // clipping. The lab runs z -23.8 to -13, so anything on its ceiling has to stand clear of both ends.
   lamp.position.set(-77.4, LAB.h, -15.4); await add(lamp);
   // No hospital in here any more. The room had two sheeted gurneys, a drip stand, a wheelchair and
   // an old bed frame in it, all of which came straight off the Terragroup labs reference and none
@@ -296,10 +296,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // the one thing in the hold that was not the lab's own, and Jordan read it as out of place.
   await add(place(tripodCamera(), -76.2, HALL_FLOOR, -10.4, Math.PI + 0.42));
 
-  // Along the hall. A coil of yellow cable off the ceiling and a blue tarp slung down the east wall
-  // are the two notes of colour in a room that is otherwise white on white.
+  // Along the hall, a coil of yellow cable off the ceiling. There was a blue tarp slung down the
+  // east wall here too, 8 m of it, full height and in the dado's own blue, so from the walk it read
+  // as the paint running up the wall to the ceiling and stopping on a torn edge.
   await add(place(cableCoil(), -76.4, H - 1.8, -9, 0));
-  await add(place(tarpWall(8, 3.2), X1 - 0.1, 1.9, -8, -Math.PI / 2));
 
   // A stool knocked over up the hall, and stock left standing in the corridor. The wheelchair and
   // the bed frame that stood here are gone with the rest of the hospital, and the bed frame was

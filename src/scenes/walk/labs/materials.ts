@@ -55,6 +55,25 @@ export function dadoBands(len: number, x: number, z: number, ry: number, h = DAD
   const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, h + 0.05, z);
   return { band, line };
 }
+
+/**
+ * Drops the faces of a placed geometry that look along `away`, and returns it. For a dado run in
+ * the metre two rooms share: the credentials hall and the server hall overlap by the thickness of
+ * the wall between them, so a band on one side of that wall stands inside the other room's volume.
+ * Each room's wall is a one sided plane and hides from the other, but a band is a box, and its back
+ * face was a blue slab floating a metre in front of the server hall's west wall. The face against
+ * the wall is never seen from the band's own room, so it goes, and the other room sees nothing.
+ */
+export function backless(geo: THREE.BufferGeometry, away: THREE.Vector3): THREE.BufferGeometry {
+  const index = geo.getIndex()!, normal = geo.getAttribute('normal'), keep: number[] = [];
+  for (let i = 0; i < index.count; i += 3) {
+    const a = index.getX(i);
+    if (normal.getX(a) * away.x + normal.getY(a) * away.y + normal.getZ(a) * away.z > 0.9) continue;
+    keep.push(a, index.getX(i + 1), index.getX(i + 2));
+  }
+  geo.setIndex(keep); geo.clearGroups();
+  return geo;
+}
 export const dadoMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.8 });
 export const dadoLineMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.6 });
 /**

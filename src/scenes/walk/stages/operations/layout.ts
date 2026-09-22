@@ -76,7 +76,9 @@ export const FIRE_NORTH = 2;
 export const TRUNK = { y: 4.2, z: CAGE_Z.south };
 
 export const TAPE_Y = 0.95;
-export const STANCHIONS: [number, number][] = [[-73.4, -33.3], [-73.4, -27.2], [-74.7, -35.5], [-74.7, -25.5]];
+/** Every stanchion stands in the aisle between the two cage lines. The north end post was at z
+ *  -25.5, which is behind the north cage's fence, so its tape ran out through the cage's end. */
+export const STANCHIONS: [number, number][] = [[-73.4, -33.3], [-73.4, -27.2], [-74.7, -35.5], [-74.7, -26.5]];
 /** Post to post, both ends. Each run used to start on a point out by the west wall with nothing at
  *  it, so the tape read as tied to the paint: "this tape seems unnaturally placed". A tape is tied
  *  to something at both ends or it is not a tape. */

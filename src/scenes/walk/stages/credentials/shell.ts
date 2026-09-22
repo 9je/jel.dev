@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
 import { merged, instances, type Spot } from '../../merge';
-import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, labSteel, LABS } from '../../labs/materials';
+import { labFloor, labWall, dadoBands, backless, dadoMaterial, dadoLineMaterial, labSteel, LABS } from '../../labs/materials';
 import { glassRoom } from '../../labs/props';
 import { doorway } from '../../labs/signage';
 import { battens, lightShaft, troffer, lensMaterial, fixtureSteel } from '../../labs/fixtures';
@@ -16,6 +16,8 @@ export interface Shell { planes: Set<THREE.Object3D> }
  *  owns the doorway that fills this gate and the vestibule behind it; this room closes the gate's
  *  head and its own south end so no frame in the transition shows an unbuilt edge. */
 const GATE_Z1 = -27, GATE_H = 3.2;
+/** The server hall's north wall. North of it this hall's east wall is its own again. */
+const OPS_Z1 = -24;
 /** The server hall cuts the doorway through the metre of wall where the two shells overlap (its X0
  *  back to this room's X1), so that metre of the south end at floor level is the vestibule's own
  *  south reveal. This room's south wall is built around it: a second plane in the same place facing
@@ -54,6 +56,15 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   };
   wallSegment(X0, Math.PI / 2, Z0, Z1);
   wallSegment(X1, -Math.PI / 2, GATE_Z1, Z1);
+  // The east wall's band from the gate to the server hall's north wall (z -27 to -24) stands in the
+  // metre the two halls share, which is inside the server hall. Seen from there it was a blue slab
+  // floating in front of that hall's west wall, from the door to the cage. Its back face goes.
+  const shared = OPS_Z1 - GATE_Z1;
+  const inside = dadoBands(shared, X1 - 0.02, (GATE_Z1 + OPS_Z1) / 2, Math.PI / 2);
+  const rest = dadoBands(Z1 - OPS_Z1, X1 - 0.02, (OPS_Z1 + Z1) / 2, Math.PI / 2);
+  const east = new THREE.Vector3(1, 0, 0);
+  bandGeoms.splice(-1, 1, backless(inside.band, east), rest.band);
+  lineGeoms.splice(-1, 1, backless(inside.line, east), rest.line);
   /** A band on an end wall, turned to face down the hall. */
   const endBand = (len: number, x: number, z: number) => {
     const b = dadoBands(len, x, z, 0); bandGeoms.push(b.band); lineGeoms.push(b.line);

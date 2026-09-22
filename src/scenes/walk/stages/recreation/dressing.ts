@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { cableTray, papers } from '../../labs/props';
-import { arcadeCabinet, canteenChair, canteenTable, crtBracket, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
+import { arcadeCabinet, canteenChair, canteenTable, crtBracket, crtSet, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
-import { screenFace } from '../../labs/textures';
+import { statusScreen } from '../../labs/textures';
 import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
@@ -108,7 +108,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   anchors.set('recreation', new THREE.Vector3(-25.4, 2.0, -33.9));
 
   // ---- North wall: the quiet side ---------------------------------------------------------------
-  await add(place(statusBoard(prop('tv')), -29.6, 2.05, Z1 - 0.02, Math.PI));
+  await add(place(statusBoard(), -29.6, 2.05, Z1 - 0.02, Math.PI));
 
   // Two canteen tables against the wall with a chair at each end, and every chair turned to face
   // the table it belongs to. Both chairs at both tables used to face away from theirs, which is
@@ -166,7 +166,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const board = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.95, 0.05), new THREE.MeshStandardMaterial({ color: 0x2f3a42, roughness: 0.8 }));
   board.position.set(-46.5, 1.7, Z1 - 0.03); board.rotation.y = Math.PI; await add(board);
   await add(place(poster('NOTICE', 1.0, 0.72, 7), -46.5, 1.72, Z1 - 0.07, Math.PI));
-  await add(place(statusBoard(prop('tv')), -49.45, 2.05, Z1 - 0.02, Math.PI));
+  await add(place(statusBoard(), -49.45, 2.05, Z1 - 0.02, Math.PI));
   await add(deadPlant(once(prop('plant'), -50.4, 0, Z1 - 0.5, 1.1)));
   await add(place(canteenTable(1.6, 0.8), -53.5, 0, Z1 - 0.62, 0));
   // Two chairs at the ends, both facing the table, and one dragged clear and left turned out. None
@@ -185,16 +185,29 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 }
 
 /** The television on its wall bracket, showing the wing's own status board. It is dressing, not a
- *  project, so it carries no hotspot. The face is measured off the model rather than guessed, and
- *  hung 5 mm proud of the front of its own bounding box. */
-function statusBoard(tv: THREE.Object3D): THREE.Group {
-  const size = new THREE.Box3().setFromObject(tv).getSize(new THREE.Vector3());
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(size.x * 0.76, size.y * 0.66), new THREE.MeshStandardMaterial({
-    color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.05,
-    emissiveMap: screenFace(['torn.bet  operational', 'Kayou  1,500 members', 'character bot  in flight'], ACCENT, 512, 360),
-  }));
-  face.position.set(0, size.y * 0.54, size.z / 2 + 0.005); tv.add(face);
-  return crtBracket(tv, size.x * 0.92);
+ *  project, so it carries no hotspot. It was the Poly Haven set with a lit plane hung in front of
+ *  its bounding box, which put the picture a few centimetres off the curved glass, and the board on
+ *  it was three sentences too small to read: "i can tell we put floating text on it and i cant even
+ *  read it". Now it is the same set the containment floor has, whose screen sits in its own bezel,
+ *  half again as big, with the board set in type sized for the room. */
+function statusBoard(): THREE.Group {
+  const S = 1.5;
+  const set = crtSet(statusScreen([
+    ['torn.bet', 'OPERATIONAL', '#4FD08A'],
+    ['Kayou', '1,500 MEMBERS', '#6EC1D6'],
+    ['Character bot', 'IN FLIGHT', '#E8B923'],
+  ]));
+  set.scale.setScalar(S);
+  // The set is 0.6 m deep behind its face at this size, so the shelf runs the whole of that and the
+  // set stands with the back of its funnel just off the wall.
+  const back = 0.415 * S, front = 0.16 * S;
+  const g = crtBracket(set, 0.52 * S * 0.92, back + front + 0.04);
+  set.position.z = back + 0.03;
+  // Turned on the shelf toward the east, which is the way the walk comes. The set hangs on the side
+  // wall and the walk passes along that wall, so square to it the screen is only ever seen edge on.
+  // Turned 0.64 rad the funnel's back corner still clears the wall by 4 cm.
+  set.rotation.y = -0.64;
+  return g;
 }
 
 /** The plants died with the building. Tinting the model's own materials is enough: green is the one

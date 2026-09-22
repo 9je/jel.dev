@@ -6,7 +6,7 @@ import { cabinetBank, fallenTiles, switchCabinet, wallPanel } from '../../labs/p
 import { labSteel } from '../../labs/materials';
 import { crtSet } from '../../labs/furniture';
 import { signBox, tapeCross } from '../../labs/signage';
-import { chainlink, redactedSheet, staticNoise } from '../../labs/textures';
+import { chainlink, passerby, redactedSheet, staticNoise } from '../../labs/textures';
 import { X1, Z1, AISLE_CLEAR, BANK, CRT, HALL_DOOR, ISLANDS, MISSING, SEALED, TABLE } from './layout';
 import { holeAt } from './shell';
 
@@ -16,6 +16,8 @@ export interface Dressing {
   pulse: THREE.MeshStandardMaterial[];
   /** The television's screen, for the stage to crawl its static. */
   crt: { map: THREE.Texture; material: THREE.MeshStandardMaterial };
+  /** The sealed door's glass and seam maps, for the stage to walk someone past behind it. */
+  passer: { glass: THREE.Texture; seam: THREE.Texture };
 }
 
 /** Terragroup's switchgear green, off the reference. */
@@ -129,7 +131,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const leaf = new THREE.Mesh(new THREE.BoxGeometry(SEALED.w, SEALED.h, 0.08), labSteel(0x4a545c));
   leaf.position.y = SEALED.h / 2; sealed.add(leaf);
 
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a0a0b, emissive: RED, emissiveIntensity: 0.8 });
+  const passer = passerby();
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a0a0b, emissive: RED, emissiveIntensity: 0.8, emissiveMap: passer.glass });
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.5), glassMat);
   glass.rotation.y = Math.PI; glass.position.set(0, 1.72, -0.045); sealed.add(glass);
   // The wire in the wired glass: the cage mesh at a third opacity, over the lit pane.
@@ -139,7 +142,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   }));
   wire.rotation.y = Math.PI; wire.position.set(0, 1.72, -0.05); sealed.add(wire);
 
-  const seamMat = new THREE.MeshStandardMaterial({ color: 0x1a0a0b, emissive: RED, emissiveIntensity: 3 });
+  const seamMat = new THREE.MeshStandardMaterial({ color: 0x1a0a0b, emissive: RED, emissiveIntensity: 3, emissiveMap: passer.seam });
   const seam = new THREE.Mesh(new THREE.BoxGeometry(SEALED.w, 0.02, 0.05), seamMat);
   seam.position.set(0, 0.02, -0.06); sealed.add(seam);
   pulse.push(glassMat, seamMat);
@@ -212,5 +215,5 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     [-82.6, 0, 19.8, 2.2], [-79.6, 0, 23.4, 1.2],
   ]));
 
-  return { hotspots, pulse, crt: { map: crtFace, material: crt.material as THREE.MeshStandardMaterial } };
+  return { hotspots, pulse, crt: { map: crtFace, material: crt.material as THREE.MeshStandardMaterial }, passer };
 }

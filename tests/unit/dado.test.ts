@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { DADO_H, dadoBands } from '../../src/scenes/walk/labs/materials';
+import * as THREE from 'three';
+import { DADO_H, backless, dadoBands } from '../../src/scenes/walk/labs/materials';
 
 /**
  * The blue lower wall is one height for the whole building, and this is what holds it there.
@@ -51,5 +52,16 @@ describe('the dado', () => {
   it('paints to a height a building would actually paint to', () => {
     expect(DADO_H).toBeGreaterThan(1.4);
     expect(DADO_H).toBeLessThan(1.9);
+  });
+
+  // Where two halls share a wall, a band on one side stands inside the other hall. Its back face is
+  // what showed there, so a run in that metre drops it and keeps every other face.
+  it('drops only the face against the wall from a run in a shared wall', () => {
+    const { band } = dadoBands(3, 0, 0, Math.PI / 2);
+    const before = band.getIndex()!.count;
+    backless(band, new THREE.Vector3(1, 0, 0));
+    expect(band.getIndex()!.count).toBe(before - 6);
+    const n = band.getAttribute('normal'), idx = band.getIndex()!;
+    for (let i = 0; i < idx.count; i++) expect(n.getX(idx.getX(i))).toBeLessThan(0.9);
   });
 });

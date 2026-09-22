@@ -94,6 +94,75 @@ export function screenFace(lines: string[], accent = '#6EC1D6', w = 512, h = 320
   return own(c);
 }
 
+/**
+ * The break room television's status board, 4:3 for the set's screen: one project to a row, the
+ * name large with its state under it in that row's colour and a bar of the same colour beside it.
+ * Colour and emissive map. Sized to be read across the room: it was three sentences in 34 px type
+ * on a face 0.4 m wide, which from the walk is a grey smear.
+ */
+export function statusScreen(rows: [name: string, state: string, color: string][]): THREE.CanvasTexture {
+  const w = 640, h = 480;
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = '#04111b'; ctx.fillRect(0, 0, w, h);
+  const glow = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, w * 0.62);
+  glow.addColorStop(0, 'rgba(110,193,214,0.10)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+  const size = (text: string, px: number, maxW: number) => {
+    let p = px;
+    do { ctx.font = `600 ${p}px Michroma, system-ui, sans-serif`; } while (ctx.measureText(text).width > maxW && --p > 10);
+  };
+  const rowH = h / rows.length, left = 78, maxW = w - left - 30;
+  ctx.textBaseline = 'alphabetic';
+  rows.forEach(([name, state, color], i) => {
+    const mid = i * rowH + rowH / 2;
+    ctx.fillStyle = color; ctx.fillRect(34, mid - 44, 16, 88);
+    ctx.fillStyle = '#E6F2F7'; size(name, 50, maxW); ctx.fillText(name, left, mid + 4);
+    ctx.fillStyle = color; size(state, 28, maxW); ctx.fillText(state, left, mid + 44);
+  });
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
+  const t = own(c); t.anisotropy = 8; return t;
+}
+
+/**
+ * Someone walking past behind the sealed door, as two emissive maps: the wired glass and the seam
+ * of light under the door. Each is a strip three times its own width, lit white at both ends, with
+ * the figure in the middle third, so a map at `repeat.x` 1/3 shows plain light and sliding its
+ * offset walks the figure across. Clamped at the edges, so anywhere past the strip is lit.
+ *
+ * The glass gets a head and shoulders, the seam gets the shadow of two feet and the body over
+ * them. Both are drawn soft: the glass is wired and frosted and the figure is a metre behind it,
+ * and a hard edged cut out would read as a sticker sliding over the pane.
+ */
+export function passerby(): { glass: THREE.CanvasTexture; seam: THREE.CanvasTexture } {
+  const shadowed = (ctx: CanvasRenderingContext2D, blur: number, draw: () => void) => {
+    // A blurred shape without ctx.filter, which Safari does not have: draw it far off the canvas
+    // and let its shadow land where it belongs.
+    ctx.save(); ctx.shadowColor = '#000000'; ctx.shadowBlur = blur; ctx.shadowOffsetX = 4000;
+    ctx.translate(-4000, 0); ctx.fillStyle = '#000000'; draw(); ctx.restore();
+  };
+  // The pane is 0.4 by 0.5 m, 128 by 160 here, its top edge 1.97 m off the floor.
+  const [gc, g] = canvas(384, 160);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 384, 160);
+  shadowed(g, 14, () => {
+    const cx = 192, px = 320; // px per metre
+    const y = (m: number) => (1.97 - m) * px;
+    g.beginPath(); g.ellipse(cx, y(1.68), 0.085 * px, 0.11 * px, 0, 0, Math.PI * 2); g.fill();
+    g.fillRect(cx - 0.05 * px, y(1.58), 0.1 * px, 0.06 * px);
+    g.beginPath(); g.moveTo(cx - 0.22 * px, 170); g.quadraticCurveTo(cx - 0.21 * px, y(1.5), cx - 0.08 * px, y(1.54));
+    g.lineTo(cx + 0.08 * px, y(1.54)); g.quadraticCurveTo(cx + 0.21 * px, y(1.5), cx + 0.22 * px, 170); g.closePath(); g.fill();
+  });
+  // The seam is 1.6 m along, 128 px here: the body's shadow wide and faint, the feet dark in it.
+  const [sc, sctx] = canvas(384, 16);
+  const body = sctx.createLinearGradient(192 - 40, 0, 192 + 40, 0);
+  body.addColorStop(0, '#ffffff'); body.addColorStop(0.5, '#3a3a3a'); body.addColorStop(1, '#ffffff');
+  sctx.fillStyle = body; sctx.fillRect(0, 0, 384, 16);
+  shadowed(sctx, 5, () => { sctx.fillRect(192 - 13, 0, 9, 16); sctx.fillRect(192 + 4, 0, 9, 16); });
+  const strip = (c: HTMLCanvasElement) => {
+    const t = own(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.repeat.set(1 / 3, 1); return t;
+  };
+  return { glass: strip(gc), seam: strip(sc) };
+}
+
 /** A sheet of paper with grey lines of text, slightly yellowed. Colour map. */
 export function paperSheet(seed = 1): THREE.CanvasTexture {
   const [c, ctx] = canvas(128, 180); const r = rng(seed);

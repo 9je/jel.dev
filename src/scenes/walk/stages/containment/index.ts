@@ -11,7 +11,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'containment'; scene.add(root);
   const shell = buildShell(ctx, root); await ctx.pace();
-  const { hotspots, pulse, crt } = await buildDressing(ctx, root);
+  const { hotspots, pulse, crt, passer } = await buildDressing(ctx, root);
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.Points) return;
     const translucent = (o.material as THREE.Material).transparent;
@@ -47,12 +47,38 @@ async function build(ctx: StageContext): Promise<Stage> {
   // field rate and not a frame rate, and at sixty it reads as a shimmer rather than as a picture
   // that is not there. The brightness swims a little under it, which is the set's own gain hunting
   // for a signal it is never going to find.
+  //
+  // And every fifteen seconds or so, someone walks past on the other side of the door. Nothing more
+  // than that: a head and shoulders crossing the wired glass, the feet crossing the seam, and the
+  // red on the floor dipping while they are in front of the light. It is a second and a half, it
+  // never happens on a beat, and the first one is late enough that a visitor has to have stood here
+  // a while to see it. The red spot is the rig's, and the rig reads a placement's intensity every
+  // frame, so the dip is made by moving the number on the placement this room handed it.
   let clock = 0, crtClock = 0;
   const CRT_FIELD = 1 / 24;
+  const placements = lights();
+  const red = placements.find((l) => l.kind === 'spot' && l.color === 0xd7383a)!;
+  const RED_I = red.intensity;
+  const WALK = { span: 1.5, speed: 1.1 };
+  let nextPass = 9 + Math.random() * 4, passAt = -1;
+  const walkTo = (p: number) => {
+    // Each map is a strip three widths long with the figure centred, so the figure is `p` metres off
+    // the centre of an opening `w` wide when the strip is offset by (w - p) / 3w. Past either end
+    // the offset leaves the strip, and the clamped edge is plain light.
+    passer.glass.offset.x = (0.4 - p) / 1.2;
+    passer.seam.offset.x = (SEALED.w - p) / (3 * SEALED.w);
+    red.intensity = RED_I * (1 - 0.7 * Math.exp(-((p / 0.45) ** 2)));
+  };
+  walkTo(10);
   return {
-    id: 'containment', root, lights: lights(), hotspots,
+    id: 'containment', root, lights: placements, hotspots,
     update(_t, dt) {
       clock += dt;
+      if (passAt < 0 && clock >= nextPass) passAt = clock;
+      if (passAt >= 0) {
+        const p = -WALK.span + (clock - passAt) * WALK.speed;
+        if (p > WALK.span) { passAt = -1; nextPass = clock + 12 + Math.random() * 6; walkTo(10); } else walkTo(p);
+      }
       for (const p of fx) p.update(dt);
       const level = 2.4 + 0.8 * Math.sin(clock * 1.7);
       pulse[0].emissiveIntensity = level * 0.33;

@@ -91,13 +91,6 @@ describe('the break room kit', () => {
     expect(box.max.x - box.min.x).toBeGreaterThan(0.6);
   });
 
-  it('slings a tarp the size it was asked for with a rail over it', () => {
-    const box = new THREE.Box3().setFromObject(kit.tarpWall(8, 3.2));
-    expect(box.max.x - box.min.x).toBeCloseTo(8, 2);
-    expect(box.max.y).toBeGreaterThan(1.6);
-    expect(box.min.y).toBeCloseTo(-1.6, 1);
-  });
-
   it('gives every locker bay a door', () => {
     const doors = (bays: number) => {
       let n = 0;

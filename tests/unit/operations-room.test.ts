@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CatmullRomCurve3, Vector3 } from 'three';
 import { CONTROL_POINTS, STOPS, cameraAt } from '../../src/scenes/walk/path';
 import { lights } from '../../src/scenes/walk/stages/operations/lighting';
-import { BATTEN_ROWS, BATTEN_XS, BATTEN_Y, CARTONS, RACK_Z, STANCHIONS, TAPE_RUNS, TRUNK, X0 } from '../../src/scenes/walk/stages/operations/layout';
+import { BATTEN_ROWS, BATTEN_XS, BATTEN_Y, CAGE_Z, CARTONS, RACK_Z, STANCHIONS, TAPE_RUNS, TRUNK, X0, Z0, Z1 } from '../../src/scenes/walk/stages/operations/layout';
+import { LAB } from '../../src/scenes/walk/stages/credentials/layout';
 
 // The walked line, as the path builds it, sampled finely enough to measure a clearance against.
 const curve = new CatmullRomCurve3(CONTROL_POINTS.map((p) => new Vector3(...p)), false, 'centripetal', 0.5);
@@ -49,6 +50,23 @@ describe('the server hall', () => {
     }
     // And it feeds the tray it hangs over, so the drops into it stay short.
     expect(Math.abs(TRUNK.z - RACK_Z.south)).toBeLessThanOrEqual(2);
+  });
+
+  // The north end post stood behind the north cage's fence, and its tape ran out through the end of
+  // the cage to reach the aisle.
+  it('stands every stanchion in the aisle, so no tape runs through a cage', () => {
+    for (const [, z] of STANCHIONS) {
+      expect(z).toBeGreaterThan(CAGE_Z.south);
+      expect(z).toBeLessThan(CAGE_Z.north);
+    }
+  });
+
+  // The credentials hall overlaps this one by the metre of wall between them. Its glass lab's south
+  // east corner stood in that metre, so the lab's glass and roof showed through behind the cage.
+  it('keeps the credentials lab out of this hall', () => {
+    const lab = { x1: LAB.x + LAB.w / 2, z0: LAB.z - LAB.d / 2 };
+    const inside = lab.x1 > X0 && lab.z0 < Z1 && lab.z0 + LAB.d > Z0;
+    expect(inside).toBe(false);
   });
 
   it('strings no tape through the flagship desk', () => {

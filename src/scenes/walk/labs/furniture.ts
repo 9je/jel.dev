@@ -385,13 +385,15 @@ export function arcadeCabinet(spec: ArcadeSpec): THREE.Group {
 /** A wall bracket for the break room's television: a back plate, a shelf and two braces, with the
  *  model already standing on it. Origin at the wall, shelf top on y 0. Two draw calls plus the
  *  model's own. */
-export function crtBracket(model: THREE.Object3D, w: number): THREE.Group {
+export function crtBracket(model: THREE.Object3D, w: number, depth = 0.42): THREE.Group {
   const g = new THREE.Group();
   const steel: THREE.BufferGeometry[] = [
     new THREE.BoxGeometry(w * 0.9, 0.07, 0.025).translate(0, 0.04, 0.012),
-    new THREE.BoxGeometry(w, 0.03, 0.42).translate(0, -0.015, 0.21),
+    new THREE.BoxGeometry(w, 0.03, depth).translate(0, -0.015, depth / 2),
   ];
-  for (const side of [-1, 1]) steel.push(new THREE.BoxGeometry(0.03, 0.5, 0.03).rotateX(0.87).translate(side * w * 0.4, -0.16, 0.21));
+  // Each brace runs from low on the wall to the shelf's middle, at the same angle whatever the depth.
+  const k = depth / 0.42;
+  for (const side of [-1, 1]) steel.push(new THREE.BoxGeometry(0.03, 0.5 * k, 0.03).rotateX(0.87).translate(side * w * 0.4, -0.16 * k, depth / 2));
   g.add(merged(steel, labSteel(0x39434b)));
   model.position.set(0, 0.002, 0.22); g.add(model);
   return g;
@@ -665,22 +667,6 @@ export function cableCoil(): THREE.Group {
   const yellow = new THREE.MeshStandardMaterial({ color: 0xe8b923, roughness: 0.6 });
   const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.8, 6), yellow); cord.position.y = 0.9; g.add(cord);
   g.add(instances(new THREE.TorusGeometry(0.22, 0.02, 8, 24).rotateX(Math.PI / 2), yellow, Array.from({ length: 6 }, (_, i) => [0, -i * 0.05, 0] as Spot)));
-  return g;
-}
-
-/** A polythene tarp slung off a rail, `w` by `h`, origin at the centre of the sheet, facing +z. The
- *  sheet's vertices are pushed off the plane by a few centimetres, which is all it takes for the
- *  light to break up across it instead of laying one flat blue rectangle on the wall. Two calls. */
-export function tarpWall(w: number, h: number, seed = 1): THREE.Group {
-  const g = new THREE.Group();
-  const geo = new THREE.PlaneGeometry(w, h, 12, 6);
-  const pos = geo.attributes.position as THREE.BufferAttribute;
-  const r = rng(seed);
-  for (let i = 0; i < pos.count; i++) pos.setZ(i, (r() - 0.5) * 0.06);
-  pos.needsUpdate = true; geo.computeVertexNormals();
-  g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x2a5aa0, roughness: 0.95, side: THREE.DoubleSide })));
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.05), labSteel(0x9aa5ad));
-  rail.position.y = h / 2 + 0.04; g.add(rail);
   return g;
 }
 
@@ -1010,6 +996,15 @@ function tracked(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
   ctx.textAlign = align;
 }
 
+/** Sets `ctx.font` to the largest Michroma size up to `px` at which `text`, tracked by `spacing`,
+ *  fits in `maxW`. Michroma is a very wide face: COLD DRINKS at a flat 44 px ran 510 px on a 512 px
+ *  sign, so its C sat over the bottle mark and its K ran off the edge. */
+function fit(ctx: CanvasRenderingContext2D, text: string, spacing: number, maxW: number, px: number, weight = 600): void {
+  const at = (size: number) => { ctx.font = `${weight} ${size}px Michroma, system-ui, sans-serif`; return [...text].reduce((w, ch) => w + ctx.measureText(ch).width, 0) + spacing * (text.length - 1); };
+  let size = px;
+  while (size > 8 && at(size) > maxW) size -= 1;
+}
+
 /** A rounded rectangle path. */
 function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -1221,10 +1216,10 @@ export function snackHeader(accent = '#E8B923'): THREE.CanvasTexture {
   ctx.fillStyle = '#ffffff';
   for (const y of [by + 2, by + bh - crimp]) for (let k = 0; k < 5; k++) ctx.fillRect(bx + 10 + k * ((bw - 20) / 5), y, 6, 10);
   ctx.fillStyle = '#2b1a12'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  ctx.font = '600 44px Michroma, system-ui, sans-serif';
+  fit(ctx, 'SNACKS', 9, 340, 44);
   tracked(ctx, 'SNACKS', 312, 74, 9);
   ctx.fillStyle = 'rgba(43,26,18,0.5)'; ctx.fillRect(190, 108, 244, 2);
-  ctx.font = '600 20px Michroma, system-ui, sans-serif';
+  fit(ctx, 'EXACT CHANGE', 4, 320, 20);
   tracked(ctx, 'EXACT CHANGE', 312, 134, 4);
   const t = own(c); t.anisotropy = 8; return t;
 }
@@ -1259,11 +1254,12 @@ export function drinksHeader(accent = '#3D7BE0'): THREE.CanvasTexture {
   ctx.beginPath(); ctx.ellipse(bx + bw + 14, by + 52, 5, 8, 0, 0, Math.PI * 2); ctx.fill();
   // The words, tracked wide, with a hairline under them.
   ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  ctx.font = '600 44px Michroma, system-ui, sans-serif';
-  tracked(ctx, 'COLD DRINKS', 312, 74, 7);
-  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(160, 108, 304, 2);
-  ctx.font = '600 15px Michroma, system-ui, sans-serif';
-  tracked(ctx, 'SERVED CHILLED', 312, 130, 5);
+  // Everything right of the bottle and its droplet: x 140 to 492, centred on 316.
+  fit(ctx, 'COLD DRINKS', 5, 340, 44);
+  tracked(ctx, 'COLD DRINKS', 316, 74, 5);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(166, 108, 300, 2);
+  fit(ctx, 'SERVED CHILLED', 5, 300, 17);
+  tracked(ctx, 'SERVED CHILLED', 316, 132, 5);
   // The sign's own bezel, so the face reads as a lit panel in a frame and not a decal.
   ctx.strokeStyle = 'rgba(8,16,26,0.75)'; ctx.lineWidth = 10; ctx.strokeRect(0, 0, W, H);
   const t = own(c); t.anisotropy = 8; return t;
