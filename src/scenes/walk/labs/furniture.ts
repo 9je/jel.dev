@@ -672,12 +672,22 @@ export function taskChair(): THREE.Group {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The break room's second drinks machine. `vendingMachine` above is the first cut and stays as it
-// is for any room that still uses it. This one is built the way the real object is built: a full
-// height glass door in a steel frame with a handle, the stock on lit shelves behind it, a lit header
-// over the door, a coin mech column beside it and a delivery flap and a vent in the plinth.
+// The vending machines. Built the way the real object is built: a full height glass door in a steel
+// frame with a handle, the stock on lit shelves behind it, a lit header over the door, a coin mech
+// column beside it and a delivery flap and a vent in the plinth.
+//
+// There was a first cut of this, a flat recess with the stock painted on, and the break room went
+// on drawing it after this one was written and never placed. Jordan called both its instances weak,
+// so the first cut is gone and this is the only machine in the kit.
 
-export interface DrinksSpec { accent: string; lit: boolean; seed: number }
+export interface DrinksSpec {
+  accent: string;
+  lit: boolean;
+  seed: number;
+  /** What the machine sells. The cabinet is the same object either way, which is the point of the
+   *  parameter: what changes is the header over the door and the stock behind the glass. */
+  kind?: 'drinks' | 'snacks';
+}
 
 /** Draws `text` one glyph at a time with `spacing` pixels between them, centred on `x`. The canvas
  *  `letterSpacing` property is not in every browser the walk runs on. */
@@ -783,6 +793,132 @@ export function drinksStock(seed = 1): THREE.CanvasTexture {
   const t = own(c); t.anisotropy = 8; return t;
 }
 
+/** A crisp bag on a coil: a pillow with crimped seams top and bottom, a label band across it and a
+ *  highlight down one side, the way a foil bag catches a strip light. */
+function bag(ctx: CanvasRenderingContext2D, x: number, base: number, w: number, h: number, colour: string, label: string): void {
+  const top = base - h, crimp = h * 0.11;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.12, top + crimp);
+  ctx.quadraticCurveTo(x - w * 0.06, base - h / 2, x + w * 0.12, base - crimp);
+  ctx.lineTo(x + w * 0.88, base - crimp);
+  ctx.quadraticCurveTo(x + w * 1.06, base - h / 2, x + w * 0.88, top + crimp);
+  ctx.closePath(); ctx.fill();
+  const shade = ctx.createLinearGradient(x, 0, x + w, 0);
+  shade.addColorStop(0, 'rgba(0,0,0,0.45)'); shade.addColorStop(0.24, 'rgba(255,255,255,0.34)');
+  shade.addColorStop(0.5, 'rgba(255,255,255,0.04)'); shade.addColorStop(1, 'rgba(0,0,0,0.5)');
+  ctx.fillStyle = shade; ctx.fill();
+  // The crimped seams, drawn as a run of short teeth so the bag has a top and a bottom.
+  ctx.fillStyle = 'rgba(220,228,234,0.75)';
+  for (const y of [top + crimp * 0.2, base - crimp]) for (let k = 0; k < 7; k++) {
+    ctx.fillRect(x + w * 0.14 + k * (w * 0.72 / 7), y, w * 0.06, crimp * 0.62);
+  }
+  ctx.fillStyle = label; ctx.fillRect(x + w * 0.16, top + h * 0.38, w * 0.68, h * 0.24);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; rrect(ctx, x + w * 0.24, top + h * 0.44, w * 0.52, h * 0.09, 3); ctx.fill();
+  ctx.fillStyle = shade; ctx.fillRect(x + w * 0.16, top + h * 0.38, w * 0.68, h * 0.24);
+}
+
+/** A chocolate bar on a coil: a flat wrapper, squarer and shorter than a bag, with a foil edge. */
+function barWrap(ctx: CanvasRenderingContext2D, x: number, base: number, w: number, h: number, colour: string, label: string): void {
+  const top = base - h;
+  ctx.fillStyle = colour; rrect(ctx, x + w * 0.08, top, w * 0.84, h, 4); ctx.fill();
+  const shade = ctx.createLinearGradient(x, 0, x + w, 0);
+  shade.addColorStop(0, 'rgba(0,0,0,0.4)'); shade.addColorStop(0.3, 'rgba(255,255,255,0.22)'); shade.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = shade; rrect(ctx, x + w * 0.08, top, w * 0.84, h, 4); ctx.fill();
+  ctx.fillStyle = label; ctx.fillRect(x + w * 0.12, top + h * 0.34, w * 0.76, h * 0.3);
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; rrect(ctx, x + w * 0.2, top + h * 0.42, w * 0.6, h * 0.12, 2); ctx.fill();
+}
+
+/**
+ * The stock behind a snack machine's glass: six shelves of bags and bars hung on helix coils, with
+ * a price rail on each and a few coils turned empty. Colour and emissive map, 512 by 1024, for the
+ * same door the drinks machine uses.
+ *
+ * The break room ran two drinks machines side by side and Jordan read them as one machine drawn
+ * twice. A snack machine is the object that actually stands next to a drinks machine, and it is a
+ * different silhouette behind the glass: product hanging off coils in rows rather than stacked on
+ * shelves, warm packaging rather than cold, and gaps where a coil has turned.
+ */
+export function snackStock(seed = 1): THREE.CanvasTexture {
+  const W = 512, H = 1024;
+  const [c, ctx] = canvas(W, H); const r = rng(seed);
+  ctx.fillStyle = '#0d1116'; ctx.fillRect(0, 0, W, H);
+  for (const [x0, x1] of [[0, 90], [W, W - 90]] as [number, number][]) {
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, 'rgba(236,216,180,0.26)'); g.addColorStop(1, 'rgba(236,216,180,0)');
+    ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x1), 0, 90, H);
+  }
+  // Packaging colours: the snack aisle is warm where the drinks cabinet is cold.
+  const packs: [string, string][] = [
+    ['#e8b923', '#8a4a0c'], ['#d7383a', '#f3e6d8'], ['#2f7d3a', '#f0ead6'], ['#1f5fa8', '#f2d24a'],
+    ['#8b5fc4', '#f0e8f6'], ['#e07a1f', '#2b1a12'], ['#3b2a1c', '#d9a441'],
+  ];
+  const pitch = 166, cols = 5, colW = W / cols;
+  for (let s = 0; s < 6; s++) {
+    const base = pitch * (s + 1) - 40;
+    // The top two rows are bars laid flatter, the rest bags. A machine stocks its heavy lines low.
+    const bars = s > 3;
+    const empty = Math.floor(r() * cols);
+    for (let k = 0; k < cols; k++) {
+      if (k === empty) continue;
+      const [body, label] = packs[Math.floor(r() * packs.length)]!;
+      const x = k * colW + 6, w = colW - 12;
+      if (bars) barWrap(ctx, x, base - 18, w, 46, body, label);
+      else bag(ctx, x, base - 10, w, 92, body, label);
+    }
+    // The coil in front of each slot, seen end on: four turns of a helix, the front one brightest.
+    for (let k = 0; k < cols; k++) for (let t = 0; t < 4; t++) {
+      ctx.strokeStyle = `rgba(214,226,234,${(0.22 + t * 0.12).toFixed(2)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(k * colW + colW / 2, base - 34 - t * 22, colW * 0.36, 13, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    // The shelf plate and the price rail, with a slot code under each column.
+    const plate = ctx.createLinearGradient(0, base, 0, base + 13);
+    plate.addColorStop(0, '#8b979e'); plate.addColorStop(1, '#4b565d');
+    ctx.fillStyle = plate; ctx.fillRect(0, base, W, 13);
+    ctx.fillStyle = '#e6e1d3'; ctx.fillRect(0, base + 13, W, 18);
+    ctx.fillStyle = '#1a2530'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '600 13px Michroma, system-ui, sans-serif';
+    for (let k = 0; k < cols; k++) {
+      ctx.fillText(`${String.fromCharCode(65 + s)}${k + 1}`, k * colW + 10, base + 27);
+      ctx.fillRect(k * colW + colW - 2, base + 13, 2, 18);
+    }
+  }
+  const t = own(c); t.anisotropy = 8; return t;
+}
+
+/** The header over a snack machine: the same lit box as the drinks one in a warm palette, with a
+ *  bag mark instead of a bottle. */
+export function snackHeader(accent = '#E8B923'): THREE.CanvasTexture {
+  const W = 512, H = 171;
+  const [c, ctx] = canvas(W, H);
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#7a3c06'); g.addColorStop(0.55, accent); g.addColorStop(1, '#f3d98a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const sweep = ctx.createLinearGradient(0, 0, W * 0.6, H);
+  sweep.addColorStop(0, 'rgba(255,255,255,0)'); sweep.addColorStop(0.5, 'rgba(255,255,255,0.18)'); sweep.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sweep; ctx.fillRect(0, 0, W, H);
+  // The bag mark: the same pillow the stock is drawn with, in white, at sign size.
+  const bx = 62, by = 30, bw = 52, bh = 110, crimp = 14;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(bx + 8, by + crimp);
+  ctx.quadraticCurveTo(bx - 8, by + bh / 2, bx + 8, by + bh - crimp);
+  ctx.lineTo(bx + bw - 8, by + bh - crimp);
+  ctx.quadraticCurveTo(bx + bw + 8, by + bh / 2, bx + bw - 8, by + crimp);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = accent; ctx.fillRect(bx + 10, by + 46, bw - 20, 22);
+  ctx.fillStyle = '#ffffff';
+  for (const y of [by + 2, by + bh - crimp]) for (let k = 0; k < 5; k++) ctx.fillRect(bx + 10 + k * ((bw - 20) / 5), y, 6, 10);
+  ctx.fillStyle = '#2b1a12'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.font = '600 44px Michroma, system-ui, sans-serif';
+  tracked(ctx, 'SNACKS', 312, 74, 9);
+  ctx.fillStyle = 'rgba(43,26,18,0.5)'; ctx.fillRect(190, 108, 244, 2);
+  ctx.font = '600 20px Michroma, system-ui, sans-serif';
+  tracked(ctx, 'EXACT CHANGE', 312, 134, 4);
+  const t = own(c); t.anisotropy = 8; return t;
+}
+
 /** The header over the door: a cold blue gradient, a bottle mark and the words in tracked Michroma.
  *  Colour and emissive map, 512 by 171, for a header 0.84 by 0.28. */
 export function drinksHeader(accent = '#3D7BE0'): THREE.CanvasTexture {
@@ -876,7 +1012,7 @@ export function drinksMech(): { map: THREE.CanvasTexture; glow: THREE.CanvasText
 }
 
 /**
- * A glass fronted drinks machine, 0.9 wide, 1.9 tall, 0.8 deep, origin at floor centre, facing +z.
+ * A glass fronted vending machine, 0.9 wide, 1.9 tall, 0.8 deep, origin at floor centre, facing +z.
  * A dark painted carcass with a full height glass door in a steel frame, the stock lit on shelves
  * behind it under LED strips, a lit header over the door, the coin mech column beside it, a
  * delivery flap and a vent grille in the plinth, and rubber feet. Unlit, the header, the strips, the
@@ -929,11 +1065,16 @@ export function drinksMachine(spec: DrinksSpec): THREE.Group {
   g.add(merged(steel, labSteel(0x9aa5ad)));
 
   // The stock on its shelves at the back of the cavity, and the LED strips down the door reveals.
-  const shelves = drinksStock(spec.seed);
+  const snacks = spec.kind === 'snacks';
+  const shelves = snacks ? snackStock(spec.seed) : drinksStock(spec.seed);
   const stock = new THREE.Mesh(new THREE.PlaneGeometry(doorW, doorH), new THREE.MeshStandardMaterial({
     map: shelves, emissive: 0xffffff, emissiveMap: shelves, emissiveIntensity: spec.lit ? 0.9 : 0, roughness: 0.8,
   }));
-  stock.position.set(doorX, doorY, BACK + 0.002); g.add(stock);
+  // The stock stands just behind the door rather than at the back of the cavity. It is one plane
+  // standing in for the front row of product, and a real machine's front row is up against the
+  // glass: 0.3 m back, the pair on the break room's south wall lost it behind the door frame the
+  // moment the walk was off their axis, and the further machine read as an empty case.
+  stock.position.set(doorX, doorY, F - 0.1); g.add(stock);
   const strips: THREE.BufferGeometry[] = [];
   for (const x of [DOOR.x0 + 0.012, DOOR.x1 - 0.012]) strips.push(new THREE.BoxGeometry(0.012, doorH - 0.02, 0.012).translate(x, doorY, F - 0.03));
   g.add(merged(strips, new THREE.MeshStandardMaterial({ color: spec.lit ? 0xffffff : 0x2a3138, emissive: 0xdff0f6, emissiveIntensity: spec.lit ? 2.4 : 0, roughness: 0.5 })));
@@ -943,7 +1084,7 @@ export function drinksMachine(spec: DrinksSpec): THREE.Group {
   }));
   glass.position.set(doorX, doorY, F + 0.004); glass.renderOrder = 2; g.add(glass);
 
-  const face = drinksHeader(spec.accent);
+  const face = snacks ? snackHeader(spec.accent) : drinksHeader(spec.accent);
   const header = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.28), new THREE.MeshStandardMaterial({
     color: 0xffffff, map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: spec.lit ? 1.3 : 0, roughness: 0.5,
   }));

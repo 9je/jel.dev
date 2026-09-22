@@ -17,13 +17,18 @@ export function labWall(store: AssetStore, w: number, h: number, tint: number = 
 /**
  * A dado band to 1.2 m with a thin line on top, as two geometries already placed. Merge many.
  *
- * The run is inset three centimetres at each end of `len`. A band flush with the end of its wall
- * puts its end cap on whatever plane closes the wall there, facing the same way, and where that is
- * a doorway's reveal the two are coplanar front faces the depth buffer cannot separate: a flicker
- * down the jamb as the camera turns through the opening. Three centimetres is invisible and cannot.
+ * The run is inset two millimetres at each end of `len`, and the size of that number is the whole
+ * of it. A band flush with the end of its wall puts its end cap on whatever plane closes the wall
+ * there, facing the same way, and where that is a doorway's reveal the two are coplanar front faces
+ * the depth buffer cannot separate: a flicker down the jamb as the camera turns through the
+ * opening. So some inset there must be. It was three centimetres, which is six between two runs
+ * that meet on the same line, and that is not invisible at all: the break room's west end joins
+ * four runs and the blue came apart into panels with a black sliver between each. Two millimetres
+ * is under a pixel at any distance the walk ever reads a wall from, and still fifteen times the
+ * separation the depth buffer needs at these ranges.
  */
 export function dadoBands(len: number, x: number, z: number, ry: number): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
-  const run = Math.max(0.1, len - 0.06);
+  const run = Math.max(0.1, len - 0.004);
   const band = new THREE.BoxGeometry(run, 1.2, 0.03); band.rotateY(ry); band.translate(x, 0.6, z);
   const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, 1.25, z);
   return { band, line };

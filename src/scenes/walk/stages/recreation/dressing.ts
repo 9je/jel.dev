@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { cableTray, papers } from '../../labs/props';
-import { arcadeCabinet, crtBracket, fridge, kitchenette, locker, poster, splashback, vendingMachine } from '../../labs/furniture';
+import { arcadeCabinet, crtBracket, drinksMachine, fridge, kitchenette, locker, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
 import { screenFace } from '../../labs/textures';
@@ -77,14 +77,24 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // thing you look at on the way in rather than the machines.
   await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'BREAK ROOM' }), -28.1, 2.28, Z0 + 0.13));
 
-  // ---- South wall, west of the row: the drinks ---------------------------------------------------
-  // The lit machine and its dead twin, past the cabinets, where they are the backdrop the row stands
-  // against and the light that leaks down the wall behind it.
-  const machine = vendingMachine({ accent: ACCENT, lit: true, seed: 11 });
+  // ---- South wall, west of the row: the machines --------------------------------------------------
+  // Past the cabinets, where they are the backdrop the row stands against and the light that leaks
+  // down the wall behind it. Two machines, and until now they were the same machine twice: the same
+  // carcass, the same stock, one lit and one not, which Jordan read as "2 almost identical" and the
+  // dead one as the less detailed of the pair. The pair a break room actually has is a drinks
+  // machine and a snack machine, so that is what stands here: the same cabinet, but one is cold
+  // blue with cans and bottles stacked on shelves and the other is warm with bags and bars hung off
+  // coils. Different silhouette behind the glass, different header over the door.
+  //
+  // Both are `drinksMachine`, which was built as the second cut of this object and then never
+  // placed: a full height glass door in a steel frame, a coin mech column, a delivery flap and a
+  // vent in the plinth. The room went on drawing the first cut, which is the flat recess and the
+  // painted-on stock Jordan called weak.
+  const machine = drinksMachine({ accent: ACCENT, lit: true, seed: 11 });
   const header = machine.getObjectByName('header') as THREE.Mesh;
   const litHeader = header.material as THREE.MeshStandardMaterial;
   await add(place(machine, -31.9, 0, Z0 + 0.42));
-  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -32.95, 0, Z0 + 0.42));
+  await add(place(drinksMachine({ accent: '#E8B923', lit: true, seed: 5, kind: 'snacks' }), -32.95, 0, Z0 + 0.42));
 
   // The copy panel hangs east of the row, over the counter end, so it never covers the cabinets it
   // is describing.

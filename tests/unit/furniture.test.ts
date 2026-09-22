@@ -28,8 +28,8 @@ describe('the break room kit', () => {
 
   it('puts the lights out in an unlit vending machine', () => {
     const header = (m: T.Object3D) => (m.getObjectByName('header') as T.Mesh).material as T.MeshStandardMaterial;
-    expect(header(kit.vendingMachine({ accent: '#3D7BE0', lit: false, seed: 1 })).emissiveIntensity).toBe(0);
-    expect(header(kit.vendingMachine({ accent: '#3D7BE0', lit: true, seed: 1 })).emissiveIntensity).toBeGreaterThan(1);
+    expect(header(kit.drinksMachine({ accent: '#3D7BE0', lit: false, seed: 1 })).emissiveIntensity).toBe(0);
+    expect(header(kit.drinksMachine({ accent: '#3D7BE0', lit: true, seed: 1 })).emissiveIntensity).toBeGreaterThan(1);
   });
 
   it('stands an arcade cabinet at the height a marquee reads from', () => {
