@@ -68,13 +68,14 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   wall(BAY_DOOR.w, H - BAY_DOOR.h, LANDING.x0, (H + BAY_DOOR.h) / 2, BAY_DOOR.z, Math.PI / 2);
   // The rest of this room's east wall, beside the doorway: the bay's own west wall backs onto it.
   wall(Z1 - LANDING.z1, H, X1, H / 2, (LANDING.z1 + Z1) / 2, -Math.PI / 2);
-  // One tape, hanging off the doorway's south post and trailing to the floor: somebody ducked under
-  // it. It stops well short of the walked line, so it never runs through the camera or a wall.
-  // Tied from the jamb to a stanchion two metres along. It used to run from the jamb to the floor
-  // with nothing at the floor end, a tape that had fallen and been left, and Jordan's note on the
-  // entry was that it felt weird.
-  const postA = stanchion(); postA.position.set(BAY_DOOR.x + 2.0, 0, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.8); root.add(postA);
-  root.add(tapeStrip([BAY_DOOR.x, 1.05, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.05], [BAY_DOOR.x + 2.0, 0.95, BAY_DOOR.z - BAY_DOOR.w / 2 + 0.8], 0.06));
+  // The dado runs through the vestibule. The room's band stopped at the wall plane and the
+  // landing's picked up again 2.4 m later, which from the bay is a metre of blue that starts and
+  // stops on a bare wall: "still random wall". The vestibule's south flank is on the same plane as
+  // both, so one band across it closes the gap and the paint reads as paint.
+  band(BAY_DOOR.depth, BAY_DOOR.x, Z0 + 0.02, 0);
+  // There was a tape here, tied from the jamb to a stanchion two metres along. The post stands
+  // behind the doorway's own pillar from every angle the walk sees this landing from, so all that
+  // was ever in frame was a yellow stick lying on a wall: "random tape going into it".
 
   // ---- The west end: the doorway into the server hall -------------------------------------------
   // Its far mouth is the hall's own east wall plane (X0), which the hall closes around, and its near
