@@ -115,7 +115,7 @@
 /* The column is bottom aligned in a frame with 8vh of padding under it, so a body capped at 24vh
    under a name and a line of about 14vh puts the column's top at about 55vh: the room's middle
    band, where the exhibits are, stays clear of it at every stop. */
-.walk[data-mode='full'] .stop-body { max-width: none; max-height: 24vh; overflow: auto; overscroll-behavior: contain; }
+.walk[data-mode='full'] .stop-body { max-width: none; max-height: 28vh; overflow: auto; overscroll-behavior: contain; }
 
 /* Wherever a disclosure is simply there, open, its control is not: the stop body on a fine pointer,
    and the certification wall on every path but the compact column. */

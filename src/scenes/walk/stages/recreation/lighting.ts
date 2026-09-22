@@ -25,7 +25,7 @@ export function lights(): Placement[] {
     { kind: 'spot', position: [row[0], 3.02, row[1]], target: [row[0], 1.25, row[1] - 1.2], intensity: 44, distance: 16, ...room, angle: Math.PI / 4 },
     { kind: 'spot', position: [lounge[0], 3.02, lounge[1]], target: [lounge[0] - 0.4, 0, lounge[1] - 1.4], intensity: 52, distance: 18, ...room },
     { kind: 'spot', position: [west[0], 3.02, west[1]], target: [west[0] - 0.5, 0, west[1] - 1.2], intensity: 62, distance: 22, ...room },
-    { kind: 'point', position: [-30.95, 1.2, Z0 + 0.7], color: 0x3d7be0, intensity: 3.4, distance: 4.5, decay: 2 },
+    { kind: 'point', position: [-31.9, 1.2, Z0 + 0.7], color: 0x3d7be0, intensity: 3.4, distance: 4.5, decay: 2 },
     { kind: 'point', position: [-28.1, 1.85, Z0 + 1.2], color: 0x3d7be0, intensity: 5, distance: 4.5, decay: 2 },
   ];
 }

@@ -510,10 +510,12 @@ export function monitor(spec: MonitorSpec): THREE.Group {
   stand.position.set(0, 0.1 * k, -0.01); g.add(stand);
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.55 * k, 0.36 * k, 0.04), carcass(DARK, 0.5));
   body.position.set(0, 0.38 * k, 0); g.add(body);
+  // A dark monitor carries no texture at all. Passing the keys as undefined is not the same thing:
+  // three reads its parameters by key, so it warns on every dead screen in the room.
   const map = spec.alive ? spec.face : undefined;
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.5 * k, 0.31 * k), new THREE.MeshStandardMaterial({
-    color: 0x0b1117, map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: spec.alive ? 1.1 : 0,
-    roughness: 0.4,
+    color: 0x0b1117, emissive: 0xffffff, emissiveIntensity: spec.alive ? 1.1 : 0, roughness: 0.4,
+    ...(map ? { map, emissiveMap: map } : {}),
   }));
   screen.position.set(0, 0.38 * k, 0.021); screen.name = 'face'; g.add(screen);
   return g;

@@ -55,7 +55,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('wall_clock'), -22.9, 2.3, Z0 + 0.07));
 
   // ---- South wall, the middle: the row the room is about ----------------------------------------
-  // The four cabinets stand square on the piece of wall the camera parks in front of, under their
+  // The cabinets stand square on the piece of wall the camera parks in front of, under their
   // own batten and their own sign. The dark panel behind them is what gives a blue machine an edge
   // against a blue dado, which was the note "blue blends into wall", and it reads as the painted
   // back of a machine bay.
@@ -69,7 +69,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7 }), x, 0, CABINET_Z, ry);
     await add(cabinet);
     hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
-    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(-26.66, 2.15, Z0 + 1.0));
+    // Off the cabinet's own x, so a card still lands on its machine when the row is re-spaced.
+    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(x, 2.15, Z0 + 1.0));
   }
   // The sign over the row, on the wall above the marquees. A lit box at the head of an aisle is how
   // a building this size tells you what a corner of a room is for, and it is what makes the row the
@@ -82,11 +83,11 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const machine = vendingMachine({ accent: ACCENT, lit: true, seed: 11 });
   const header = machine.getObjectByName('header') as THREE.Mesh;
   const litHeader = header.material as THREE.MeshStandardMaterial;
-  await add(place(machine, -30.95, 0, Z0 + 0.42));
-  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -32.0, 0, Z0 + 0.42));
+  await add(place(machine, -31.9, 0, Z0 + 0.42));
+  await add(place(vendingMachine({ accent: ACCENT, lit: false, seed: 5 }), -32.95, 0, Z0 + 0.42));
 
-  // The copy panel hangs east of the row, over the counter end, so it never covers the four cabinets
-  // it is describing.
+  // The copy panel hangs east of the row, over the counter end, so it never covers the cabinets it
+  // is describing.
   anchors.set('recreation', new THREE.Vector3(-25.4, 2.0, -33.9));
 
   // ---- North wall: the quiet side ---------------------------------------------------------------

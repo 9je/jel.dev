@@ -56,15 +56,22 @@ export const PANEL: [number, number] = [1.2, 0.28];
  * So the turn is gone and the hold's aim in `path.ts` swings south to the row instead.
  */
 export const CABINET_Z = Z0 + 0.45;
+/**
+ * The row, east to west, in the order the copy column lists them: a cabinet stands where its
+ * project sits in the list, so reading one and looking at the other agree. 0.96 apart on a 0.76
+ * wide cabinet, and the run is centred on -28.1, which is where the camera parks, so the hold looks
+ * straight down the middle of it rather than at one end.
+ */
 export const CABINETS: [string, string, number, string, number][] = [
-  ['torn-bet', 'torn.bet', -26.66, '#3D7BE0', 0],
-  ['faction-tools', 'faction.tools', -27.62, '#E8B923', 0],
-  ['kayou-bot', 'Kayou', -28.58, '#D7383A', 0],
-  ['character-bot', 'character bot', -29.54, '#3FD47A', 0],
+  ['torn-bet', 'torn.bet', -26.18, '#3D7BE0', 0],
+  ['earworm', 'earworm.games', -27.14, '#B86FE0', 0],
+  ['faction-tools', 'faction.tools', -28.10, '#E8B923', 0],
+  ['kayou-bot', 'Kayou', -29.06, '#D7383A', 0],
+  ['character-bot', 'character bot', -30.02, '#3FD47A', 0],
 ];
 /** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a
  *  blue machine on a blue wall has no edge. `[x, width, height]`. */
-export const ROW_PANEL = { x: -28.1, w: 4.6, h: 2.5 };
+export const ROW_PANEL = { x: -28.1, w: 5.6, h: 2.5 };
 
 export const ACCENT = '#3D7BE0';
 

@@ -67,10 +67,15 @@ export function signLetters(font: Font | null, text: string, opts: { size: numbe
  * the ink stays dark on the lit face and the band lights in its own colour. `w` and `h` fix the
  * aspect; the canvas is 1024 wide.
  */
-export function signFace(text: string, opts: { w: number; h: number; code?: string; accent?: string; ink?: string }): THREE.CanvasTexture {
+export function signFace(text: string, opts: { w: number; h: number; code?: string; accent?: string; ink?: string }, glow = false): THREE.CanvasTexture {
   const W = 1024, H = Math.max(96, Math.round((W * opts.h) / opts.w));
   const [c, ctx] = canvas(W, H);
-  const accent = opts.accent ?? '#2455A4', ink = opts.ink ?? '#17334f';
+  // The emissive pass prints the lettering in black. Lettering on a lightbox is opaque vinyl: the
+  // tubes behind it light the acrylic around it and not the letter itself. Handing the colour map
+  // to `emissiveMap` instead lifts the ink by the same amount as the ground, and under a ceiling
+  // spot the whole face clips to white with the name a grey ghost on it, which is what Jordan saw
+  // twice on the arcade sign.
+  const accent = opts.accent ?? '#2455A4', ink = glow ? '#000000' : (opts.ink ?? '#17334f');
   // The acrylic: brighter where the tubes sit behind it, a little greyer toward the foot.
   const ground = ctx.createLinearGradient(0, 0, 0, H);
   ground.addColorStop(0, '#f2f7fa'); ground.addColorStop(0.45, '#fbfdfe'); ground.addColorStop(1, '#e6eef2');
@@ -135,9 +140,12 @@ export function signBox(text: string, opts: { w: number; h: number; accent?: num
     new THREE.BoxGeometry(lip, h + 2 * lip, deep).translate(-(w / 2 + lip / 2), 0, deep / 2 - 0.02),
   ], new THREE.MeshStandardMaterial({ color: 0x9aa5ad, metalness: 0.7, roughness: 0.3 }));
   bezel.name = 'bezel'; g.add(bezel);
-  const map = signFace(text, { w, h, code: opts.code, accent: accentHex });
+  const print = { w, h, code: opts.code, accent: accentHex };
+  const map = signFace(text, print);
+  // A dark sign never lights anything, so it does not pay for a second canvas.
+  const glow = opts.on ? signFace(text, print, true) : map;
   const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({
-    color: 0xffffff, map, roughness: 0.4, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: opts.on ? 0.6 : 0,
+    color: 0xffffff, map, roughness: 0.4, emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: opts.on ? 0.6 : 0,
   }));
   face.name = 'face'; g.add(face);
   const strip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.03), new THREE.MeshStandardMaterial({

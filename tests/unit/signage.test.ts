@@ -156,11 +156,18 @@ describe('tapeCross', () => {
 });
 
 describe('signFace and wallPlaque', () => {
-  it('prints the face as one map carried as colour and emissive, and plaques stay unlit', () => {
+  it('lights the acrylic around the lettering and not the lettering itself', () => {
     const box = kit.signBox('CONTAINMENT', { w: 2, h: 0.42, on: true, code: 'ZONE 06' });
     const face = box.getObjectByName('face') as import('three').Mesh;
     const m = face.material as import('three').MeshStandardMaterial;
-    expect(m.map).toBe(m.emissiveMap);
+    // A second print, with the name in black, so a spot on the face cannot wash the name off it.
+    expect(m.emissiveMap).not.toBe(m.map);
+    expect(m.emissiveIntensity).toBeGreaterThan(0);
+    // A dark sign emits nothing, so it does not pay for the second canvas.
+    const dark = kit.signBox('CONTAINMENT', { w: 2, h: 0.42, code: 'ZONE 06' });
+    const dm = (dark.getObjectByName('face') as import('three').Mesh).material as import('three').MeshStandardMaterial;
+    expect(dm.emissiveMap).toBe(dm.map);
+    expect(dm.emissiveIntensity).toBe(0);
     expect(box.getObjectByName('bezel')).toBeDefined();
     expect(meshes(box)).toHaveLength(4);
     const plaque = kit.wallPlaque('SWITCHGEAR', { code: 'B2' });
