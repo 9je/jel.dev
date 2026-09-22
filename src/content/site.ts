@@ -44,10 +44,13 @@ export const site = {
       'I learned by building things people needed and fixing them when they broke. At work I am a Platform Developer at a compliance-focused MSP, on the team that rolls out new products, automates the repeat work, and integrates what the company acquires. PowerShell, Power Automate, Rewst and Pia are the daily tools.',
       'Outside work I run a few things with real users, ship products under JEL, and spend my remaining hours on security research. This site is the one place all of it lives.',
     ],
+    // Years off the dates the repositories were opened rather than off memory, and spanning the
+    // whole of it rather than the last of it: the products are all 2026, but the C++ engine is
+    // 2022 and there has been something every year in between.
     timeline: [
-      { when: '2024', what: 'Earned eJPT and ISC2 CC. Shipped torn.bet.' },
-      { when: '2025', what: 'Started ezkey.io and conch.gg. Kayou bot passes 1,500 Discord members.' },
-      { when: '2026', what: 'First bug bounty accepted, pending disclosure. jel.dev goes live.' },
+      { when: '2022', what: 'A metaverse engine in C++, and the first sites I put live.' },
+      { when: '2024', what: 'Earned eJPT and ISC2 CC. The API work the Torn projects sit on.' },
+      { when: '2026', what: 'Six products shipped. First bug bounty accepted. jel.dev live.' },
     ],
     email: 'eldridge.dev@outlook.com',
     github: 'https://github.com/9je',

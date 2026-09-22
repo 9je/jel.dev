@@ -228,6 +228,24 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   return `${text.slice(0, cut).trimEnd()}...`;
 }
 
+/** The same, over `rows` lines: words are broken at spaces and only the last line is cut short. A
+ *  record of a year in one truncated line is a line that says nothing, which is what the timeline
+ *  on the control desk read as once the years carried more than one thing each. */
+function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, rows: number): string[] {
+  const words = text.split(' ');
+  const out: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width <= max || !line) { line = next; continue; }
+    out.push(line); line = word;
+    if (out.length === rows - 1) break;
+  }
+  const rest = words.slice(out.join(' ').split(' ').filter(Boolean).length).join(' ');
+  out.push(fit(ctx, out.length === rows - 1 ? rest : line, max));
+  return out.slice(0, rows);
+}
+
 /**
  * The live monitor on the control desk: the same record the file carries, typed up on a terminal.
  * A cyan header, the years down the left with their entries beside them, and a block cursor on the
@@ -244,15 +262,18 @@ export function timelineScreen(rows: { when: string; what: string }[]): THREE.Ca
   ctx.fillText('PERSONNEL FILE', 24, 16);
   // Three entries, set large enough to be read from the walk's last hold. The type used to be 20 px
   // on a 512 wide canvas, which is a grey smear at this distance.
+  // A row is the year, up to two lines under it, and a rule. The rule sits clear of the second
+  // line's descenders: at the old pitch it ran through the bottom of every wrapped entry.
   rows.slice(0, 3).forEach((row, i) => {
-    const y = 108 + i * 124;
+    const y = 96 + i * 124;
     ctx.font = '600 44px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#e6b14a';
     ctx.fillText(row.when, 24, y);
-    ctx.font = '400 34px system-ui, sans-serif'; ctx.fillStyle = '#b6d6e4';
-    ctx.fillText(fit(ctx, row.what, w - 60), 24, y + 58);
-    ctx.fillStyle = '#12313f'; ctx.fillRect(24, y + 108, w - 48, 2);
+    ctx.font = '400 30px system-ui, sans-serif'; ctx.fillStyle = '#b6d6e4';
+    wrap(ctx, row.what, w - 60, 2).forEach((line, k) => ctx.fillText(line, 24, y + 50 + k * 32));
+    // No rule under the last row: with two lines in it there is nothing below to separate, and the
+    // rule landed in the descenders.
+    if (i < Math.min(3, rows.length) - 1) { ctx.fillStyle = '#12313f'; ctx.fillRect(24, y + 118, w - 48, 2); }
   });
-  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(24, h - 46, 20, 30);
   ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 0; y < h; y += 5) ctx.fillRect(0, y, w, 2);
   return own(c);
 }
