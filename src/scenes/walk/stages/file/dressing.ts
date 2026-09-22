@@ -5,8 +5,8 @@ import { grounded, instances, merged, place, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
 import { labSteel } from '../../labs/materials';
 import { controlConsole, controlDesk, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
-import { canvas, consoleFace, own, personnelSheet, timelineScreen } from '../../labs/textures';
-import { ASHTRAY, BOTTLE, DESK, FILE, GLASS, X1, Z1 } from './layout';
+import { consoleFace, personnelSheet, timelineScreen } from '../../labs/textures';
+import { ASHTRAY, DESK, FILE, GLASS, X1, Z1 } from './layout';
 
 /** A four drawer steel filing cabinet with the top drawer standing open on its folders, 0.5 by 0.62
  *  on plan and 1.32 tall, origin at floor centre, fronts to +z. Room furniture rather than kit: it
@@ -117,69 +117,6 @@ function tumbler(): THREE.Group {
   return g;
 }
 
-/**
- * The bottle the glass was poured from, life size at 0.27 m, origin at the foot. A square bottle
- * with a tapered shoulder and the label set on the slant, which is the silhouette anybody who
- * drinks it will recognise across a room: the four sided prism is a cylinder with four radial
- * segments, turned a quarter turn so a flat faces the lens rather than a corner.
- *
- * The label is the shape and the colours, not the mark. A facsimile of somebody's trademark is not
- * a thing to put on a portfolio, and at three metres the blue field on the slant with gold rules
- * over and under it is what carries anyway. Six draw calls.
- */
-function bottle(): THREE.Group {
-  const g = new THREE.Group();
-  const QUARTER = Math.PI / 4;
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0xbfd6cf, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.42, side: THREE.DoubleSide });
-  const spirit = new THREE.MeshStandardMaterial({ color: 0x7a3206, roughness: 0.1, metalness: 0.08, emissive: 0x933c06, emissiveIntensity: 0.16 });
-  // The spirit first, so the glass draws over it: body to four fifths, and up the neck a little.
-  g.add(merged([
-    new THREE.CylinderGeometry(0.048, 0.048, 0.112, 4).rotateY(QUARTER).translate(0, 0.058, 0),
-    new THREE.CylinderGeometry(0.014, 0.048, 0.046, 4).rotateY(QUARTER).translate(0, 0.137, 0),
-    new THREE.CylinderGeometry(0.012, 0.013, 0.03, 10).translate(0, 0.175, 0),
-  ], spirit));
-  g.add(merged([
-    new THREE.CylinderGeometry(0.053, 0.053, 0.135, 4).rotateY(QUARTER).translate(0, 0.0675, 0),
-    new THREE.CylinderGeometry(0.016, 0.053, 0.05, 4).rotateY(QUARTER).translate(0, 0.16, 0),
-    new THREE.CylinderGeometry(0.0145, 0.0155, 0.055, 12).translate(0, 0.2125, 0),
-    new THREE.CylinderGeometry(0.0175, 0.0165, 0.008, 12).translate(0, 0.244, 0),
-  ], glass));
-  // The stopper: a dark cap with a gold collar under it.
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.032, 12), new THREE.MeshStandardMaterial({ color: 0x14181d, roughness: 0.45 }));
-  cap.position.y = 0.264; g.add(cap);
-  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.0196, 0.0196, 0.006, 12), new THREE.MeshStandardMaterial({ color: 0xb2892f, roughness: 0.35, metalness: 0.65 }));
-  collar.position.y = 0.2495; g.add(collar);
-  // The label, on the slant across the front flat.
-  // On the flat, a millimetre proud of it. A four segment cylinder's radius is to its corners, so
-  // the face is r/root two out, not r: at 0.0535 the label floated in the air in front of the glass.
-  // The flat is r root two across, 0.075, and a label set on the slant needs its own width plus a
-  // share of its height inside that. At 0.082 the corners hung off the side of the bottle.
-  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.062, 0.037), new THREE.MeshStandardMaterial({ map: bottleLabel(), roughness: 0.7, side: THREE.DoubleSide }));
-  label.position.set(0, 0.072, 0.0385); label.rotation.z = -0.42; g.add(label);
-  return g;
-}
-
-/** The label: a deep blue field on the slant, gold rules top and bottom, and the words set small.
- *  340 by 200 for a label 0.085 by 0.05. */
-function bottleLabel(): THREE.CanvasTexture {
-  const W = 340, H = 200;
-  const [c, ctx] = canvas(W, H);
-  ctx.fillStyle = '#0d2b52'; ctx.fillRect(0, 0, W, H);
-  const wash = ctx.createLinearGradient(0, 0, 0, H);
-  wash.addColorStop(0, 'rgba(255,255,255,0.12)'); wash.addColorStop(0.5, 'rgba(255,255,255,0)'); wash.addColorStop(1, 'rgba(0,0,0,0.25)');
-  ctx.fillStyle = wash; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#caa24a';
-  ctx.fillRect(14, 16, W - 28, 4); ctx.fillRect(14, H - 20, W - 28, 4);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = '600 44px Michroma, system-ui, sans-serif';
-  ctx.fillText('BLUE', W / 2, 78);
-  ctx.font = '600 30px Michroma, system-ui, sans-serif';
-  ctx.fillText('LABEL', W / 2, 124);
-  ctx.font = '600 15px Michroma, system-ui, sans-serif'; ctx.fillStyle = 'rgba(202,162,74,0.8)';
-  ctx.fillText('BLENDED SCOTCH WHISKY', W / 2, 160);
-  return own(c);
-}
-
 /** The lines the form on the open leaf carries, off `site.about` and nothing retyped. The name is
  *  the one derived string: a personnel file is filed under the surname, so the sentence's own
  *  "Jordan Eldridge" is turned round rather than written out again. */
@@ -265,11 +202,6 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // folder the eye lands on and clear of the console's own footprint.
   await add(place(ashtray(), ASHTRAY[0], TOP, ASHTRAY[1], ASHTRAY_TURN));
   await add(place(tumbler(), GLASS[0], TOP, GLASS[1], 0));
-  // The bottle it came out of, at the back of the top where it stands against the window. A glass
-  // of something amber on its own is a glass of something amber.
-  // Turned so a flat, and the label on it, faces the lens: the walk ends at (-70, 30) looking back
-  // along the desk, so the face the camera reads is the one pointing at -x and -z.
-  await add(place(bottle(), BOTTLE[0], TOP, BOTTLE[1], -2.24));
 
   // The anchor a pinned panel would hang off, half a metre in front of the folder. Nothing in the
   // page carries `data-anchor="file"` yet: the pinned rule in walk.css draws no ground of its own,
