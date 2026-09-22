@@ -132,13 +132,43 @@ describe('the break room kit', () => {
   });
 
   it('rakes the console face up toward whoever is working it', () => {
-    const keys = kit.controlConsole(new THREE.Texture()).getObjectByName('keys') as T.Mesh;
-    keys.updateMatrixWorld(true);
-    const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(keys.quaternion);
+    const console_ = kit.controlConsole(new THREE.Texture());
+    console_.updateMatrixWorld(true);
+    const keys = console_.getObjectByName('keys') as T.Mesh;
+    // In world space, not the mesh's own: the rake sits on the group the face and the key caps
+    // share, so that a cap placed at a canvas pixel lands on the well printed at it.
+    const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(keys.getWorldQuaternion(new THREE.Quaternion()));
     // Up, and leaning toward +z, which is the side the console is operated from. Leaning the other
     // way turns a bank of keys into a blank pale slab facing the ceiling and the far wall.
     expect(normal.y).toBeGreaterThan(0.9);
     expect(normal.z).toBeGreaterThan(0.2);
-    expect(keys.position.y).toBeGreaterThan(0.16);
+    expect(keys.getWorldPosition(new THREE.Vector3()).y).toBeGreaterThan(0.16);
+  });
+
+  // The caps are geometry and the wells they sit in are printed, so the two enumerations have to
+  // agree. They are built from one grid for exactly that reason, and this is what holds them to it:
+  // eighteen caps, two of them lit, every one inside the deck and none of them on top of another.
+  it('stands a key cap on every well the console prints', () => {
+    const console_ = kit.controlConsole(new THREE.Texture());
+    const batches = [] as T.InstancedMesh[];
+    console_.traverse((o) => { if ((o as T.InstancedMesh).isInstancedMesh) batches.push(o as T.InstancedMesh); });
+    expect(batches.reduce((n, b) => n + b.count, 0)).toBe(18);
+    const lit = batches.filter((b) => (b.material as T.MeshStandardMaterial).emissiveIntensity > 1);
+    expect(lit.reduce((n, b) => n + b.count, 0)).toBe(2);
+
+    const seen = new Set<string>();
+    const m = new THREE.Matrix4(), v = new THREE.Vector3();
+    console_.updateMatrixWorld(true);
+    for (const b of batches) for (let i = 0; i < b.count; i++) {
+      b.getMatrixAt(i, m);
+      v.setFromMatrixPosition(m).applyMatrix4(b.matrixWorld);
+      // Inside the 1.0 by 0.5 case on plan, and standing above the worktop.
+      expect(Math.abs(v.x)).toBeLessThan(0.5);
+      expect(Math.abs(v.z)).toBeLessThan(0.25);
+      expect(v.y).toBeGreaterThan(0.16);
+      const key = `${v.x.toFixed(3)},${v.z.toFixed(3)}`;
+      expect(seen.has(key)).toBe(false);
+      seen.add(key);
+    }
   });
 });

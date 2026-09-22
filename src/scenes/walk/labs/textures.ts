@@ -9,7 +9,6 @@ export function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderin
 export function own(c: HTMLCanvasElement, srgb = true): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.userData.owned = true; return t;
 }
-/** Deterministic noise so a room looks the same on every load and every screenshot. */
 /**
  * Television static: a square of luminance noise that tiles, for a set with no signal on it.
  *
@@ -44,6 +43,7 @@ export function staticNoise(size = 256, seed = 3): THREE.DataTexture {
   return t;
 }
 
+/** Deterministic noise so a room looks the same on every load and every screenshot. */
 export function rng(seed: number): () => number { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 /**
@@ -281,66 +281,180 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, rows: nu
 }
 
 /**
- * The live monitor on the control desk: the same record the file carries, typed up on a terminal.
- * A cyan header, the years down the left with their entries beside them, and a block cursor on the
- * line after the last of them. Drawn once, not animated: a cursor that blinks is the only motion in
- * a still room and it pulls the eye off the page under the lamp, which is what the room is about.
+ * The control room's live screen: a plan of the facility with the walk's own route on it and where
+ * the reader is standing, beside a short status board.
+ *
+ * It carried the personnel file's three dated lines, which is the same copy the stop's own text
+ * column is already showing a metre to the left of it. Jordan's note was that it was hard to read
+ * and offered nothing new, and both halves of that are the same problem: three lines of prose on a
+ * 0.95 m panel four metres away are always going to be small, and small is only worth paying for
+ * when the thing being said is not already said better somewhere else.
+ *
+ * A plan is the answer to both. It is the one thing a control room over a loading yard would
+ * actually have on the wall, it says something no other surface on the site says, and it survives
+ * being small in a way prose does not: a plan communicates by shape first, so the outline of the
+ * building and the route drawn through it read from the hold even when the room labels are down at
+ * annotation size. The type that has to be read is the status board beside it and the callout on
+ * the reader's own position, and both of those are set large.
+ *
+ * The footprints are the rooms' own, taken from each stage's layout and drawn to one scale, and the
+ * route is `CONTROL_POINTS`. Carrying the numbers here rather than importing six layout modules
+ * keeps the first visit bundle out of it, and the plan is a diagram either way: the test pins it to
+ * the same values the rooms are built from.
  */
-export function timelineScreen(rows: { when: string; what: string }[]): THREE.CanvasTexture {
-  const w = 768, h = 480;
-  const [c, ctx] = canvas(w, h);
-  ctx.fillStyle = '#050d14'; ctx.fillRect(0, 0, w, h);
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(0, 0, w, 72);
-  ctx.fillStyle = '#04222c'; ctx.font = '600 40px Michroma, system-ui, sans-serif';
-  ctx.fillText('PERSONNEL FILE', 24, 16);
-  // Three entries, set large enough to be read from the walk's last hold. The type used to be 20 px
-  // on a 512 wide canvas, which is a grey smear at this distance.
-  // A row is the year, up to two lines under it, and a rule. The rule sits clear of the second
-  // line's descenders: at the old pitch it ran through the bottom of every wrapped entry.
-  rows.slice(0, 3).forEach((row, i) => {
-    const y = 96 + i * 124;
-    ctx.font = '600 44px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#e6b14a';
-    ctx.fillText(row.when, 24, y);
-    ctx.font = '400 30px system-ui, sans-serif'; ctx.fillStyle = '#b6d6e4';
-    wrap(ctx, row.what, w - 60, 2).forEach((line, k) => ctx.fillText(line, 24, y + 50 + k * 32));
-    // No rule under the last row: with two lines in it there is nothing below to separate, and the
-    // rule landed in the descenders.
-    if (i < Math.min(3, rows.length) - 1) { ctx.fillStyle = '#12313f'; ctx.fillRect(24, y + 118, w - 48, 2); }
+export function facilityPlan(): THREE.CanvasTexture {
+  const W = 768, H = 480;
+  const [c, ctx] = canvas(W, H);
+  const INK = '#cfe6ee', DIM = '#5f89a3', LINE = '#22435c';
+
+  ctx.fillStyle = '#04101a'; ctx.fillRect(0, 0, W, H);
+  // A survey grid under everything, five metres to the square.
+  ctx.strokeStyle = 'rgba(60,110,145,0.16)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 24) { ctx.beginPath(); ctx.moveTo(x + 0.5, 64); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
+  for (let y = 64; y < H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+
+  // The header.
+  ctx.fillStyle = '#6ec1d6'; ctx.fillRect(0, 0, W, 64);
+  ctx.fillStyle = '#04222c'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.font = '600 34px Michroma, system-ui, sans-serif';
+  ctx.fillText('FACILITY PLAN', 20, 34);
+  ctx.textAlign = 'right'; ctx.font = '600 22px Michroma, system-ui, sans-serif';
+  ctx.fillText('CONTROL 01', W - 20, 34);
+
+  // ---- The plan --------------------------------------------------------------------------------
+  // World x -86..14 and z -38..34, drawn west to the left and +z up, to one scale that fits both.
+  const S = 3.9, ox = 28, oz = 132;
+  const px = (x: number) => ox + (x + 86) * S;
+  const py = (z: number) => oz + (34 - z) * S;
+
+  /** A room: its footprint, and a short name set inside it. */
+  const room = (x0: number, x1: number, z0: number, z1: number, name: string) => {
+    const l = px(x0), r = px(x1), t = py(z1), b = py(z0);
+    ctx.fillStyle = 'rgba(20,52,76,0.85)'; ctx.fillRect(l, t, r - l, b - t);
+    ctx.strokeStyle = LINE; ctx.lineWidth = 2; ctx.strokeRect(l + 1, t + 1, r - l - 2, b - t - 2);
+    ctx.fillStyle = DIM; ctx.font = '600 13px Michroma, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(name, (l + r) / 2, (t + b) / 2);
+  };
+  room(-20, 14, -30, 22, 'BAY');
+  room(-58, -20, -35, -27, 'BREAK');
+  room(-76, -58, -38, -24, 'SERVER');
+  room(-83, -75, -30, 6, 'CERTS');
+  room(-86, -72, 6, 26, 'SWITCH');
+  room(-77, -62, 26, 34, '');
+
+  // The route, dashed, with a tick at every stop the walk holds at.
+  const route: [number, number][] = [
+    [0, 26], [0, 12], [-3, -14], [-8, -26], [-16, -31], [-30, -31], [-44, -31], [-58, -31],
+    [-70, -31], [-79, -26], [-79, -12], [-79, 4], [-79, 18], [-75, 27], [-70, 30],
+  ];
+  ctx.strokeStyle = '#e0a13a'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]);
+  ctx.beginPath(); route.forEach(([x, z], i) => (i ? ctx.lineTo(px(x), py(z)) : ctx.moveTo(px(x), py(z))));
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#e0a13a';
+  for (const [x, z] of [[0, 26], [-7, -11], [-28, -31], [-58, -31], [-79, -22], [-79, 4]] as [number, number][]) {
+    ctx.beginPath(); ctx.arc(px(x), py(z), 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Where the reader is standing. The one thing on the plan set at reading size.
+  const hx = px(-70), hz = py(30);
+  ctx.strokeStyle = '#e8b923'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(hx, hz, 13, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#e8b923'; ctx.beginPath(); ctx.arc(hx, hz, 6, 0, Math.PI * 2); ctx.fill();
+  // The callout goes to the right of the mark. The control room is at the north west corner of the
+  // building, which is the top left of the plan, so set right aligned it ran off the panel: the
+  // screen read "ROL" over "E HERE". East of the mark there is nothing until the bay.
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.font = '600 22px Michroma, system-ui, sans-serif';
+  ctx.fillText('CONTROL', hx + 22, hz + 4);
+  ctx.font = '600 14px Michroma, system-ui, sans-serif'; ctx.fillStyle = DIM;
+  ctx.textBaseline = 'top'; ctx.fillText('YOU ARE HERE', hx + 22, hz + 6);
+
+  // A north arrow, over the empty quarter of the plan.
+  const nx = px(10), ny = py(-34);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(nx, ny + 22); ctx.lineTo(nx, ny - 14); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath();
+  ctx.moveTo(nx, ny - 22); ctx.lineTo(nx - 7, ny - 8); ctx.lineTo(nx + 7, ny - 8); ctx.closePath(); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.font = '600 15px Michroma, system-ui, sans-serif'; ctx.fillText('N', nx, ny + 26);
+
+  // ---- The status board ------------------------------------------------------------------------
+  const bx = 452;
+  ctx.strokeStyle = LINE; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(bx - 16, 82); ctx.lineTo(bx - 16, H - 22); ctx.stroke();
+  const rows: [string, string, string][] = [
+    ['BAY DOOR', 'CLOSED', '#3fd47a'],
+    ['SERVER HALL', 'ROW B FAULT', '#e0a13a'],
+    ['CONTAINMENT', 'SEALED', '#d7383a'],
+    ['YARD', 'LIT', '#3fd47a'],
+  ];
+  rows.forEach(([label, value, lamp], i) => {
+    const y = 108 + i * 92;
+    ctx.fillStyle = lamp; ctx.beginPath(); ctx.arc(bx + 9, y, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = DIM; ctx.font = '600 19px Michroma, system-ui, sans-serif';
+    ctx.fillText(label, bx + 28, y);
+    ctx.fillStyle = lamp; ctx.font = '600 25px Michroma, system-ui, sans-serif';
+    ctx.fillText(value, bx + 28, y + 34);
+    if (i < rows.length - 1) {
+      ctx.strokeStyle = LINE; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx, y + 62.5); ctx.lineTo(W - 24, y + 62.5); ctx.stroke();
+    }
   });
-  ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 0; y < h; y += 5) ctx.fillRect(0, y, w, 2);
-  return own(c);
+
+  const t = own(c); t.anisotropy = 8; return t;
 }
 
 /**
- * A control desk's face: four rows of square keys on a grey panel, two of them lit amber, a slider
- * down the right and stencilled legends under each block. Colour and emissive map, so the two live
- * keys glow and the rest of the panel stays lit by the room.
+ * A control desk's face: the recessed wells the key caps sit in, stencilled legends over each bank,
+ * the slider track and the two lamps. Colour and emissive map, so the live keys glow and the rest of
+ * the panel stays lit by the room. The caps themselves are geometry: see `controlConsole`.
  */
 export function consoleFace(): THREE.CanvasTexture {
   const w = 512, h = 256;
   const [c, ctx] = canvas(w, h);
-  ctx.fillStyle = '#b9bdbb'; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#a2a7a5'; ctx.fillRect(0, 0, w, 10);
-  // Keys, six by three, dark grey with a lit lip.
+  // A brushed panel rather than a flat grey. The first pass filled it with one colour and printed
+  // the keys on it, and a printed key has no edge to catch a light: from the hold the whole console
+  // was a grey slab with a chequerboard on it, which is what Jordan called mid.
+  const ground = ctx.createLinearGradient(0, 0, 0, h);
+  ground.addColorStop(0, '#c3c7c5'); ground.addColorStop(0.5, '#b4b9b7'); ground.addColorStop(1, '#9ea4a2');
+  ctx.fillStyle = ground; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(0, 0, w, 3);
+  ctx.fillStyle = 'rgba(40,48,52,0.35)'; ctx.fillRect(0, h - 4, w, 4);
+  for (let y = 0; y < h; y += 3) { ctx.fillStyle = 'rgba(255,255,255,0.035)'; ctx.fillRect(0, y, w, 1); }
+
+  // The wells the caps drop into: a dark recess with a lit top lip and a shadow under it, on the
+  // same six by three grid `controlConsole` places the caps on.
   for (let row = 0; row < 3; row++) for (let col = 0; col < 6; col++) {
-    const x = 26 + col * 58, y = 56 + row * 56;
-    const live = (row === 1 && col === 2) || (row === 2 && col === 4);
-    ctx.fillStyle = '#6d7370'; ctx.fillRect(x - 3, y - 3, 46, 40);
-    ctx.fillStyle = live ? '#e0a13a' : '#3a4044'; ctx.fillRect(x, y, 40, 34);
-    ctx.fillStyle = live ? '#f6d79a' : '#525a5f'; ctx.fillRect(x + 3, y + 3, 34, 6);
+    const x = KEY_GRID.x0 + col * KEY_GRID.dx, y = KEY_GRID.y0 + row * KEY_GRID.dy;
+    ctx.fillStyle = 'rgba(30,36,40,0.55)'; ctx.fillRect(x - 5, y - 5, KEY_GRID.w + 10, KEY_GRID.h + 10);
+    ctx.fillStyle = '#2f3438'; ctx.fillRect(x - 3, y - 3, KEY_GRID.w + 6, KEY_GRID.h + 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x - 3, y - 3, KEY_GRID.w + 6, 2);
   }
-  // Legends: short stencilled words under the blocks, the way a dispatch desk labels its banks.
+  // Legends stencilled over each bank of two.
   ctx.font = '600 15px Michroma, system-ui, sans-serif'; ctx.fillStyle = '#41474a';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillText('BAY', 26, 40); ctx.fillText('DOOR', 142, 40); ctx.fillText('LIGHTS', 258, 40);
-  // The slider, and the two lamps over it.
+  // The slider, and the two lamps under it.
   ctx.fillStyle = '#8d9290'; ctx.fillRect(404, 48, 72, 156);
+  ctx.fillStyle = 'rgba(30,36,40,0.5)'; ctx.fillRect(404, 48, 72, 3);
   ctx.fillStyle = '#31373a'; ctx.fillRect(436, 60, 8, 132);
   ctx.fillStyle = '#d8dcda'; ctx.fillRect(422, 126, 36, 18);
   ctx.fillStyle = '#3fd47a'; ctx.fillRect(410, 216, 24, 16);
   ctx.fillStyle = '#2a3033'; ctx.fillRect(446, 216, 24, 16);
   return own(c);
 }
+
+/**
+ * The key grid, in canvas pixels on a 512 by 256 face. `consoleFace` prints a well at each of these
+ * and `controlConsole` stands a cap in it, so the two have to agree: one of them alone is either a
+ * printed chequerboard or a row of caps floating on a blank panel.
+ */
+export const KEY_GRID = { x0: 26, y0: 56, dx: 58, dy: 56, w: 40, h: 34, canvas: [512, 256] as [number, number] };
+/** Which of the eighteen keys are lit, as `[row, col]`. */
+export const KEY_LIVE: [number, number][] = [[1, 2], [2, 4]];
+
 
 /**
  * A neon run's corona, text-shaped: the letters drawn in the tube colour under a wide blur on a

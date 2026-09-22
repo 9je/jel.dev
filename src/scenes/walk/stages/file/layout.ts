@@ -55,12 +55,21 @@ export const DESK = { x: -67.5, z0: 28, z1: 34, top: 0.79, tier: 0.25, front: -6
 export const FILE = { x: -67.85, z: 31.0 };
 
 /**
- * The ashtray and the glass on the worktop, as `[x, z]`. They sit between the open file and the
- * console, on the front half of the top where the lamp reaches, so the cigar's smoke rises through
- * the one warm light in the room.
+ * The ashtray and the glass on the worktop, as `[x, z]`. They stood between the open file and the
+ * console, which put the ashtray eight centimetres off the console's south edge: from the hold the
+ * two touched, and Jordan asked for the ashtray off the side of it. They are south of the file now,
+ * on the front edge of the top, a metre clear of the console and where a person sitting at the file
+ * would actually have put them. The knocked mug moves further south again to make the room.
+ *
+ * That is out of the middle of the lamp's pool, which is where they were put so the cigar's smoke
+ * would rise through the one warm light in the room. It still does: the lamp stands 0.8 m north of
+ * the ashtray with its head turned down on the file, and the plume rises three quarters of a metre
+ * into the spill off it.
  */
-export const ASHTRAY: [number, number] = [-67.78, 31.62];
-export const GLASS: [number, number] = [-67.88, 31.34];
+export const ASHTRAY: [number, number] = [-67.80, 30.72];
+export const GLASS: [number, number] = [-67.95, 30.45];
+/** The mug, on its side where somebody knocked it. */
+export const MUG: [number, number] = [-67.85, 29.92];
 
 /** The ceiling grid the glass room hangs, which is where the one cold ceiling spot has to sit:
  *  `lighting.ts` enumerates the lit troffers from these numbers exactly the way `ceilingGrid` does,

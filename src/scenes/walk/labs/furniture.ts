@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { instances, merged, type Spot } from '../merge';
 import { LABS, labSteel } from './materials';
 import { stencilTexture } from '../textures';
-import { canvas, own, paperSheet, rng } from './textures';
+import { KEY_GRID, KEY_LIVE, canvas, own, paperSheet, rng } from './textures';
 
 /**
  * The break room kit and the clean lab's, in that order. Everything here has its origin on the
@@ -593,18 +593,57 @@ export function tarpWall(w: number, h: number, seed = 1): THREE.Group {
  *  the desk by 0.5 deep, origin at the desk top on its own centre, face toward +z. Three calls. */
 export function controlConsole(face: THREE.Texture): THREE.Group {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.16, 0.5), carcass(0x9ea5a3, 0.6));
-  body.position.set(0, 0.08, 0); g.add(body);
+  const DECK_W = 0.96, DECK_D = 0.42, RAKE = 0.3;
+  const shell = carcass(0x777d7c, 0.62);
+  const body: THREE.BufferGeometry[] = [];
+  const put = (geo: THREE.BufferGeometry, x: number, y: number, z: number) => { geo.translate(x, y, z); body.push(geo); };
+  put(new THREE.BoxGeometry(1.0, 0.15, 0.5), 0, 0.085, 0);
+  // A plinth under it, set back on every side, so the case stands off the worktop instead of
+  // sitting on it like a box. Every real instrument of this kind has one.
+  put(new THREE.BoxGeometry(0.94, 0.012, 0.44), 0, 0.006, 0);
+  // Two toggles and a row of three lamps on the front face, under the deck's low edge. This is the
+  // face the hold actually looks at, and it carried nothing at all.
+  put(new THREE.BoxGeometry(0.1, 0.05, 0.014), -0.34, 0.075, 0.252);
+  put(new THREE.BoxGeometry(0.1, 0.05, 0.014), -0.21, 0.075, 0.252);
+  g.add(merged(body, shell));
+
   // The keyed face is a wedge raked up away from the operator, who stands at +z: the far edge of
   // the deck is the high one, so the keys are turned toward whoever is working them. Raked the
   // other way the console presents its blank back to the room, which is exactly what the first
   // pass put in the middle of the frame.
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.44), carcass(0xb3b8b6, 0.55));
-  deck.rotation.x = 0.3; deck.position.set(0, 0.2, 0.02); g.add(deck);
-  const keys = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.42), new THREE.MeshStandardMaterial({
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, DECK_D + 0.02), carcass(0x9aa09e, 0.55));
+  deck.rotation.x = RAKE; deck.position.set(0, 0.2, 0.02); g.add(deck);
+
+  // The face and everything standing on it share one frame, so a cap printed at a canvas pixel and
+  // a cap built at a world position land on each other without either having to know the rake.
+  const panel = new THREE.Group();
+  panel.rotation.x = -Math.PI / 2 + RAKE; panel.position.set(0, 0.212, 0.023); g.add(panel);
+  const keys = new THREE.Mesh(new THREE.PlaneGeometry(DECK_W, DECK_D), new THREE.MeshStandardMaterial({
     map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.5, roughness: 0.75,
   }));
-  keys.rotation.x = -Math.PI / 2 + 0.3; keys.position.set(0, 0.212, 0.023); keys.name = 'keys'; g.add(keys);
+  keys.name = 'keys'; panel.add(keys);
+
+  // The caps. A printed key has no edge for a light to catch, and from four metres eighteen printed
+  // squares are a chequerboard on a slab. These stand 12 mm proud on the same grid the face prints
+  // its wells at, so the bank has a raking highlight down one side of every cap and a shadow down
+  // the other, which is the whole of what makes a keyboard read as one.
+  const [cw, ch] = KEY_GRID.canvas;
+  const capW = (KEY_GRID.w / cw) * DECK_W, capH = (KEY_GRID.h / ch) * DECK_D;
+  const at = (row: number, col: number): [number, number] => [
+    ((KEY_GRID.x0 + col * KEY_GRID.dx + KEY_GRID.w / 2) / cw - 0.5) * DECK_W,
+    (0.5 - (KEY_GRID.y0 + row * KEY_GRID.dy + KEY_GRID.h / 2) / ch) * DECK_D,
+  ];
+  const live = new Set(KEY_LIVE.map(([r, k]) => `${r},${k}`));
+  const dark: Spot[] = [], lit: Spot[] = [];
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 6; col++) {
+    const [x, y] = at(row, col);
+    (live.has(`${row},${col}`) ? lit : dark).push([x, y, 0.006]);
+  }
+  const cap = new THREE.BoxGeometry(capW, capH, 0.012);
+  panel.add(instances(cap, carcass(0x3a4044, 0.5), dark));
+  panel.add(instances(cap, new THREE.MeshStandardMaterial({
+    color: 0xe0a13a, emissive: 0xe0a13a, emissiveIntensity: 1.6, roughness: 0.45,
+  }), lit));
   return g;
 }
 
@@ -669,36 +708,70 @@ export function pinboard(w: number, h: number, label = 'ROSTER'): THREE.Group {
   return g;
 }
 
-/** A manila folder standing open on a desk: two leaves hinged at the fold, the near one propped up
- *  on the fold at fifty degrees with the form on it. Origin at the desk top on the fold, leaves
- *  along z, the propped one toward +z and facing +z. The form is a child named `page`, so a room
- *  can aim a lamp at it and a test can find it. Three draw calls.
+/**
+ * A manila folder standing open on a desk: two leaves hinged at the fold, the near one propped up
+ * on the fold with the form on it, a cut tab on the propped leaf, a clip across its head and a few
+ * loose sheets fanned out from under the flat one. Origin at the desk top on the fold, leaves along
+ * z, the propped one toward +z and facing +z. The form is a child named `page`, so a room can aim a
+ * lamp at it and a test can find it. Five draw calls.
  *
- *  The lift is fifty degrees rather than the eight it was drawn with. A folder lying flat on a desk
- *  is read from seven metres back at fifteen degrees off the horizontal, and at that angle an A4
- *  leaf is a seventy by twenty pixel sliver with nothing on it anybody can see. Propped, the same
- *  leaf is a card facing the lens, and a room turns the whole folder so that card faces the camera.
- *  The leaves are 0.44 by 0.32, which is a dossier rather than a document wallet: at the distance
- *  the control room parks the camera it is the difference between a form a hundred and forty pixels
- *  across and one a hundred and ten across, and the form is the point of the room.
+ * The lift is fifty degrees rather than the eight it was drawn with. A folder lying flat on a desk
+ * is read from seven metres back at fifteen degrees off the horizontal, and at that angle an A4
+ * leaf is a seventy by twenty pixel sliver with nothing on it anybody can see. Propped, the same
+ * leaf is a card facing the lens, and a room turns the whole folder so that card faces the camera.
+ * The leaves are 0.44 by 0.32, which is a dossier rather than a document wallet: at the distance
+ * the control room parks the camera it is the difference between a form a hundred and forty pixels
+ * across and one a hundred and ten across, and the form is the point of the room.
+ *
+ * Which is also what went wrong with it. A rectangle propped at fifty degrees behind a flat
+ * rectangle is a laptop, and that is what Jordan has called it every time he has seen it: "i cant
+ * read the laptop", then "i wanna make the laptop look better". The silhouette was doing all the
+ * talking and it was saying the wrong word. So the silhouette is broken on purpose: the tab stands
+ * above the top edge where no lid has anything, the clip crosses the head, the loose sheets slide
+ * out past the fold at angles no hinge would allow, and the leaves are thick enough to read as a
+ * wad of paper rather than a panel. The angle stays, because the form still has to be read.
  */
 export function openFile(page?: THREE.Texture): THREE.Group {
   const g = new THREE.Group();
-  const LEAF = 0.44, DEEP = 0.32;
+  const LEAF = 0.44, DEEP = 0.32, THICK = 0.013;
   const card = new THREE.MeshStandardMaterial({ color: 0xc2a469, roughness: 0.92, side: THREE.DoubleSide });
-  const flat = new THREE.Mesh(new THREE.BoxGeometry(LEAF, 0.005, DEEP), card);
-  flat.position.set(0, 0.0025, -DEEP / 2); g.add(flat);
+  const paper = new THREE.MeshStandardMaterial({ color: 0xe8e4d8, roughness: 0.95, side: THREE.DoubleSide });
+
+  // The loose sheets first, so the flat leaf lies on top of them and they read as the bottom of the
+  // wad rather than as litter beside it. Each slides out past the fold on its own bearing, which is
+  // the thing no laptop has.
+  const loose: THREE.BufferGeometry[] = [];
+  for (const [dx, dz, turn] of [[0.03, -0.09, 0.14], [-0.05, -0.05, -0.1], [0.01, -0.14, 0.05]] as [number, number, number][]) {
+    loose.push(new THREE.BoxGeometry(LEAF - 0.02, 0.002, DEEP - 0.02).rotateY(turn).translate(dx, 0.001, -DEEP / 2 + dz));
+  }
+  g.add(merged(loose, paper));
+
+  const flat = new THREE.Mesh(new THREE.BoxGeometry(LEAF, THICK, DEEP), card);
+  flat.position.set(0, THICK / 2, -DEEP / 2); g.add(flat);
   // The propped leaf swings about the fold, so it hangs off a pivot at the fold rather than sitting
   // at its own centre and turning, which would drive its hinge edge down through the desk.
   const hinge = new THREE.Group(); hinge.rotation.x = -0.87; g.add(hinge);
-  const lifted = new THREE.Mesh(new THREE.BoxGeometry(LEAF, 0.005, DEEP), card);
-  lifted.position.set(0, 0.0025, DEEP / 2); hinge.add(lifted);
+  const lifted = new THREE.Mesh(new THREE.BoxGeometry(LEAF, THICK, DEEP), card);
+  lifted.position.set(0, THICK / 2, DEEP / 2); hinge.add(lifted);
+  // The cut tab, standing above the leaf's far edge where a folder carries its label, and the clip
+  // across the head of the form. Between them they are most of what says "folder" from four metres.
+  const trim: THREE.BufferGeometry[] = [];
+  trim.push(new THREE.BoxGeometry(0.15, THICK, 0.045).translate(-0.11, THICK / 2, DEEP + 0.02));
+  hinge.add(merged(trim, card));
+  // The clip sits at negative x, which is the right hand end of the printed head: the form is laid
+  // on with a half turn about its own normal so the type is not upside down, and that turn puts the
+  // sheet's right at the leaf's -x. At +x the clip landed on the name.
+  const clip: THREE.BufferGeometry[] = [
+    new THREE.BoxGeometry(0.06, 0.006, 0.05).translate(-0.165, THICK + 0.013, DEEP - 0.05),
+    new THREE.BoxGeometry(0.06, 0.02, 0.008).translate(-0.165, THICK + 0.005, DEEP - 0.026),
+  ];
+  hinge.add(merged(clip, labSteel(0x8f979d)));
   // Half a turn about the sheet's own normal before it is laid down, or the form is typed upside
   // down on the leaf: laying a plane flat maps the top of its canvas toward the fold, which is the
   // bottom of the card once the leaf is propped.
   const form = new THREE.PlaneGeometry(LEAF * 0.92, DEEP * 0.92).rotateZ(Math.PI).rotateX(-Math.PI / 2);
   const sheet = new THREE.Mesh(form, new THREE.MeshStandardMaterial({ map: page, roughness: 0.9 }));
-  sheet.position.set(0, 0.007, DEEP / 2); sheet.name = 'page';
+  sheet.position.set(0, THICK + 0.002, DEEP / 2); sheet.name = 'page';
   hinge.add(sheet);
   return g;
 }

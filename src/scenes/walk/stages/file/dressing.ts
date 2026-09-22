@@ -5,8 +5,8 @@ import { grounded, instances, merged, place, type Spot } from '../../merge';
 import { papers } from '../../labs/props';
 import { labSteel } from '../../labs/materials';
 import { controlConsole, controlDesk, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
-import { consoleFace, personnelSheet, timelineScreen } from '../../labs/textures';
-import { ASHTRAY, DESK, FILE, GLASS, X1, Z1 } from './layout';
+import { consoleFace, facilityPlan, personnelSheet } from '../../labs/textures';
+import { ASHTRAY, DESK, FILE, GLASS, MUG, X1, Z1 } from './layout';
 
 /** A four drawer steel filing cabinet with the top drawer standing open on its folders, 0.5 by 0.62
  *  on plan and 1.32 tall, origin at floor centre, fronts to +z. Room furniture rather than kit: it
@@ -184,7 +184,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   handle.position.set(0.01, 0.04, 0.04); mug.add(handle);
   const stain = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.12), new THREE.MeshStandardMaterial({ color: 0x5a4126, transparent: true, opacity: 0.35, roughness: 0.9, depthWrite: false }));
   stain.rotation.x = -Math.PI / 2; stain.position.set(-0.07, 0.004, 0.01); mug.add(stain);
-  place(mug, DESK.x - 0.35, TOP, FILE.z - 0.52, 0.7);
+  place(mug, MUG[0], TOP, MUG[1], 0.7);
   exhibit.add(mug);
   await add(exhibit);
 
@@ -198,8 +198,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(lamp);
 
   // What the person at this desk was doing a minute ago: a cigar still going in the ashtray and a
-  // glass poured. Both stand in the lamp's pool between the file and the console, clear of the
-  // folder the eye lands on and clear of the console's own footprint.
+  // glass poured. Both stand south of the file on the front edge of the top, in the spill off the
+  // lamp rather than the middle of its pool, and a metre clear of the console.
   await add(place(ashtray(), ASHTRAY[0], TOP, ASHTRAY[1], ASHTRAY_TURN));
   await add(place(tumbler(), GLASS[0], TOP, GLASS[1], 0));
 
@@ -212,13 +212,16 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   hotspots.push({ id: 'file', kind: 'project', label: 'Personnel file', object: exhibit, stop: 'file' });
 
   // ---- The screens -----------------------------------------------------------------------------
-  // One alive, two dead. The live one is the record typed up, so the folder and the screen say the
-  // same thing twice and the room reads as one person's file rather than as a set of props.
+  // One alive, two dead. The live one carried the record typed up, which made the folder and the
+  // screen say the same thing twice, and the stop's own copy column a metre to the left of it say
+  // it a third time. It carries a plan of the facility now with the walk's route on it and a mark
+  // where the reader is standing, which is the one thing a control room over a loading yard would
+  // have on the wall and the only surface on the site that says what the place is shaped like.
   // The live one is a large panel rather than a desk monitor. At four metres from the lens a 0.5 m
   // screen renders its type at about seven pixels whatever is drawn on it, which is the whole of the
   // note "screen hard to read". At 1.9 times the size, with three lines set large, it reads.
   const TIER = TOP + DESK.tier;
-  const live = monitor({ alive: true, size: 1.9, face: timelineScreen(site.about.timeline) });
+  const live = monitor({ alive: true, size: 1.9, face: facilityPlan() });
   await add(place(live, DESK.tierBack - 0.2, TIER, 32.9, -Math.PI / 2 - 0.22));
   for (const [z, turn] of [[29.7, -Math.PI / 2 + 0.1], [28.6, -Math.PI / 2 - 0.15]] as [number, number][]) {
     await add(place(monitor({ alive: false }), DESK.tierBack - 0.2, TIER, z, turn));
