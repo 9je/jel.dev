@@ -43,9 +43,12 @@ async function build(ctx: StageContext): Promise<Stage> {
   // starts where a real plume goes cool.
   const fx: ParticleSystem[] = [
     dust([X0 + 2, 0.3, Z0 + 2.4], [X1 - 1, 4.0, Z1 - 2.4], tier === 'high' ? 160 : 60, { size: 0.07, opacity: 0.18, color: 0xd8e8f0 }),
-    plume([fire.top[0], fire.top[1] + 0.55, fire.top[2]], {
-      count: tier === 'high' ? 34 : 15, life: 4.2, rise: 1.8, spread: 0.36, size: 0.36, grow: 2.6,
-      color: 0x8b9298, opacity: 0.34, drift: [0.02, 0, -0.12], texture: 'smoke', seed: 5,
+    // Smoke as a column rather than a string of puffs: twice the sprites at twice the size and a
+    // little over half the opacity, so each one overlaps the next few and the gaps between them go.
+    // Born a quarter metre over the flame, just clear of its core, not half a metre up in clean air.
+    plume([fire.top[0], fire.top[1] + 0.25, fire.top[2]], {
+      count: tier === 'high' ? 64 : 28, life: 4.6, rise: 1.8, spread: 0.3, size: 0.62, grow: 3,
+      color: 0x8b9298, opacity: 0.2, drift: [0.02, 0, -0.12], texture: 'soft', seed: 5,
     }),
     plume(fire.top, {
       count: tier === 'high' ? 30 : 14, life: 1.5, rise: 1.05, spread: 0.15, size: 0.34, grow: 1.7,

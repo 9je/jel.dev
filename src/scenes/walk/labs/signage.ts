@@ -265,7 +265,9 @@ export function tapeCross(w: number, h: number): THREE.Group {
   const g = new THREE.Group();
   g.add(tapeStrip([-w / 2, 0.05, 0], [w / 2, h - 0.05, 0], 0.08));
   g.add(tapeStrip([w / 2, 0.05, 0], [-w / 2, h - 0.05, 0], 0.08));
-  const plate = signBox('KEEP OUT', { w: Math.min(0.9, w * 0.34), h: 0.22, accent: LABS.warn });
+  // A thin printed plate, not a lightbox: the lightbox's polished bezel caught whatever light was
+  // behind the door and drew a hot line down one edge of it.
+  const plate = wallPlaque('KEEP OUT', { w: Math.min(0.9, w * 0.34), h: 0.22, accent: LABS.warn });
   plate.position.set(0, h / 2, 0.03); plate.name = 'plate';
   g.add(plate);
   return g;

@@ -5,7 +5,7 @@ import { cableTray, papers } from '../../labs/props';
 import { arcadeCabinet, canteenChair, canteenTable, crtBracket, crtSet, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
-import { statusScreen } from '../../labs/textures';
+import { labsIdent } from '../../labs/textures';
 import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
@@ -169,11 +169,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(place(statusBoard(), -49.45, 2.05, Z1 - 0.02, Math.PI));
   await add(deadPlant(once(prop('plant'), -50.4, 0, Z1 - 0.5, 1.1)));
   await add(place(canteenTable(1.6, 0.8), -53.5, 0, Z1 - 0.62, 0));
-  // Two chairs at the ends, both facing the table, and one dragged clear and left turned out. None
-  // of the three stands on the south side, for the clearance the walk keeps either side of the line.
+  // Two chairs at the ends, both facing the table, and a spare stood back against the wall square
+  // to it. It was left dragged out at an angle, which from the walk only read as a chair facing
+  // nowhere. None of the three stands on the south side, for the clearance the walk keeps.
   await add(place(canteenChair(), -54.52, 0, Z1 - 0.62, Math.PI / 2));
   await add(place(canteenChair(), -52.48, 0, Z1 - 0.62, -Math.PI / 2));
-  await add(place(canteenChair(), -51.4, 0, Z1 - 1.25, 0.8));
+  await add(place(canteenChair(), -51.4, 0, Z1 - 0.3, Math.PI));
 
   // The clock on the west end wall, south of the doorway, so the far end of the room has something
   // to read rather than being the place the light runs out.
@@ -184,29 +185,20 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   return { hotspots, header: litHeader };
 }
 
-/** The television on its wall bracket, showing the wing's own status board. It is dressing, not a
- *  project, so it carries no hotspot. It was the Poly Haven set with a lit plane hung in front of
- *  its bounding box, which put the picture a few centimetres off the curved glass, and the board on
- *  it was three sentences too small to read: "i can tell we put floating text on it and i cant even
- *  read it". Now it is the same set the containment floor has, whose screen sits in its own bezel,
- *  half again as big, with the board set in type sized for the room. */
+/** The television on its wall bracket, square to the wall it hangs on, showing the Labs mark. It
+ *  is dressing, not a project, so it carries no hotspot. It is the same set the containment floor
+ *  has, whose screen sits in its own bezel, half again as big. It stands the way a set on a canteen
+ *  wall does, facing the room, not turned to meet the walk: the room is meant to look lived in, not
+ *  posed for the camera passing through it. */
 function statusBoard(): THREE.Group {
   const S = 1.5;
-  const set = crtSet(statusScreen([
-    ['torn.bet', 'OPERATIONAL', '#4FD08A'],
-    ['Kayou', '1,500 MEMBERS', '#6EC1D6'],
-    ['Character bot', 'IN FLIGHT', '#E8B923'],
-  ]));
+  const set = crtSet(labsIdent());
   set.scale.setScalar(S);
   // The set is 0.6 m deep behind its face at this size, so the shelf runs the whole of that and the
   // set stands with the back of its funnel just off the wall.
   const back = 0.415 * S, front = 0.16 * S;
   const g = crtBracket(set, 0.52 * S * 0.92, back + front + 0.04);
   set.position.z = back + 0.03;
-  // Turned on the shelf toward the east, which is the way the walk comes. The set hangs on the side
-  // wall and the walk passes along that wall, so square to it the screen is only ever seen edge on.
-  // Turned 0.64 rad the funnel's back corner still clears the wall by 4 cm.
-  set.rotation.y = -0.64;
   return g;
 }
 

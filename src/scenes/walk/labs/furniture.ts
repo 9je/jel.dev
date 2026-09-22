@@ -361,15 +361,14 @@ export function arcadeCabinet(spec: ArcadeSpec): THREE.Group {
   g.add(instances(button(), carcass(0xd7383a, 0.4), [[-0.08, 1.015, 0.291], [0.0, 1.015, 0.291], [0.08, 1.015, 0.291]]));
   g.add(instances(button(), carcass(0x3d7be0, 0.4), [[-0.08, 1.032, 0.359], [0.0, 1.032, 0.359], [0.08, 1.032, 0.359]]));
 
-  // The glass stands proud of the head in its own bezel. Raked back at z 0.17 the top quarter of
-  // it was inside the cabinet: the head box's front face is at 0.15, so everything above the
-  // middle of the screen was occluded by the machine it belongs to, and the line at the top of
-  // the attract screen has never been visible on any cabinet in the room.
+  // The glass sits in the head, flush with its face, behind a thin bezel. It stood 4 cm proud on a
+  // raked bezel of its own, which read as a tablet clipped to the front of the machine rather than
+  // a monitor built into it. The head box's front face is the plane z 0.15.
   const face = attractScreen(spec.title, spec.accent, spec.seed, spec.kind);
-  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.5, 0.03), carcass(0x0b1117, 0.6));
-  bezel.position.set(0, 1.41, 0.19); bezel.rotation.x = -0.2; g.add(bezel);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.5, 0.01), carcass(0x0b1117, 0.6));
+  bezel.position.set(0, 1.41, 0.155); g.add(bezel);
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.44), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.15, emissiveMap: face, map: face }));
-  screen.position.set(0, 1.408, 0.212); screen.rotation.x = -0.2; g.add(screen);
+  screen.position.set(0, 1.41, 0.162); g.add(screen);
   const lamp = marqueeFace(spec.title, spec.accent);
   // A backlit plate is its own light, not a white card under the room's. Held near the composer's
   // 0.85 bloom threshold on the emissive pass, and nearly black on the diffuse one so the ceiling

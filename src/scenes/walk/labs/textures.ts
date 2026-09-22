@@ -95,32 +95,29 @@ export function screenFace(lines: string[], accent = '#6EC1D6', w = 512, h = 320
 }
 
 /**
- * The break room television's status board, 4:3 for the set's screen: one project to a row, the
- * name large with its state under it in that row's colour and a bar of the same colour beside it.
- * Colour and emissive map. Sized to be read across the room: it was three sentences in 34 px type
- * on a face 0.4 m wide, which from the walk is a grey smear.
+ * The break room television's idle picture: the Labs mark, large, over the word, on the deep blue
+ * a set shows between programmes. Colour and emissive map, 4:3. It was a status board of three
+ * rows, which from the walk was text too small to read: "id rather lose visibility and just do a
+ * logo or something than text thats hard to read". A mark reads at any size and any angle.
  */
-export function statusScreen(rows: [name: string, state: string, color: string][]): THREE.CanvasTexture {
+export function labsIdent(): THREE.CanvasTexture {
   const w = 640, h = 480;
   const [c, ctx] = canvas(w, h);
-  ctx.fillStyle = '#04111b'; ctx.fillRect(0, 0, w, h);
-  const glow = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, w * 0.62);
-  glow.addColorStop(0, 'rgba(110,193,214,0.10)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
-  const size = (text: string, px: number, maxW: number) => {
-    let p = px;
-    do { ctx.font = `600 ${p}px Michroma, system-ui, sans-serif`; } while (ctx.measureText(text).width > maxW && --p > 10);
-  };
-  const rowH = h / rows.length, left = 78, maxW = w - left - 30;
-  ctx.textBaseline = 'alphabetic';
-  rows.forEach(([name, state, color], i) => {
-    const mid = i * rowH + rowH / 2;
-    ctx.fillStyle = color; ctx.fillRect(34, mid - 44, 16, 88);
-    ctx.fillStyle = '#E6F2F7'; size(name, 50, maxW); ctx.fillText(name, left, mid + 4);
-    ctx.fillStyle = color; size(state, 28, maxW); ctx.fillText(state, left, mid + 44);
-  });
-  ctx.fillStyle = 'rgba(0,0,0,0.22)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
-  const t = own(c); t.anisotropy = 8; return t;
+  const bg = ctx.createRadialGradient(w / 2, h * 0.45, 30, w / 2, h / 2, w * 0.7);
+  bg.addColorStop(0, '#1d4f9e'); bg.addColorStop(1, '#071a38');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  // The mark: two chevrons stacked into an arrow, the cut the wall stencil in the server hall uses.
+  ctx.fillStyle = '#E6F2F7';
+  const mx = w / 2, my = h * 0.36, s = 190;
+  for (const dy of [-s * 0.42, s * 0.18]) {
+    ctx.beginPath(); ctx.moveTo(mx - s * 0.5, my + dy + s * 0.5); ctx.lineTo(mx, my + dy); ctx.lineTo(mx + s * 0.5, my + dy + s * 0.5);
+    ctx.lineTo(mx + s * 0.5, my + dy + s * 0.28); ctx.lineTo(mx, my + dy - s * 0.22); ctx.lineTo(mx - s * 0.5, my + dy + s * 0.28); ctx.closePath(); ctx.fill();
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = '600 92px Michroma, system-ui, sans-serif';
+  ctx.fillText('LABS', mx, h * 0.84);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
+  return own(c);
 }
 
 /**
