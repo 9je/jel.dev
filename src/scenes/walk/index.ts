@@ -478,13 +478,34 @@ function teardown() {
  */
 function wireColumnScroll(els: WalkElements): () => void {
   const bodies = Array.from(els.root.querySelectorAll<HTMLElement>('.stop-body'));
-  const sync = (el: HTMLElement) => { el.toggleAttribute('data-lenis-prevent', el.scrollHeight > el.clientHeight + 1); };
-  const enter = (e: Event) => sync(e.currentTarget as HTMLElement);
+  // Two attributes off one measurement. `data-lenis-prevent` hands the wheel to a column that has
+  // somewhere of its own to go, so the room does not walk out from under a reader halfway down a
+  // paragraph. `data-more` says there is copy below the fold, and the card fades its last line
+  // instead of cutting a sentence off square: the file's two paragraphs do not fit 28vh, and cut
+  // flat the card read as broken type rather than as a card with more in it. It clears the moment
+  // the reader reaches the end, which is why the scroll itself is listened to and not only the
+  // pointer arriving.
+  const sync = (el: HTMLElement) => {
+    const over = el.scrollHeight > el.clientHeight + 1;
+    el.toggleAttribute('data-lenis-prevent', over);
+    el.toggleAttribute('data-more', over && el.scrollTop + el.clientHeight < el.scrollHeight - 1);
+  };
+  const one = (e: Event) => sync(e.currentTarget as HTMLElement);
   const all = () => bodies.forEach(sync);
-  for (const b of bodies) { b.addEventListener('pointerenter', enter); b.addEventListener('toggle', all, true); }
+  for (const b of bodies) {
+    b.addEventListener('pointerenter', one);
+    b.addEventListener('scroll', one, { passive: true });
+    b.addEventListener('toggle', all, true);
+  }
   window.addEventListener('resize', all);
+  all();
   return () => {
-    for (const b of bodies) { b.removeEventListener('pointerenter', enter); b.removeEventListener('toggle', all, true); b.removeAttribute('data-lenis-prevent'); }
+    for (const b of bodies) {
+      b.removeEventListener('pointerenter', one);
+      b.removeEventListener('scroll', one);
+      b.removeEventListener('toggle', all, true);
+      b.removeAttribute('data-lenis-prevent'); b.removeAttribute('data-more');
+    }
     window.removeEventListener('resize', all);
   };
 }

@@ -186,6 +186,17 @@
      lit room is unreadable without it. */
   .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body,
   .walk[data-mode='full'] .stop[data-stop='file'] .stop-body { background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
+  /* Neither card holds all of its copy at 28vh, so both scroll, and a scroll cut flat ends a
+     sentence in mid air. `data-more` is on the body only while there is something below the fold,
+     so the last line goes under the card's own ground and comes back the moment the reader reaches
+     the end. Sticky rather than fixed to the card: it rides the bottom of the scrollport, and the
+     negative margins take it out of the flow and carry it over the card's padding to the edge. */
+  .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body[data-more]::after,
+  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body[data-more]::after {
+    content: ''; display: block; position: sticky; bottom: -0.75rem; height: 2.4rem;
+    margin: -2.4rem -0.9rem -0.75rem; pointer-events: none;
+    background: linear-gradient(to top, var(--surface), transparent);
+  }
   .walk[data-mode='full'] .stop[data-stop='file'] .timeline { grid-template-columns: 4rem 1fr; }
   /* The flagship is the first row of that list, not a card: same line, same plate, its picture and
      its copy behind the same disclosure. */
