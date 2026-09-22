@@ -6,7 +6,7 @@ import { papers } from '../../labs/props';
 import { labSteel } from '../../labs/materials';
 import { controlConsole, controlDesk, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
 import { consoleFace, personnelSheet, timelineScreen } from '../../labs/textures';
-import { DESK, FILE, X1, Z1 } from './layout';
+import { ASHTRAY, DESK, FILE, GLASS, X1, Z1 } from './layout';
 
 /** A four drawer steel filing cabinet with the top drawer standing open on its folders, 0.5 by 0.62
  *  on plan and 1.32 tall, origin at floor centre, fronts to +z. Room furniture rather than kit: it
@@ -28,6 +28,92 @@ function filingCabinet(): THREE.Group {
   const folders: THREE.BufferGeometry[] = [];
   for (let z = -0.2; z < 0.26; z += 0.055) folders.push(new THREE.BoxGeometry(0.4, 0.1, 0.008).translate(0, 0.19, z));
   open.add(merged(folders, new THREE.MeshStandardMaterial({ color: 0xd6b979, roughness: 0.9 })));
+  return g;
+}
+
+/**
+ * A cut glass ashtray with a cigar resting in it, life size, origin at the middle of the dish on
+ * the worktop. The dish is a lathed bowl rather than two stacked cylinders, because the thing that
+ * says glass at this distance is the thickness of the rim catching the lamp. The cigar lies across
+ * the rest with its lit end over the bowl, a band a third of the way down, and a cone of ash at the
+ * tip with the ember inside it. Five draw calls.
+ */
+function ashtray(): THREE.Group {
+  const g = new THREE.Group();
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x39434b, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  const profile = [
+    new THREE.Vector2(0, 0.004), new THREE.Vector2(0.056, 0.004), new THREE.Vector2(0.066, 0.01),
+    new THREE.Vector2(0.068, 0.03), new THREE.Vector2(0.056, 0.032), new THREE.Vector2(0.046, 0.014),
+    new THREE.Vector2(0, 0.012),
+  ];
+  g.add(new THREE.Mesh(new THREE.LatheGeometry(profile, 28), glass));
+  // The rests: two bars across the rim, and the ash somebody knocked off into the bottom.
+  const rests: THREE.BufferGeometry[] = [];
+  for (const a of [0.5, 0.5 + Math.PI]) {
+    rests.push(new THREE.BoxGeometry(0.03, 0.008, 0.016).translate(Math.cos(a) * 0.058, 0.03, Math.sin(a) * 0.058));
+  }
+  g.add(merged(rests, glass));
+  const ash = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.03, 0.005, 16), new THREE.MeshStandardMaterial({ color: 0x8e8e8a, roughness: 1 }));
+  ash.position.y = 0.0145; g.add(ash);
+
+  const cigar = new THREE.Group();
+  const leaf = new THREE.MeshStandardMaterial({ color: 0x5a3517, roughness: 0.78 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0088, 0.0106, 0.108, 12), leaf);
+  body.rotation.z = Math.PI / 2; cigar.add(body);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0109, 0.0109, 0.015, 12), new THREE.MeshStandardMaterial({ color: 0xb08528, roughness: 0.5, metalness: 0.4 }));
+  band.rotation.z = Math.PI / 2; band.position.x = -0.03; cigar.add(band);
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.0074, 0.0088, 0.022, 12), new THREE.MeshStandardMaterial({ color: 0x9a9a95, roughness: 1 }));
+  tip.rotation.z = Math.PI / 2; tip.position.x = 0.064; cigar.add(tip);
+  // The ember: the only warm thing in the room that is not the lamp, and small enough that the
+  // bloom on the high tier gives it a halo the size of a coal rather than a lamp.
+  const ember = new THREE.Mesh(new THREE.SphereGeometry(0.0072, 10, 8), new THREE.MeshStandardMaterial({
+    color: 0x2a0a00, emissive: 0xff5a12, emissiveIntensity: 2.6,
+  }));
+  ember.scale.set(0.6, 1, 1); ember.position.x = 0.0752; cigar.add(ember);
+  cigar.position.set(-0.012, 0.0345, 0.012); cigar.rotation.set(0, 0.55, 0.07);
+  g.add(cigar);
+  return g;
+}
+
+/** Where the cigar's lit end sits inside the ashtray group, so the smoke comes off the coal rather
+ *  than off the middle of the dish. */
+/** How the ashtray is set down on the top. */
+const ASHTRAY_TURN = 0.6;
+
+const EMBER = new THREE.Vector3(0.0752, 0, 0).applyEuler(new THREE.Euler(0, 0.55, 0.07)).add(new THREE.Vector3(-0.012, 0.0345, 0.012));
+
+/** The same point in the room, for the plume the stage hangs off it. The ashtray is set down at a
+ *  turn of its own, so the offset turns with it. */
+export const CIGAR_TIP: [number, number, number] = (() => {
+  const v = EMBER.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), ASHTRAY_TURN);
+  return [ASHTRAY[0] + v.x, DESK.top + v.y, ASHTRAY[1] + v.z];
+})();
+
+/**
+ * A cut tumbler with two fingers of bourbon in it, life size, origin at the foot. Built as a wall,
+ * a thick base and the liquid inside it, because a glass reads by what the light does at its
+ * shoulder and at the meniscus, and both of those want the wall to be open ended. Four draw calls.
+ */
+function tumbler(): THREE.Group {
+  const g = new THREE.Group();
+  // The wall carries enough opacity to have a silhouette. Under 0.2 the glass disappeared and all
+  // that was left on the desk was the liquid, which read as a clay cup.
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xe8f2f7, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.32, side: THREE.DoubleSide });
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.032, 0.094, 22, 1, true), glass);
+  wall.position.y = 0.047; g.add(wall);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.033, 0.018, 22), glass);
+  base.position.y = 0.009; g.add(base);
+  // Opaque, and darker than it looks in a glass: read through a pale wall at 0.26 the first pour
+  // came out pink. Bourbon is a deep amber that the lamp lights from the side.
+  const bourbon = new THREE.Mesh(new THREE.CylinderGeometry(0.0344, 0.0322, 0.04, 22), new THREE.MeshStandardMaterial({
+    color: 0x7a3206, roughness: 0.07, metalness: 0.08, emissive: 0x933c06, emissiveIntensity: 0.18,
+  }));
+  bourbon.position.y = 0.038; g.add(bourbon);
+  // One cube, mostly under: ice that floats proud of the surface is ice in a glass of water.
+  const ice = new THREE.Mesh(new THREE.BoxGeometry(0.021, 0.021, 0.021), new THREE.MeshPhysicalMaterial({
+    color: 0xeef6fa, roughness: 0.1, metalness: 0, transparent: true, opacity: 0.4,
+  }));
+  ice.position.set(0.006, 0.046, -0.004); ice.rotation.set(0.4, 0.7, 0.2); g.add(ice);
   return g;
 }
 
@@ -110,6 +196,12 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // was buried in the tier and the lamp read as hanging in the air over the desk.
   place(lamp, DESK.back - 0.22, TOP, FILE.z + 0.5, 0.9);
   await add(lamp);
+
+  // What the person at this desk was doing a minute ago: a cigar still going in the ashtray and a
+  // glass poured. Both stand in the lamp's pool between the file and the console, clear of the
+  // folder the eye lands on and clear of the console's own footprint.
+  await add(place(ashtray(), ASHTRAY[0], TOP, ASHTRAY[1], ASHTRAY_TURN));
+  await add(place(tumbler(), GLASS[0], TOP, GLASS[1], 0));
 
   // The anchor a pinned panel would hang off, half a metre in front of the folder. Nothing in the
   // page carries `data-anchor="file"` yet: the pinned rule in walk.css draws no ground of its own,

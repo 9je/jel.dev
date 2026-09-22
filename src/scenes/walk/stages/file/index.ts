@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Stage, StageContext, StageDef } from '../types';
 import { disposeObject } from '../../materials';
 import { buildShell } from './shell';
-import { buildDressing } from './dressing';
+import { buildDressing, CIGAR_TIP } from './dressing';
 import { lights } from './lighting';
 import { dust, plume, type ParticleSystem } from '../../labs/particles';
 import { DESK } from './layout';
@@ -22,11 +22,15 @@ async function build(ctx: StageContext): Promise<Stage> {
   // has just left still has its air.
   const fx: ParticleSystem[] = [
     dust([DESK.x - 0.9, 0.75, DESK.z0 + 1.2], [DESK.x + 0.9, 1.7, DESK.z1 - 1.2], tier === 'high' ? 160 : 60, { size: 0.035, opacity: 0.42, color: 0xffe0a8, amp: 0.1 }),
+    // The cigar. A thread rather than a cloud: it leaves the coal narrow, widens as it rises, and
+    // leans the way the room's air moves, which is toward the window the yard is outside of.
+    plume(CIGAR_TIP, { count: 26, life: 3.6, rise: 0.5, spread: 0.11, size: 0.095, grow: 2.8, drift: [0.008, 0, 0.022], color: 0xccd4d9, opacity: 0.6, seed: 23 }),
   ];
   for (const p of fx) root.add(p.points);
-  // Nothing in here moves. This is the last frame of the walk and it is a room somebody has just
-  // left: the file is open, the mug is over, the chair is turned, and the only thing still running
-  // is the yard outside the window. Motion in it would make it a room somebody is still in.
+  // This is the last frame of the walk, and it is a room somebody has just stepped out of rather
+  // than left for good: the file is open, the mug is over, the chair is turned, the glass is
+  // poured, and the cigar in the ashtray is still going. The smoke off it is the only thing in the
+  // room that moves under its own steam, which is what puts a person in the chair a minute ago.
   return {
     id: 'file', root, lights: lights(), hotspots,
     update(_t, dt) { for (const p of fx) p.update(dt); },

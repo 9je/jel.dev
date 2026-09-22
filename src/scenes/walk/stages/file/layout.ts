@@ -54,6 +54,14 @@ export const DESK = { x: -67.5, z0: 28, z1: 34, top: 0.79, tier: 0.25, front: -6
  *  under the window's north end, and 2.9 m off the lens. */
 export const FILE = { x: -67.85, z: 31.0 };
 
+/**
+ * The ashtray and the glass on the worktop, as `[x, z]`. They sit between the open file and the
+ * console, on the front half of the top where the lamp reaches, so the cigar's smoke rises through
+ * the one warm light in the room.
+ */
+export const ASHTRAY: [number, number] = [-67.78, 31.62];
+export const GLASS: [number, number] = [-67.88, 31.34];
+
 /** The ceiling grid the glass room hangs, which is where the one cold ceiling spot has to sit:
  *  `lighting.ts` enumerates the lit troffers from these numbers exactly the way `ceilingGrid` does,
  *  so the spot lands under a lens the room actually draws. */
