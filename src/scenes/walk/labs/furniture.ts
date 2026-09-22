@@ -177,7 +177,11 @@ export function arcadeCabinet(spec: ArcadeSpec): THREE.Group {
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.44), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.15, emissiveMap: face, map: face }));
   screen.position.set(0, 1.41, 0.17); screen.rotation.x = -0.2; g.add(screen);
   const lamp = marqueeFace(spec.title, spec.accent);
-  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.2), new THREE.MeshStandardMaterial({ color: 0xffffff, map: lamp, emissive: 0xffffff, emissiveMap: lamp, emissiveIntensity: 1.4 }));
+  // A backlit plate is its own light, not a white card under the room's. Held near the composer's
+  // 0.85 bloom threshold on the emissive pass, and nearly black on the diffuse one so the ceiling
+  // spot cannot add to it: above that threshold the plate blooms and ACES rolls the colour off
+  // toward white, taking the lettering with it. Yellow went first, having the most luminance.
+  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, map: lamp, emissive: 0xffffff, emissiveMap: lamp, emissiveIntensity: 0.9 }));
   marquee.position.set(0, 1.79, 0.153); marquee.name = 'marquee'; g.add(marquee);
   return g;
 }
@@ -318,7 +322,7 @@ export function marqueeFace(title: string, accent = '#3D7BE0'): THREE.CanvasText
   const [c, ctx] = canvas(512, 146);
   ctx.fillStyle = accent; ctx.fillRect(0, 0, 512, 146);
   ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, 512, 10); ctx.fillRect(0, 136, 512, 10);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   // A long title is condensed rather than shrunk. Michroma is a wide face, so setting a name like
   // "character bot" to fit at full size dropped it to about half the cap height of the short ones
   // and it could not be read at the hold at all. Squeezing the x axis keeps the letters as tall as
@@ -333,7 +337,12 @@ export function marqueeFace(title: string, accent = '#3D7BE0'): THREE.CanvasText
   while (wide * squeeze > 460 && px > 22) { px -= 2; wide = set(); }
   ctx.save();
   ctx.translate(256, 76); ctx.scale(squeeze, 1);
-  ctx.fillText(title, 0, 0);
+  // A keyline under the letters. The marquee is a lit panel behind a bloom threshold, so whatever
+  // the exposure does to the colour around them the letters keep an edge: white on a hot yellow
+  // plate is two clipped channels and no contrast at all, which is what "barely readable" was.
+  ctx.lineJoin = 'round'; ctx.lineWidth = 9; ctx.strokeStyle = 'rgba(6,10,16,0.92)';
+  ctx.strokeText(title, 0, 0);
+  ctx.fillStyle = '#ffffff'; ctx.fillText(title, 0, 0);
   ctx.restore();
   return own(c);
 }
@@ -345,7 +354,7 @@ export function posterSheet(text: string, seed = 1): THREE.CanvasTexture {
   const warn = text.includes('!');
   ctx.fillStyle = '#e6e1d3'; ctx.fillRect(0, 0, 256, 360);
   ctx.fillStyle = '#2455A4'; ctx.fillRect(0, 0, 256, 62);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const px = 30;
   ctx.font = `600 ${px}px Michroma, system-ui, sans-serif`;
   const wide = ctx.measureText(text).width;

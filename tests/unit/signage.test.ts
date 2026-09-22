@@ -80,8 +80,14 @@ describe('signBox', () => {
     const on = kit.signBox('RECREATION', { w: 1.6, h: 0.4, on: true });
     const off = kit.signBox('RECREATION', { w: 1.6, h: 0.4 });
     const face = (g: import('three').Group) => g.getObjectByName('face') as import('three').Mesh;
-    expect((face(on).material as import('three').MeshStandardMaterial).emissiveIntensity).toBe(0.6);
-    expect((face(off).material as import('three').MeshStandardMaterial).emissiveIntensity).toBe(0);
+    const lit = face(on).material as import('three').MeshStandardMaterial;
+    const dark = face(off).material as import('three').MeshStandardMaterial;
+    expect(lit.emissiveIntensity).toBeGreaterThan(0);
+    expect(dark.emissiveIntensity).toBe(0);
+    // Lit from behind, so the lit face takes almost no light off the room and the dark one is
+    // nothing but the light that falls on it. Both of them past the bloom threshold is what took
+    // the lettering off the arcade sign.
+    expect(lit.color.getHex()).toBeLessThan(dark.color.getHex());
   });
   it('centres on its face', () => {
     const box = new THREE.Box3().setFromObject(kit.signBox('OPERATIONS', { w: 2, h: 0.5, on: true }));

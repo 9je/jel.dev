@@ -144,8 +144,13 @@ export function signBox(text: string, opts: { w: number; h: number; accent?: num
   const map = signFace(text, print);
   // A dark sign never lights anything, so it does not pay for a second canvas.
   const glow = opts.on ? signFace(text, print, true) : map;
+  // A lit face carries almost no diffuse: the acrylic is lit from behind, so a ceiling spot on the
+  // front of it should not be able to add to it. White here plus a spot pushed the whole plate past
+  // the composer's bloom threshold, ACES rolled it off to paper white, and the name went with it.
+  // A dark sign is the other way round and is nothing but the light that falls on it.
   const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({
-    color: 0xffffff, map, roughness: 0.4, emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: opts.on ? 0.6 : 0,
+    color: opts.on ? 0x2c2c2c : 0xffffff, map, roughness: 0.4,
+    emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: opts.on ? 0.82 : 0,
   }));
   face.name = 'face'; g.add(face);
   const strip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.03), new THREE.MeshStandardMaterial({
