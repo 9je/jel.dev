@@ -25,11 +25,19 @@ async function build(ctx: StageContext): Promise<Stage> {
     o.receiveShadow = !translucent;
   });
   // Dust in the aisle, in the cold light off the racks: fewer motes than before and each larger and
-  // softer, so they read as dust turning in a shaft rather than as speckle. And the smoke off the
-  // burning rack, grey and slow, leaning out over the aisle as it thins.
+  // softer, so they read as dust turning in a shaft rather than as speckle. And two plumes off the
+  // burning rack.
+  //
+  // The smoke was the whole of it for a long time and it could not be seen, because grey smoke on
+  // an unlit black ceiling is grey on black. Smoke is the consequence and the flame is the thing,
+  // so the flame is drawn: a short additive plume, small and quick and orange, sitting in the mouth
+  // of the slow grey one. Additive means it makes its own brightness rather than waiting on a light
+  // this room has no budget left to give it, and it clears the bloom threshold, so the rack tops
+  // carry a halo the way the neon over the shutter does.
   const fx: ParticleSystem[] = [
     dust([X0 + 2, 0.3, Z0 + 2.4], [X1 - 1, 4.0, Z1 - 2.4], tier === 'high' ? 160 : 60, { size: 0.07, opacity: 0.18, color: 0xd8e8f0 }),
     plume(fire.top, { count: tier === 'high' ? 38 : 16, life: 4.4, rise: 1.7, spread: 0.34, size: 0.34, grow: 2.6, color: 0x8b9298, opacity: 0.5, drift: [0.02, 0, -0.12], texture: 'smoke', seed: 5 }),
+    plume(fire.top, { count: tier === 'high' ? 18 : 9, life: 1.1, rise: 0.6, spread: 0.09, size: 0.17, grow: 1.5, color: 0xff7d28, opacity: 0.55, drift: [0.01, 0, -0.03], additive: true, texture: 'soft', seed: 11 }),
   ];
   for (const p of fx) root.add(p.points);
   // The rows breathe. Every rack's units are one batch over one material, so a whole rack pulses on

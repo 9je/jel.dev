@@ -22,7 +22,7 @@ export interface Dressing { hotspots: Hotspot[]; blink: Blink[]; fire: Fire; cam
 /** By ordinal along the row, counting from the east end: the two south racks somebody left open,
  *  and the north rack with no power. */
 const OPEN_SOUTH = new Set([2, 6]);
-const DEAD_NORTH = 4;
+const DEAD_NORTH = 1;
 
 /**
  * The server hall. Sixteen racks in two caged rows under a hazard yellow trunk pipe, which is the

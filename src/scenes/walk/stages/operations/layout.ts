@@ -37,9 +37,19 @@ export const BATTEN_DROP = 0.35;
 export const BATTEN_Y = H - 0.035 - BATTEN_DROP;
 export const SPOT_FITTINGS: [number, number][] = [[-65, BATTEN_ROWS[0]], [-71, BATTEN_ROWS[1]]];
 
-/** By ordinal along the row from the east end: the north rack that is burning. It stands next to
- *  the dead one, which is the order those two things happen in. */
-export const FIRE_NORTH = 5;
+/**
+ * By ordinal along the row from the east end: the north rack that is burning. It stands next to the
+ * dead one, which is the order those two things happen in.
+ *
+ * Which ordinal is a framing decision, not a dressing one. The hold looks west down the aisle from
+ * x -58, so a rack's angle off the centre of the frame is its distance off the row divided by its
+ * distance down the hall: the north row is 6.4 m off the line, so the fifth rack along sat 36
+ * degrees out, which on a 55 degree lens is hard against the left edge behind the room's own copy.
+ * The fire was built, lit, smoking and strobing there for a week and could not be seen. Far enough
+ * down the hall and the same rack is 25 degrees out, which is inside the clear band between the
+ * copy column and the doorway.
+ */
+export const FIRE_NORTH = 2;
 
 /**
  * The tape. Each cage run's west end post is tied to a stanchion out in the hall, one run each
