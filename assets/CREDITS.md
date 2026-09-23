@@ -18,7 +18,6 @@ Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](
 | desk_lamp | [desk_lamp_arm_01](https://polyhaven.com/a/desk_lamp_arm_01) | model |
 | utility_box | [utility_box_01](https://polyhaven.com/a/utility_box_01) | model |
 | crate_wood_1 | [wooden_crate_01](https://polyhaven.com/a/wooden_crate_01) | model |
-| crate_wood_2 | [wooden_crate_02](https://polyhaven.com/a/wooden_crate_02) | model |
 | crate_plastic | [plastic_crate_01](https://polyhaven.com/a/plastic_crate_01) | model |
 | barrel | [barrel_03](https://polyhaven.com/a/barrel_03) | model |
 | fluorescent | [mounted_fluorescent_lights](https://polyhaven.com/a/mounted_fluorescent_lights) | model |
@@ -37,36 +36,27 @@ Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](
 | cardboard_box | [cardboard_box_01](https://polyhaven.com/a/cardboard_box_01) | model |
 | ladder | [ladder_sectioned_01](https://polyhaven.com/a/ladder_sectioned_01) | model |
 | dock_door | [rollershutter_door](https://polyhaven.com/a/rollershutter_door) | model |
-| chair | [plastic_monobloc_chair_01](https://polyhaven.com/a/plastic_monobloc_chair_01) | model |
 | sofa | [sofa_02](https://polyhaven.com/a/sofa_02) | model |
-| table | [dining_table](https://polyhaven.com/a/dining_table) | model |
 | bin | [metal_trash_can](https://polyhaven.com/a/metal_trash_can) | model |
 | trashbag | [trashbag](https://polyhaven.com/a/trashbag) | model |
 | laptop | [classic_laptop](https://polyhaven.com/a/classic_laptop) | model |
 | medical_box | [medical_box](https://polyhaven.com/a/medical_box) | model |
 | tote | [industrial_pastic_container](https://polyhaven.com/a/industrial_pastic_container) | model |
-| tv | [Television_01](https://polyhaven.com/a/Television_01) | model |
 | microwave | [vintage_microwave](https://polyhaven.com/a/vintage_microwave) | model |
 | kettle | [vintage_electric_kettle](https://polyhaven.com/a/vintage_electric_kettle) | model |
 | wall_clock | [wall_clock](https://polyhaven.com/a/wall_clock) | model |
 | plant | [potted_plant_01](https://polyhaven.com/a/potted_plant_01) | model |
-| tea_set | [tea_set_01](https://polyhaven.com/a/tea_set_01) | model |
 | bench | [painted_wooden_bench](https://polyhaven.com/a/painted_wooden_bench) | model |
 | security_camera | [security_camera_01](https://polyhaven.com/a/security_camera_01) | model |
 | microscope | [industrial_microscope](https://polyhaven.com/a/industrial_microscope) | model |
 | chemistry_set | [chemistry_set](https://polyhaven.com/a/chemistry_set) | model |
-| bed_frame | [old_bed_frame](https://polyhaven.com/a/old_bed_frame) | model |
-| wheelchair | [wheelchair_01](https://polyhaven.com/a/wheelchair_01) | model |
 | stool_2 | [metal_stool_02](https://polyhaven.com/a/metal_stool_02) | model |
 | utility_box_2 | [utility_box_02](https://polyhaven.com/a/utility_box_02) | model |
 | fire_alarm | [fire_alarm](https://polyhaven.com/a/fire_alarm) | model |
-| wet_floor_sign | [WetFloorSign_01](https://polyhaven.com/a/WetFloorSign_01) | model |
 | generator | [portable_generator](https://polyhaven.com/a/portable_generator) | model |
 | binder | [binder_notebook](https://polyhaven.com/a/binder_notebook) | model |
 | clipboard | [clipboard](https://polyhaven.com/a/clipboard) | model |
-| stationery | [stationery_supplies](https://polyhaven.com/a/stationery_supplies) | model |
 | notepads | [office_notepads](https://polyhaven.com/a/office_notepads) | model |
-| radio | [vintage_radio_transceiver](https://polyhaven.com/a/vintage_radio_transceiver) | model |
 
 ## Other sources
 

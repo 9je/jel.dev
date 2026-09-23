@@ -113,7 +113,11 @@
    is allowed to run past it the way a sign on a wall does. The name and the lead both sit straight
    on the room with no plate behind them, so each carries a tight dark shadow of its own, which
    reads as depth rather than as a box over a lit wall and a dark one alike. */
-.walk[data-mode='full'] .stop-title { white-space: nowrap; font-size: clamp(1.8rem, 4.6vw, 2.8rem); text-shadow: 0 1px 3px rgb(5 8 11 / 0.85), 0 0 24px color-mix(in srgb, var(--wing-light) 45%, transparent); }
+/* Long names wrap, balanced, rather than running out of the copy column across the room behind it:
+   PERSONNEL FILE on one line crossed the open file on the desk in a nearly square window. */
+.walk[data-mode='full'] .stop-title { white-space: normal; text-wrap: balance; width: min(30rem, calc(100vw - 4rem)); line-height: 1.05; font-size: clamp(1.8rem, 4.6vw, 2.8rem); text-shadow: 0 1px 3px rgb(5 8 11 / 0.85), 0 0 24px color-mix(in srgb, var(--wing-light) 45%, transparent); }
+/* A name as long as the lobby's is set a size down, so it breaks once rather than twice. */
+.walk[data-mode='full'] .stop-title[data-long] { font-size: clamp(1.6rem, 3.6vw, 2.2rem); }
 .walk[data-mode='full'] .stop-lead { margin: 0.75rem 0 1rem; font-size: 1rem; text-shadow: 0 1px 3px rgb(5 8 11 / 0.9); }
 /* The column is bottom aligned in a frame with 8vh of padding under it, so a body capped at 24vh
    under a name and a line of about 14vh puts the column's top at about 55vh: the room's middle
@@ -159,7 +163,7 @@
   .stop-more-handle { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--text-dim); opacity: 0.6; }
   .stop-more-label { color: var(--text-dim); font-size: 0.8rem; font-stretch: 75%; letter-spacing: 0.06em; }
   /* Small, because the room is behind it: the title is a caption on the sheet, not a masthead. */
-  .walk[data-mode='full'] .stop-title { white-space: normal; font-size: clamp(1.4rem, 6vw, 2rem); }
+  .walk[data-mode='full'] .stop-title { white-space: normal; width: auto; font-size: clamp(1.4rem, 6vw, 2rem); }
   .walk[data-mode='full'] .stop-lead { margin: 0.2rem 0 0.5rem; font-size: 0.95rem; }
   .walk[data-mode='full'] .scroll-cue { margin: 0 0 0.5rem; }
   .walk[data-mode='full'] .stop-body { max-width: none; max-height: 0; overflow: hidden; transition: max-height 300ms ease; }
