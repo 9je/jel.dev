@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
-import { cameraAt, stopAt, STOPS, type StopId } from './path';
+import { cameraAt, setFrame, stopAt, STOPS, type StopId } from './path';
+import { lensFor } from './framing';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
@@ -133,6 +134,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   }
 
   let sizedW = 0, sizedH = 0;
+  /** How much of the frame's bottom the phone sheet covers: the dock bar under it and the collapsed
+   *  sheet's handle, title and lead. Only a coarse pointer gets the sheet (walk.css). */
+  const coarse = matchMedia('(pointer: coarse)');
+  const sheetCover = (h: number) => (coarse.matches && window.innerWidth < h ? 12 * parseFloat(getComputedStyle(document.documentElement).fontSize) : 0);
   /**
    * The drawing buffer follows `window.innerHeight`. The canvas's own box is left to the stylesheet,
    * which pins it to the viewport with no script in the loop: a renderer that writes the box in
@@ -145,11 +150,11 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (!force && w === sizedW && h === sizedH) return;
     sizedW = w; sizedH = h;
     renderer.setSize(w, h, false); post?.setSize(w, h);
-    camera.aspect = w / h;
-    // A portrait phone crops a 55 degree horizontal cone down to almost nothing, so a taller frame
-    // than it is wide gets a wider lens and keeps the room in shot.
-    camera.fov = camera.aspect < 1 ? 72 : 55;
+    const lens = lensFor(w, h, sheetCover(h));
+    camera.aspect = lens.aspect; camera.fov = lens.fov;
+    if (lens.shift) camera.setViewOffset(w, lens.shift.fullH, 0, lens.shift.y, w, h); else camera.clearViewOffset();
     camera.updateProjectionMatrix();
+    setFrame(lens);
   }
   const onResize = () => resize();
 

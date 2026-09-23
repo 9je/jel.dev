@@ -6,7 +6,11 @@ export type StopId = 'booth' | 'fabrication' | 'recreation' | 'operations' | 'cr
  *  start where the camera holds on the threshold looking in). The light rig switches rooms on it.
  *  Switching on the nearest stop, halfway between holds, dropped a room's lights while the camera
  *  was still ten metres inside it. */
-export interface Stop { id: StopId; t: number; enter: number; hold: [number, number]; lookAt: [number, number, number]; wing?: Wing; light: string }
+/** `pan` is for a narrow frame. A portrait phone sees about 40 degrees across where a desktop sees
+ *  85, so a stop whose subject is a row (three exhibits, three cabinets, two walls of plates) shows
+ *  one piece of it. On a narrow frame the hold sweeps its aim from the first point to the second
+ *  as the reader scrolls through it, and the turn in and out lands on those ends. */
+export interface Stop { id: StopId; t: number; enter: number; hold: [number, number]; lookAt: [number, number, number]; pan?: [[number, number, number], [number, number, number]]; wideAim?: [number, number, number]; wing?: Wing; light: string }
 
 export const EYE = 1.7;
 
@@ -21,21 +25,25 @@ export const STOPS: Stop[] = [
   // The booth looks down the hall through the door it is about to walk through. Its target sits
   // well past the door on the same sightline, so the camera is never turning toward a point it is
   // standing on while it pulls away from the hold.
-  { id: 'booth', t: 0.0, enter: 0.0, hold: [0.0, 0.09], lookAt: [0, 3.2, 8], light: '#6EC1D6' },
+  // On a very wide frame the lens closes vertically (framing.ts) and the neon over the shutter
+  // left the top of the frame, so the aim lifts to keep the sign in.
+  { id: 'booth', t: 0.0, enter: 0.0, hold: [0.0, 0.09], lookAt: [0, 3.2, 8], wideAim: [0, 6.2, 8], light: '#6EC1D6' },
   // The fabrication hold is inside the dispatch office. The camera turns west to the three exhibits
   // along its glass.
-  { id: 'fabrication', t: 0.2, enter: 0.105, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], wing: 'fabrication', light: '#E0813A' },
+  // On a phone the hold pans the row from conch to earworm, plinth tops at 1.2 m.
+  { id: 'fabrication', t: 0.2, enter: 0.105, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], pan: [[-6.5, 1.25, -8.3], [-6.5, 1.25, -12.9]], wing: 'fabrication', light: '#E0813A' },
   // The break room hold turns south to the arcade row rather than west down the corridor. The
   // camera parks at (-28.09, -31.05) for the whole hold and the row is built about that x, so this
   // aim is square to the four cabinets: "pan the camera to it dont tilt the cabs".
-  { id: 'recreation', t: 0.4, enter: 0.332, hold: [0.37, 0.44], lookAt: [-28.1, 1.45, -34.6], wing: 'recreation', light: '#3D7BE0' },
+  { id: 'recreation', t: 0.4, enter: 0.332, hold: [0.37, 0.44], lookAt: [-28.1, 1.45, -34.6], pan: [[-29.1, 1.5, -34.6], [-27.1, 1.5, -34.6]], wing: 'recreation', light: '#3D7BE0' },
   { id: 'operations', t: 0.56, enter: 0.52, hold: [0.53, 0.6], lookAt: [-72, 1.6, -33], wing: 'operations', light: '#CFE6EE' },
   // The credentials hold stands inside the glass lab and looks north up it, so the three plates on
   // each side of the aisle are both in frame. Looking west put one wall in shot and the other three
   // plates behind the camera, which is what Jordan saw. The aim sits a little east of the hold's
   // own x: the spline parks at -79.83 and the lab runs on -79, so a straight north aim leans the
   // frame toward the west row and crowds the east one against the edge.
-  { id: 'credentials', t: 0.7, enter: 0.643, hold: [0.67, 0.74], lookAt: [-79.2, 1.75, -12], light: '#D9E8EE' },
+  // On a phone it pans from the west wall's plates, up the aisle, to the east wall's.
+  { id: 'credentials', t: 0.7, enter: 0.643, hold: [0.67, 0.74], lookAt: [-79.2, 1.75, -12], pan: [[-82.2, 1.8, -14.8], [-75.8, 1.8, -14.8]], light: '#D9E8EE' },
   // The containment hold stands short of the room, in the credentials hall, and looks north
   // through the CONTAINMENT doorway. The aim is the table halfway up the aisle rather than the
   // far wall: the lamp over the redacted page is what the room is about, and aiming past it put
@@ -147,15 +155,35 @@ const FORWARD = new Vector3(0, 0, -1);
  * smaller version of the same kick on the way past. From the parked position the turn out of a
  * hold is a plain blend between two fixed headings.
  */
-const _stopQuats = new Map<StopId, Quaternion>();
-function lookQuat(stop: Stop): Quaternion {
-  let q = _stopQuats.get(stop.id);
+const _stopQuats = new Map<string, Quaternion>();
+function aimQuat(stop: Stop, key: string, aim: [number, number, number]): Quaternion {
+  let q = _stopQuats.get(key);
   if (!q) {
     const parked = curve.getPointAt(stop.t, new Vector3());
-    q = new Quaternion().setFromRotationMatrix(new Matrix4().lookAt(parked, new Vector3(stop.lookAt[0], stop.lookAt[1], stop.lookAt[2]), UP));
-    _stopQuats.set(stop.id, q);
+    q = new Quaternion().setFromRotationMatrix(new Matrix4().lookAt(parked, new Vector3(aim[0], aim[1], aim[2]), UP));
+    _stopQuats.set(key, q);
   }
   return q;
+}
+
+let narrow = false, wide = false;
+/** Set from the scene's resize: `narrow` while the frame is too narrow to hold a stop's whole row,
+ *  `wide` while it is so wide the lens has closed vertically. */
+export function setFrame(f: { narrow: boolean; wide: boolean }) { narrow = f.narrow; wide = f.wide; }
+
+/** How far through its pan a stop is at scroll `u`: 0 up to the first fifth of the hold, 1 from the
+ *  last fifth, eased between, so the turn in lands on one end and the turn out leaves from the other. */
+export function panProgress(stop: Stop, u: number): number {
+  const [a, b] = stop.hold;
+  const edge = (b - a) * 0.2;
+  return smoothstep((u - a - edge) / (b - a - 2 * edge));
+}
+
+const _qPan = new Quaternion();
+function lookQuat(stop: Stop, u: number): Quaternion {
+  if (wide && stop.wideAim) return aimQuat(stop, `${stop.id}:wide`, stop.wideAim);
+  if (!narrow || !stop.pan) return aimQuat(stop, stop.id, stop.lookAt);
+  return _qPan.slerpQuaternions(aimQuat(stop, `${stop.id}:0`, stop.pan[0]), aimQuat(stop, `${stop.id}:1`, stop.pan[1]), panProgress(stop, u));
 }
 
 /**
@@ -173,7 +201,7 @@ export function cameraAt(t: number, out = { position: new Vector3(), target: new
   else { curve.getPointAt(1, _ahead); curve.getTangentAt(1, _tangent); _ahead.addScaledVector(_tangent, (aheadP - 1) * curve.getLength()); }
   const { stop, weight } = lookWeight(u);
   _qAhead.setFromRotationMatrix(_m.lookAt(out.position, _ahead, UP));
-  _qAhead.slerp(lookQuat(stop), weight);
+  _qAhead.slerp(lookQuat(stop, u), weight);
   out.target.copy(FORWARD).applyQuaternion(_qAhead).add(out.position);
   return out;
 }
