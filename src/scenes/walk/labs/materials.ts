@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { AssetStore } from '../assets';
 import { surface, prepareAO } from '../materials';
 import { troffer, lensMaterial, fixtureSteel } from './fixtures';
+import { canvas, own, rng } from './textures';
 
 /** The Labs palette. Cold white panels, the Terragroup blue dado, grey tile, dark steel. */
 export const LABS = { panel: 0xd9e8ee, dado: 0x2455a4, tile: 0x9fb0b8, steel: 0x2b3740, glassTint: 0xcfe6ee, cold: 0xdff0f6, warn: 0xc8322b, hazard: 0xe8b923 } as const;
@@ -51,9 +52,80 @@ export const DADO_H = 1.6;
  */
 export function dadoBands(len: number, x: number, z: number, ry: number, h = DADO_H): { band: THREE.BufferGeometry; line: THREE.BufferGeometry } {
   const run = Math.max(0.1, len - 0.004);
-  const band = new THREE.BoxGeometry(run, h, 0.03); band.rotateY(ry); band.translate(x, h / 2, z);
+  const band = new THREE.BoxGeometry(run, h, 0.03);
+  // UVs in metres along the run, so the grime map keeps its scale whatever the run's length.
+  const uv = band.getAttribute('uv') as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setX(i, (uv.getX(i) * run) / GRIME_SPAN);
+  band.rotateY(ry); band.translate(x, h / 2, z);
   const line = new THREE.BoxGeometry(run, 0.07, 0.035); line.rotateY(ry); line.translate(x, h + 0.05, z);
   return { band, line };
+}
+
+/** Columns in the streak atlas: five different stains, so a wall of them does not repeat. */
+const STREAKS = 5;
+
+/**
+ * Water and rust stains running down a wall from where the services cross it, as an alpha atlas
+ * of `STREAKS` stains side by side. Each is a few runs of different widths from a common source,
+ * darkest at the top and thinning out as it goes, some ending in a drip.
+ */
+function streakAtlas(): THREE.CanvasTexture {
+  const cw = 128, h = 512;
+  const [c, ctx] = canvas(cw * STREAKS, h);
+  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, cw * STREAKS, h);
+  const r = rng(77);
+  for (let k = 0; k < STREAKS; k++) {
+    const x0 = k * cw;
+    // A soft source stain across the top, where the water sat before it ran.
+    const src = ctx.createRadialGradient(x0 + cw / 2, 0, 4, x0 + cw / 2, 0, cw * 0.5);
+    src.addColorStop(0, 'rgba(255,255,255,0.55)'); src.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = src; ctx.fillRect(x0, 0, cw, cw * 0.5);
+    const runs = 3 + Math.floor(r() * 4);
+    for (let i = 0; i < runs; i++) {
+      const cx = x0 + 18 + r() * (cw - 36), len = h * (0.35 + r() * 0.65), wd = 3 + r() * 10;
+      const g = ctx.createLinearGradient(0, 0, 0, len);
+      g.addColorStop(0, `rgba(255,255,255,${0.45 + r() * 0.35})`); g.addColorStop(0.7, `rgba(255,255,255,${0.15 + r() * 0.15})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(cx - wd / 2, 0);
+      let x = cx;
+      for (let y = 0; y <= len; y += 16) { x += (r() - 0.5) * 2; ctx.lineTo(x - (wd / 2) * (1 - y / len * 0.7), y); }
+      for (let y = len; y >= 0; y -= 16) ctx.lineTo(x + (wd / 2) * (1 - y / len * 0.7), y);
+      ctx.closePath(); ctx.fill();
+      if (r() < 0.5) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(x, len * 0.92, wd * 0.4, wd * 0.7, 0, 0, Math.PI * 2); ctx.fill(); }
+    }
+  }
+  return own(c, false);
+}
+
+/** The stains' material: dark, faintly brown, laid over the wall without writing depth. */
+export const streakMaterial = () => new THREE.MeshBasicMaterial({
+  color: 0x1a150e, alphaMap: streakAtlas(), transparent: true, opacity: 0.85, depthWrite: false,
+});
+
+/**
+ * Stains running down one wall piece, as placed planes to merge with the rest of the room's. The
+ * piece is `w` by `h` centred on (x, z) and turned `ry`, the same way a room's wall helper turns
+ * it: its normal points into the room, and the stains stand a centimetre off it on that side, so a
+ * wall the other room owns never shows them. `from` is the height they start at, which is where
+ * the service runs cross the wall. One stain every few metres, never within half a metre of an end.
+ */
+export function wallStreaks(w: number, x: number, z: number, ry: number, from: number): THREE.BufferGeometry[] {
+  if (w < 1.6 || from < 2.2) return [];
+  const r = rng(Math.abs(Math.round(x * 97 + z * 131 + ry * 17)) + 1);
+  const out: THREE.BufferGeometry[] = [];
+  const n = Math.max(1, Math.round((w / 3.2) * (0.6 + r() * 0.8)));
+  for (let i = 0; i < n; i++) {
+    const sw = 0.5 + r() * 0.6, sh = Math.min(from - 0.2, 1.1 + r() * 1.6);
+    const along = -w / 2 + 0.5 + sw / 2 + r() * Math.max(0, w - 1 - sw);
+    const k = Math.floor(r() * STREAKS);
+    const g = new THREE.PlaneGeometry(sw, sh);
+    const uv = g.getAttribute('uv') as THREE.BufferAttribute;
+    for (let j = 0; j < uv.count; j++) uv.setX(j, (k + uv.getX(j)) / STREAKS);
+    g.translate(along, from - sh / 2, 0.012 + i * 0.001);
+    g.rotateY(ry); g.translate(x, 0, z);
+    out.push(g);
+  }
+  return out;
 }
 
 /**
@@ -74,7 +146,54 @@ export function backless(geo: THREE.BufferGeometry, away: THREE.Vector3): THREE.
   geo.setIndex(keep); geo.clearGroups();
   return geo;
 }
-export const dadoMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.8 });
+/** How many metres of band one repeat of the grime map covers. `dadoBands` lays its UVs in metres
+ *  over this, so the dirt keeps its scale on a two metre run and a twenty metre one alike. */
+const GRIME_SPAN = 2.5;
+
+/**
+ * The dirt on the lower wall, as a colour map multiplied into the band's blue: one repeat covers
+ * `GRIME_SPAN` metres along and the band's full height. Every wall in the building was the same
+ * clean flat blue from the corner to the doorway, which is what reads as computer made up close.
+ * A painted lower wall in a working building is darkest at the floor, where the mop water and the
+ * dust settle, and scuffed from shin height down where trolleys and boots hit it.
+ */
+function dadoGrime(): THREE.CanvasTexture {
+  const w = 512, h = 328; // 2.5 m by 1.6 m, near enough square pixels
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+  const r = rng(41);
+  // A faint wash that is never quite even along the run.
+  for (let i = 0; i < 14; i++) {
+    const x = r() * w, rw = 40 + r() * 120;
+    const g = ctx.createLinearGradient(x - rw, 0, x + rw, 0);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, `rgba(20,24,30,${0.04 + r() * 0.05})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - rw, 0, rw * 2, h);
+  }
+  // Settled dirt at the foot, with a ragged top edge where the mop stopped. Drawn three widths over
+  // so it tiles: each blob is repeated one width either side.
+  const foot = ctx.createLinearGradient(0, h, 0, h - 60);
+  foot.addColorStop(0, 'rgba(22,20,16,0.62)'); foot.addColorStop(0.35, 'rgba(22,20,16,0.3)'); foot.addColorStop(1, 'rgba(22,20,16,0)');
+  ctx.fillStyle = foot; ctx.fillRect(0, h - 60, w, 60);
+  for (let i = 0; i < 60; i++) {
+    const x = r() * w, y = h - 18 - r() * 34, rx = 6 + r() * 26, ry = 3 + r() * 9, a = 0.06 + r() * 0.12;
+    for (const dx of [-w, 0, w]) {
+      const g = ctx.createRadialGradient(x + dx, y, 0, x + dx, y, rx);
+      g.addColorStop(0, `rgba(22,20,16,${a})`); g.addColorStop(1, 'rgba(22,20,16,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x + dx, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // Scuffs: short dark smears, mostly below knee height, a few lighter where the paint is worn.
+  for (let i = 0; i < 26; i++) {
+    const x = r() * w, y = h - 20 - Math.pow(r(), 1.8) * 150, len = 8 + r() * 46, thick = 1 + r() * 3;
+    ctx.strokeStyle = r() < 0.8 ? `rgba(10,12,14,${0.18 + r() * 0.28})` : `rgba(255,255,255,${0.12 + r() * 0.12})`;
+    ctx.lineWidth = thick; ctx.lineCap = 'round';
+    for (const dx of [-w, 0, w]) { ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.lineTo(x + dx + len, y + (r() - 0.5) * 6); ctx.stroke(); }
+  }
+  const t = own(c); t.wrapS = THREE.RepeatWrapping; t.anisotropy = 8;
+  return t;
+}
+
+export const dadoMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.8, map: dadoGrime() });
 export const dadoLineMaterial = () => new THREE.MeshStandardMaterial({ color: LABS.panel, roughness: 0.6 });
 /**
  * Clear glass: reflective, barely tinted, no depth write. Give the mesh `renderOrder = 2`.

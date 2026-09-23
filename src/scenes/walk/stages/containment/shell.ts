@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
 import { instances, merged, place, type Spot } from '../../merge';
-import { ceilingGrid, dadoBands, dadoLineMaterial, dadoMaterial, labFloor, labWall } from '../../labs/materials';
+import { ceilingGrid, dadoBands, dadoLineMaterial, dadoMaterial, labFloor, labWall, wallStreaks, streakMaterial } from '../../labs/materials';
 import { cableDrop, wallPanel } from '../../labs/plant';
 import { batten } from '../../labs/fixtures';
 import { cableTray } from '../../labs/props';
@@ -34,7 +34,10 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // Whiter than the kit's panel tint. Under this room's cold spots the kit default came out a flat
   // mauve grey, which is the wall colour Jordan called weird: the reference is white block with
   // the blue dado on it, and a wall only reads white if it starts near white.
-  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number) => { const m = plane(w, h, labWall(store, w, h, 0xe3edf2)); m.rotation.y = ry; m.position.set(x, y, z); return m; };
+  /** Stains run down every full height wall piece from where the services cross it. */
+  const streaks: THREE.BufferGeometry[] = [];
+  const STAIN_FROM = H - 0.2;
+  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number) => { const m = plane(w, h, labWall(store, w, h, 0xe3edf2)); m.rotation.y = ry; m.position.set(x, y, z); if (Math.abs(y - h / 2) < 1e-6) streaks.push(...wallStreaks(w, x, z, ry, STAIN_FROM)); return m; };
 
   // A colder floor than the labs' own grey: this room is the far end of the walk and the tile is the
   // largest surface in it, so half a step of blue in it is what carries the temperature.
@@ -188,6 +191,8 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   root.add(instances(new THREE.BoxGeometry(1.2, 0.002, 0.4), new THREE.MeshStandardMaterial({
     color: 0x555d64, alphaMap: alpha, transparent: true, opacity: 0.45, depthWrite: false, metalness: 0.4, roughness: 0.65,
   }), gratingZ.map(([x, , z]) => [x, 0.021, z] as Spot)));
+
+  if (streaks.length) { const stains = merged(streaks, streakMaterial()); stains.name = 'stains'; root.add(stains); }
 
   return { planes };
 }

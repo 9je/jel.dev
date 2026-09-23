@@ -24,15 +24,17 @@ export const PANEL_Z = [-11.2, -4.6, 2.0];
 /** Plate centres, three per side, on the same three z so the hold sees a matched pair at each step
  *  up the aisle. Jordan's read of the first pass was that the room never showed both walls: the
  *  west three were in shot and the east three sat behind the camera. Every plate stands 0.45 m
- *  inside its own glass, which is the clearance its 0.25 rad turn toward the aisle needs.
+ *  inside its own glass.
  *  The near pair starts at -17.4 rather than -18. The rows are 6.3 m apart and the hold stands
  *  4.97 m short of the near pair: at -18 that pair subtends more than the 85.6 degree horizontal
  *  frame a 55 degree lens gives a 16 by 9 shot, and both near plates are cut by its edges. At
  *  -17.4 the whole run fits, and the far pair still clears the lab's north face. */
 export const PLATE_Z = { west: [-17.4, -15.6, -13.8], east: [-17.4, -15.6, -13.8] };
 export const PLATE_X = { west: XC - 3.6 + 0.45, east: XC + 3.6 - 0.45 };
-/** How far each plate turns off its wall toward the aisle, so both rows face the hold. */
-export const PLATE_TURN = 0.25;
+/** How far each plate turns off its wall toward the aisle. None: they were turned a quarter radian
+ *  so both rows faced the hold, which is a display posed for the camera rather than one somebody
+ *  hung. Plates on rods hang square to the wall they run along. */
+export const PLATE_TURN = 0;
 
 /** Four battens down the corridor north of the lab, hung half a metre off the dark steel ceiling
  *  on rods. The room's two spots sit under the first and the third. `BATTEN_Y` is where a housing

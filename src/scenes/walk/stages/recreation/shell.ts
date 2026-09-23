@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { StageContext } from '../types';
 import { prepareAO } from '../../materials';
 import { merged } from '../../merge';
-import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, ceilingGrid, nearestLitPanel } from '../../labs/materials';
+import { labFloor, labWall, dadoBands, dadoMaterial, dadoLineMaterial, ceilingGrid, nearestLitPanel, wallStreaks, streakMaterial } from '../../labs/materials';
 import { doorway, tapeStrip, stanchion } from '../../labs/signage';
 import { X1, Z0, Z1, H, W, D, XC, ZC, ROOM, ROOM_W, ROOM_XC, TILE, LIT, PANEL, LANDING, BAY_DOOR, HALL_DOOR, HALL_FACE, HALL_HEAD } from './layout';
 
@@ -13,7 +13,10 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   /** A wall piece: `ry` turns its normal into the space it faces, so a piece is only ever drawn from
    *  the side it belongs to and two pieces back to back on one plane never fight for depth. */
-  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number, tint?: number) => { const m = plane(w, h, labWall(store, w, h, tint)); m.rotation.y = ry; m.position.set(x, y, z); return m; };
+  /** Stains run down every full height wall piece from where the services cross it. */
+  const streaks: THREE.BufferGeometry[] = [];
+  const STAIN_FROM = ROOM.ceiling - 0.1;
+  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number, tint?: number) => { const m = plane(w, h, labWall(store, w, h, tint)); m.rotation.y = ry; m.position.set(x, y, z); if (Math.abs(y - h / 2) < 1e-6) streaks.push(...wallStreaks(w, x, z, ry, STAIN_FROM)); return m; };
   const dado: THREE.BufferGeometry[] = [], lines: THREE.BufferGeometry[] = [];
   const band = (len: number, x: number, z: number, ry: number) => { const b = dadoBands(len, x, z, ry); dado.push(b.band); lines.push(b.line); };
 
@@ -105,5 +108,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   root.add(tapeStrip([hallFace, 1.1, flankZ0 - 0.1], [hallFace + 1.9, 0.95, flankZ0 - 1.1], 0.06));
 
   root.add(merged(dado, dadoMaterial()), merged(lines, dadoLineMaterial()));
+  if (streaks.length) { const stains = merged(streaks, streakMaterial()); stains.name = 'stains'; root.add(stains); }
+
   return { planes, flicker: room.flicker };
 }
