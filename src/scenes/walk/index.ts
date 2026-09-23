@@ -5,6 +5,7 @@ import { STOPS, stopAt, tForStop, type StopId } from './path';
 import type { Hotspot } from './stages/types';
 import { onStreak, startStreakFeed } from './streak-feed';
 import { retickStreak } from '../../content/ticker';
+import { wireSound, type Sound } from './sound';
 
 export interface WalkElements {
   root: HTMLElement; canvas: HTMLCanvasElement; dock: HTMLElement; preloader: HTMLElement; spacer: HTMLElement; sections: HTMLElement[]; hotspotLabel: HTMLElement | null; card: HTMLElement | null;
@@ -80,6 +81,7 @@ let handle: WalkHandle | null = null;
 let scroll: ScrollController | null = null;
 let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
 let pinRaf = 0;
+let sound: Sound | null = null;
 // Places the open exhibit card against its anchor. Held here so opening a card can place it in the
 // same frame rather than leaving it at the default for one, and so teardown can drop it.
 let pinCard: (() => void) | null = null;
@@ -404,8 +406,11 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     const pin = () => { if (!handle) return; pinCard?.(); pinRaf = requestAnimationFrame(pin); };
     pin();
     scroll = createScroll();
+    const soundBtn = els.dock.querySelector<HTMLButtonElement>('[data-sound]');
+    if (soundBtn) { soundBtn.hidden = false; sound = wireSound(soundBtn); }
     scroll.onProgress((t) => {
       handle?.setProgress(t);
+      sound?.setProgress(t);
       // The cue has done its job the moment the walk moves, and it never comes back.
       if (t > 0.01) els.root.dataset.scrolled = '';
     });
@@ -463,6 +468,7 @@ function teardown() {
   // The card's source row, so a swapped page does not hold the old one's DOM alive.
   cardSource = null;
   scroll?.dispose(); scroll = null;
+  sound?.dispose(); sound = null;
   handle?.dispose(); handle = null;
   if (pinRaf) { cancelAnimationFrame(pinRaf); pinRaf = 0; }
   pinCard = null;
