@@ -98,7 +98,8 @@ export function screenFace(lines: string[], accent = '#6EC1D6', w = 512, h = 320
  * The break room television's idle picture: the Labs mark, large, over the word, on the deep blue
  * a set shows between programmes. Colour and emissive map, 4:3. It was a status board of three
  * rows, which from the walk was text too small to read: "id rather lose visibility and just do a
- * logo or something than text thats hard to read". A mark reads at any size and any angle.
+ * logo or something than text thats hard to read". A mark reads at any size and any angle. The
+ * word is JEL, the building's own name, not LABS.
  */
 export function labsIdent(): THREE.CanvasTexture {
   const w = 640, h = 480;
@@ -114,8 +115,8 @@ export function labsIdent(): THREE.CanvasTexture {
     ctx.lineTo(mx + s * 0.5, my + dy + s * 0.28); ctx.lineTo(mx, my + dy - s * 0.22); ctx.lineTo(mx - s * 0.5, my + dy + s * 0.28); ctx.closePath(); ctx.fill();
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.font = '600 92px Michroma, system-ui, sans-serif';
-  ctx.fillText('LABS', mx, h * 0.84);
+  ctx.font = '600 104px Michroma, system-ui, sans-serif';
+  ctx.fillText('JEL', mx, h * 0.86);
   ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
   return own(c);
 }

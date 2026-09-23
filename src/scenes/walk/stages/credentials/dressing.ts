@@ -21,7 +21,7 @@ export interface Dressing {
 /** The ink on a plate: dark enough to read as print on a lit panel rather than as a second light. */
 const INK = '#1e2c3a';
 /** The issuer line, a step lighter than the name so the two read as a hierarchy. */
-const INK_SOFT = '#4f6070';
+const INK_SOFT = '#34434f';
 
 /** One exhibit plate: the acrylic face is `w` by `h` with its centre at `y`, the badge a square of
  *  `badge` on a side centred `badgeY` up the face. The plate hangs from the lab's ceiling on two
@@ -116,8 +116,8 @@ export function plateFace(name: string, issuer: string, index: number): THREE.Ca
   const ruleY = nameY + ((lines.length - 1) / 2) * lead + px * 0.95;
   ctx.fillStyle = 'rgba(30,44,58,0.28)'; ctx.fillRect(W / 2 - 120, ruleY, 240, 2);
   // The issuer, tracked out in caps under the rule: it is the authority, not a caption.
-  ctx.fillStyle = INK_SOFT; ctx.font = '600 30px Inter, "Segoe UI", system-ui, sans-serif'; spacing(7);
-  ctx.fillText(issuer.toUpperCase(), W / 2, ruleY + 46);
+  ctx.fillStyle = INK_SOFT; ctx.font = '700 38px Inter, "Segoe UI", system-ui, sans-serif'; spacing(7);
+  ctx.fillText(issuer.toUpperCase(), W / 2, ruleY + 52);
   spacing(0);
   // The foot line.
   ctx.fillStyle = accent; ctx.fillRect(0, Hpx - 5, W, 5);
@@ -164,9 +164,11 @@ function exhibitPlate(face: THREE.Texture, badge: THREE.Mesh): THREE.Group {
   }
   g.add(merged(parts, bright));
   // The face, recessed inside the bevel. Lit from behind at a level that leaves the badge in front
-  // of it the brightest thing on the plate.
+  // of it the brightest thing on the plate. The albedo is held down under white on purpose: at full
+  // white the room's own lights on top of the glow ran the acrylic past the top of the range, and a
+  // clipped face swallowed every pale badge and the grey print along with it.
   const acrylic = new THREE.Mesh(new THREE.PlaneGeometry(w - 2 * bevel, h - 2 * bevel), new THREE.MeshStandardMaterial({
-    color: 0xffffff, map: face, roughness: 0.55, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.35,
+    color: 0xc4ced4, map: face, roughness: 0.7, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 0.2,
   }));
   acrylic.position.set(0, y, 0); g.add(acrylic);
   badge.position.set(0, PLATE.badgeY, 0.006); g.add(badge);

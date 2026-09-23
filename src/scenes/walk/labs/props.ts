@@ -3,7 +3,7 @@ import type { AssetStore } from '../assets';
 import { instances, merged, type Spot } from '../merge';
 import { LABS, labSteel, labGlass, ceilingGrid } from './materials';
 import { stencilTexture } from '../textures';
-import { screenFace, paperSheet, chainlink, rng } from './textures';
+import { screenFace, paperSheet, chainlink, rng, canvas, own } from './textures';
 
 export function rackSlots(levels: number, height: number): number[] { return Array.from({ length: levels }, (_, i) => +(((i + 1) * height) / levels).toFixed(4)); }
 export { gridPitch } from './materials';
@@ -58,9 +58,10 @@ export function rackBays(bays: number, bayWidth = RACK_BAY): number[] {
 export function palletRack(bays = 3, levels = 3, bayWidth = RACK_BAY, height = RACK_HEIGHT): THREE.Group {
   const g = new THREE.Group(); const depth = RACK_DEPTH; const len = bays * bayWidth;
   const blue = new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.5, metalness: 0.4 });
+  const slotted = blue.clone(); slotted.map = uprightFace(height);
   const uprights: Spot[] = [], feet: Spot[] = [];
   for (let i = 0; i <= bays; i++) for (const z of [-depth / 2, depth / 2]) { uprights.push([-len / 2 + i * bayWidth, height / 2, z]); feet.push([-len / 2 + i * bayWidth, 0.01, z]); }
-  g.add(instances(new THREE.BoxGeometry(0.1, height, 0.1), blue, uprights));
+  g.add(instances(new THREE.BoxGeometry(0.1, height, 0.1), slotted, uprights));
   g.add(instances(new THREE.BoxGeometry(0.2, 0.02, 0.2), labSteel(0x39434b), feet));
   const level = height / levels;
   const braces: Spot[] = [];
@@ -68,7 +69,7 @@ export function palletRack(bays = 3, levels = 3, bayWidth = RACK_BAY, height = R
   for (const lean of [0.7, -0.7]) g.add(instances(new THREE.BoxGeometry(0.04, 1.5, 0.04).rotateX(lean), blue, braces));
   const beams: Spot[] = [];
   for (const y of rackSlots(levels, height)) for (const x of rackBays(bays, bayWidth)) for (const z of [-depth / 2, depth / 2]) beams.push([x, y - 0.08, z]);
-  g.add(instances(new THREE.BoxGeometry(bayWidth - 0.1, 0.12, 0.08), new THREE.MeshStandardMaterial({ color: 0xd8722c, roughness: 0.5, metalness: 0.4 }), beams));
+  g.add(instances(new THREE.BoxGeometry(bayWidth - 0.1, 0.12, 0.08), new THREE.MeshStandardMaterial({ color: 0xffffff, map: beamFace(), roughness: 0.5, metalness: 0.4 }), beams));
   // Wire decking, not a steel pan: the mesh is an alpha map on the deck, alpha tested so it writes
   // depth and keeps out of the transparent sort, and the beams show through the diamonds.
   const wire = chainlink(); wire.repeat.set(bayWidth / 0.2, depth / 0.2);
@@ -77,22 +78,132 @@ export function palletRack(bays = 3, levels = 3, bayWidth = RACK_BAY, height = R
   return g;
 }
 
-/** A shrink wrapped pallet of stock: three bearers and a deck under a load in milky film with a
- *  strap round its middle. `seed` picks the load's height, so a row of them is not a row of one
- *  box. 1.2 by 1.0 on plan, origin at the foot of the pallet. Three draw calls, so stand them up
- *  through `repeat()` rather than one at a time. */
+/** An upright's face: the Labs blue with the column of punched teardrop slots every rack upright
+ *  has for its beam connectors, 50 mm apart, and the paint chipped round a few of them where beams
+ *  have been moved. Tiled up the upright, one canvas to half a metre. */
+function uprightFace(height: number): THREE.CanvasTexture {
+  const W = 64, H = 320;
+  const [c, ctx] = canvas(W, H);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const r = rng(5);
+  for (let y = 6; y < H; y += 32) {
+    if (r() < 0.25) { ctx.fillStyle = 'rgba(150,150,150,0.8)'; ctx.fillRect(W / 2 - 12, y - 3, 24, 26); }
+    ctx.fillStyle = '#10151b';
+    ctx.beginPath(); ctx.moveTo(W / 2 - 6, y); ctx.lineTo(W / 2 + 6, y); ctx.lineTo(W / 2 + 6, y + 10); ctx.lineTo(W / 2, y + 20); ctx.lineTo(W / 2 - 6, y + 10); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, 3, H); ctx.fillRect(W - 3, 0, 3, H);
+  const t = own(c); t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, height / 0.5);
+  return t;
+}
+
+/** A beam's face: safety orange with the stepped lip along its top edge in shadow, a load plate
+ *  near one end, and scuffs where pallets have been dragged along it. */
+function beamFace(): THREE.CanvasTexture {
+  const W = 1024, H = 48;
+  const [c, ctx] = canvas(W, H);
+  ctx.fillStyle = '#d8722c'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, W, 6);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(0, 7, W, 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, H - 3, W, 3);
+  ctx.fillStyle = '#e9ecee'; ctx.fillRect(70, 14, 56, 24);
+  ctx.fillStyle = '#23282d'; ctx.fillRect(76, 19, 40, 4); ctx.fillRect(76, 27, 28, 4);
+  const r = rng(9);
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = r() < 0.7 ? `rgba(40,30,24,${0.15 + r() * 0.25})` : `rgba(230,230,230,${0.2 + r() * 0.2})`;
+    ctx.fillRect(r() * W, 8 + r() * (H - 12), 6 + r() * 40, 1 + r() * 3);
+  }
+  return own(c);
+}
+
+/** A shrink wrapped pallet of stock: a slatted deck on three stringers under a stack of cartons in
+ *  stretch film, with a strap round the middle. `seed` picks the load's height and how the cartons
+ *  are stacked, so a row of them is not a row of one box. 1.2 by 1.0 on plan, origin at the foot
+ *  of the pallet. Three draw calls, so stand them up through `repeat()` rather than one at a time.
+ *
+ *  The load used to be a milky box with no surface at all, which read as a block of plaster next
+ *  to the photographed cardboard boxes on the same racks. It is the cartons now, drawn under the
+ *  film: kraft faces, seams, tape and a label, with the wrap's bands and sheen over them. */
 export function wrappedPallet(seed = 1): THREE.Group {
   const g = new THREE.Group();
   const r = rng(seed);
-  const boards: THREE.BufferGeometry[] = [new THREE.BoxGeometry(1.2, 0.02, 1.0).translate(0, 0.11, 0)];
-  for (const z of [-0.45, 0, 0.45]) boards.push(new THREE.BoxGeometry(1.2, 0.1, 0.1).translate(0, 0.05, z));
-  g.add(merged(boards, new THREE.MeshStandardMaterial({ color: 0x9c7f5a, roughness: 0.9 })));
-  const h = 0.7 + r() * 0.6;
-  const load = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, 0.9), new THREE.MeshPhysicalMaterial({ color: 0xdfe6ea, transmission: 0, roughness: 0.35, transparent: true, opacity: 0.85 }));
+  const boards: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 7; i++) boards.push(new THREE.BoxGeometry(0.14, 0.022, 1.0).translate(-0.53 + i * (1.06 / 6), 0.109, 0));
+  for (const z of [-0.45, 0, 0.45]) boards.push(new THREE.BoxGeometry(1.2, 0.098, 0.1).translate(0, 0.049, z));
+  g.add(merged(boards, new THREE.MeshStandardMaterial({ color: 0x9c7f5a, roughness: 0.92 })));
+  const rows = 2 + Math.floor(r() * 2), h = rows * 0.36;
+  const geo = new THREE.BoxGeometry(1.1, h, 0.9);
+  // One texture for the whole load: the sides from its left three quarters, the carton tops from
+  // the last quarter. The faces are ordered +x, -x, +y, -y, +z, -z, four vertices each.
+  const uv = geo.getAttribute('uv') as THREE.BufferAttribute;
+  for (let f = 0; f < 6; f++) for (let v = f * 4; v < f * 4 + 4; v++) {
+    uv.setX(v, f === 2 || f === 3 ? 0.75 + uv.getX(v) * 0.25 : uv.getX(v) * 0.75);
+  }
+  const film = wrappedLoad(rows, seed);
+  const load = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ map: film, roughness: 0.62, clearcoat: 0.7, clearcoatRoughness: 0.28 }));
   load.position.y = 0.12 + h / 2; g.add(load);
-  const strap = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.05, 0.92), new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.7 }));
-  strap.position.y = 0.12 + h / 2; g.add(strap);
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(1.106, 0.035, 0.906), new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.7 }));
+  strap.position.y = 0.12 + h * (0.45 + r() * 0.15); g.add(strap);
   return g;
+}
+
+/** The carton stack under stretch film, as one canvas: 768 by 512 of side for a face 1.1 wide and
+ *  `rows` cartons tall, then 256 of carton tops. */
+function wrappedLoad(rows: number, seed: number): THREE.CanvasTexture {
+  const W = 1024, H = 512, SW = 768;
+  const [c, ctx] = canvas(W, H);
+  const r = rng(seed * 7 + 3);
+  const carton = (x: number, y: number, w: number, h: number, top: boolean) => {
+    const tone = 150 + Math.floor(r() * 26);
+    ctx.fillStyle = `rgb(${tone + 22},${tone - 6},${tone - 52})`; ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = `rgba(${r() < 0.5 ? '255,235,200' : '60,40,20'},${0.04 + r() * 0.05})`;
+      ctx.fillRect(x + r() * w, y + r() * h, 2 + r() * 30, 1 + r() * 3);
+    }
+    ctx.fillStyle = 'rgba(40,26,12,0.55)'; ctx.fillRect(x, y, w, 3); ctx.fillRect(x, y, 3, h);
+    // The tape: across the flaps on a top, down the join on a side.
+    ctx.fillStyle = 'rgba(214,190,140,0.75)';
+    if (top) ctx.fillRect(x + w / 2 - 9, y, 18, h); else ctx.fillRect(x, y, w, 12);
+    if (!top && r() < 0.55) {
+      const lx = x + 18 + r() * (w - 110), ly = y + 26 + r() * (h - 90);
+      ctx.fillStyle = '#eceae2'; ctx.fillRect(lx, ly, 76, 50);
+      ctx.fillStyle = '#23282d';
+      for (let b = 0; b < 16; b++) ctx.fillRect(lx + 6 + b * 4, ly + 28, r() < 0.5 ? 1 : 2, 16);
+      ctx.fillRect(lx + 6, ly + 8, 44, 5); ctx.fillRect(lx + 6, ly + 17, 30, 4);
+    }
+    if (!top && r() < 0.4) {
+      ctx.strokeStyle = 'rgba(30,24,18,0.7)'; ctx.lineWidth = 4;
+      const ax = x + w - 34, ay = y + h - 30;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay - 34); ctx.moveTo(ax - 9, ay - 24); ctx.lineTo(ax, ay - 34); ctx.lineTo(ax + 9, ay - 24); ctx.stroke();
+    }
+  };
+  // The side: rows of cartons, the joints staggered row to row the way a stack is built.
+  const rh = H / rows;
+  for (let row = 0; row < rows; row++) {
+    const n = 3 + (row % 2), cw = SW / n, off = row % 2 ? -cw / 2 : 0;
+    for (let i = 0; i <= n; i++) carton(off + i * cw, row * rh, cw, rh, false);
+  }
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) carton(SW + i * 128, j * 256, 128, 256, true);
+  // The film over it all: a milky veil, heavier where the wrap doubles at the top and the foot,
+  // bands where each pass of the roll overlaps the last, and vertical sheen along the stretch.
+  const veil = ctx.createLinearGradient(0, 0, 0, H);
+  veil.addColorStop(0, 'rgba(236,240,244,0.55)'); veil.addColorStop(0.18, 'rgba(236,240,244,0.26)');
+  veil.addColorStop(0.8, 'rgba(236,240,244,0.24)'); veil.addColorStop(1, 'rgba(236,240,244,0.6)');
+  ctx.fillStyle = veil; ctx.fillRect(0, 0, SW, H);
+  ctx.fillStyle = 'rgba(236,240,244,0.3)'; ctx.fillRect(SW, 0, W - SW, H);
+  for (let y = 30 + r() * 30; y < H; y += 60 + r() * 50) {
+    ctx.fillStyle = `rgba(245,248,250,${0.12 + r() * 0.12})`;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(SW, y - 30 + r() * 60); ctx.lineTo(SW, y + 10 + r() * 40); ctx.lineTo(0, y + 22); ctx.fill();
+  }
+  for (let i = 0; i < 26; i++) {
+    const x = r() * SW, w = 3 + r() * 16;
+    ctx.fillStyle = `rgba(255,255,255,${0.05 + r() * 0.12})`; ctx.fillRect(x, 0, w, H);
+  }
+  for (let i = 0; i < 18; i++) {
+    ctx.strokeStyle = `rgba(255,255,255,${0.1 + r() * 0.2})`; ctx.lineWidth = 1 + r() * 2;
+    const x = r() * SW, y = r() * H;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 20 - r() * 40, y + 30, x + 30 - r() * 60, y + 60 + r() * 60); ctx.stroke();
+  }
+  return own(c);
 }
 
 /** A 20 ft shipping container, 6.1 by 2.6 by 2.4, ribbed sides. Origin at floor centre, long axis

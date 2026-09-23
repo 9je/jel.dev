@@ -642,19 +642,37 @@ export function tripodCamera(): THREE.Group {
   return g;
 }
 
-/** A moulded flight case: coloured shell, a lid seam, two latches and a handle. 0.6 by 0.4 on plan,
- *  origin at floor centre, latches facing +z. Three draw calls. */
+/** A moulded flight case: coloured shell, a lid proud of it at the seam, two latches bridging the
+ *  seam and a fold down handle on each end, so the lid stays flat and a second case stacks on it.
+ *  The front used to carry the handle as a bar under the latches, and two latches over a bar is a
+ *  face. 0.6 by 0.4 on plan, 0.45 tall, origin at floor centre, latches facing +z. Three draw calls. */
 export function hardCase(color = 0xe07a2a): THREE.Group {
   const g = new THREE.Group();
-  const shell = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.4), new THREE.MeshStandardMaterial({ color, roughness: 0.55 }));
-  shell.position.y = 0.225; g.add(shell);
-  const seam = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.02, 0.41), new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.7), roughness: 0.6 }));
-  seam.position.y = 0.31; g.add(seam);
-  g.add(merged([
-    new THREE.BoxGeometry(0.08, 0.05, 0.02).translate(-0.18, 0.27, 0.21),
-    new THREE.BoxGeometry(0.08, 0.05, 0.02).translate(0.18, 0.27, 0.21),
-    new THREE.BoxGeometry(0.22, 0.03, 0.03).translate(0, 0.14, 0.215),
-  ], new THREE.MeshStandardMaterial({ color: 0x14191d, roughness: 0.5 })));
+  const W = 0.6, H = 0.45, D = 0.4, SEAM = 0.31;
+  // The shell: a body and a lid a touch proud of it at the seam, with the ribs moulded across the
+  // lid's face and down each end, all in the case's colour.
+  const body: THREE.BufferGeometry[] = [
+    new THREE.BoxGeometry(W - 0.02, SEAM - 0.02, D - 0.02).translate(0, 0.01 + (SEAM - 0.02) / 2, 0),
+    new THREE.BoxGeometry(W, H - SEAM - 0.012, D).translate(0, SEAM + (H - SEAM - 0.012) / 2, 0),
+    new THREE.BoxGeometry(W + 0.012, 0.03, D + 0.012).translate(0, SEAM - 0.005, 0),
+  ];
+  for (const x of [-0.2, 0, 0.2]) body.push(new THREE.BoxGeometry(0.03, 0.012, D - 0.06).translate(x, H - 0.006, 0));
+  for (const side of [-1, 1]) body.push(new THREE.BoxGeometry(0.012, 0.22, 0.05).translate(side * (W / 2), 0.16, 0));
+  g.add(merged(body, new THREE.MeshStandardMaterial({ color, roughness: 0.62 })));
+  // Two steel latches bridging the seam, near the ends, and a white asset label off centre. Dark
+  // latches on a bright shell read as a pair of eyes.
+  const steel: THREE.BufferGeometry[] = [];
+  for (const x of [-0.22, 0.22]) {
+    steel.push(new THREE.BoxGeometry(0.045, 0.075, 0.014).translate(x, SEAM, D / 2 + 0.008));
+    steel.push(new THREE.BoxGeometry(0.035, 0.012, 0.02).translate(x, SEAM + 0.032, D / 2 + 0.012));
+  }
+  steel.push(new THREE.BoxGeometry(0.13, 0.06, 0.004).translate(-0.06, 0.17, D / 2 - 0.008));
+  g.add(merged(steel, new THREE.MeshStandardMaterial({ color: 0xb4bcc1, roughness: 0.35, metalness: 0.7 })));
+  // The black hardware: a handle folded flat on each end, and four feet.
+  const black: THREE.BufferGeometry[] = [];
+  for (const side of [-1, 1]) black.push(new THREE.BoxGeometry(0.012, 0.03, 0.16).translate(side * (W / 2 - 0.002), 0.22, 0));
+  for (const x of [-W / 2 + 0.05, W / 2 - 0.05]) for (const z of [-D / 2 + 0.05, D / 2 - 0.05]) black.push(new THREE.BoxGeometry(0.05, 0.01, 0.05).translate(x, 0.005, z));
+  g.add(merged(black, new THREE.MeshStandardMaterial({ color: 0x14191d, roughness: 0.5 })));
   return g;
 }
 

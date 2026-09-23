@@ -81,33 +81,35 @@ export function controller(model: THREE.Object3D): THREE.Group {
 
 /**
  * ezkey.io: a key store, so a key. Brushed steel, a round bow with the product's cyan lit through
- * it, a long shaft and three bits standing up off it. It lies on its side across the cap, leaning
- * back a little on the stand, because the classic silhouette is the side view: stood on end and
- * raked toward the eye it read as a lollipop and hid its own label.
+ * it, a long shaft and three bits along its top edge, stood on a clear easel and leaned back the
+ * way a shop shows one.
+ *
+ * It is drawn face up on the y 0 plane like the other two, with its bits toward -z, the edge that
+ * ends up on top once the group is raked. It used to be drawn standing in the xy plane and then
+ * raked as if it lay flat, so the rake laid it on its back instead of standing it up: from the hold
+ * the bow was a disc seen edge on and the bits pointed at the lens.
  */
 export function key(): THREE.Group {
+  const LEAN = 1.15, BOW = 0.135, T = 0.03;
   const g = new THREE.Group();
-  // Raked to 1.15 rather than 0.6. At 0.6 the key is 34 degrees off the cap, which from the hold is
-  // a key seen almost down its own plane: the bow foreshortens into a sliver and the bits along the
-  // shaft disappear. Near upright it is the silhouette a key is recognised by, presented flat to
-  // the lens. The old note against standing it up was about standing it on its end, which turns it
-  // into a lollipop, not about raising the rake.
-  const LEAN = 1.15, PIVOT = 0.2;
-  const tilt = new THREE.Group(); tilt.rotation.x = LEAN; tilt.position.y = PIVOT; g.add(tilt);
+  // The low edge is the bow's rim toward +z, so the pivot sets that rim on the easel's base plate.
+  const pivot = BOW * Math.sin(LEAN) + (T / 2) * Math.cos(LEAN) + 0.014;
+  const tilt = new THREE.Group(); tilt.rotation.x = LEAN; tilt.position.y = pivot; g.add(tilt);
   const steel = [
-    new THREE.TorusGeometry(0.105, 0.03, 10, 28).translate(-0.22, 0, 0),
-    new THREE.BoxGeometry(0.5, 0.06, 0.03).translate(0.11, 0, 0),
-    new THREE.BoxGeometry(0.06, 0.04, 0.03).translate(0.38, 0, 0),
-    new THREE.BoxGeometry(0.045, 0.075, 0.03).translate(0.13, 0.06, 0),
-    new THREE.BoxGeometry(0.045, 0.09, 0.03).translate(0.215, 0.068, 0),
-    new THREE.BoxGeometry(0.045, 0.065, 0.03).translate(0.3, 0.055, 0),
+    new THREE.TorusGeometry(0.105, T, 10, 28).rotateX(-Math.PI / 2).translate(-0.22, 0, 0),
+    new THREE.BoxGeometry(0.5, T, 0.06).translate(0.11, 0, 0),
+    new THREE.BoxGeometry(0.06, T, 0.04).translate(0.38, 0, 0),
+    new THREE.BoxGeometry(0.045, T, 0.075).translate(0.13, 0, -0.06),
+    new THREE.BoxGeometry(0.045, T, 0.09).translate(0.215, 0, -0.068),
+    new THREE.BoxGeometry(0.045, T, 0.065).translate(0.3, 0, -0.055),
   ];
   tilt.add(merged(steel, shell(0xd6dde2, 0.3, 0.8)));
-  const inlay = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24), new THREE.MeshStandardMaterial({ color: 0x06131a, emissive: 0x6ec1d6, emissiveIntensity: 1.8, side: THREE.DoubleSide }));
+  const inlay = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x06131a, emissive: 0x6ec1d6, emissiveIntensity: 1.8, side: THREE.DoubleSide }));
   inlay.position.set(-0.22, 0, 0); tilt.add(inlay);
-  // Its own stand: the key's plane is upright, so the rail is a clear sheet behind it.
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.3, 0.012), acrylic()); rail.position.set(0.05, 0.02, -0.024); tilt.add(rail);
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.012, 0.28), acrylic()); base.position.set(0.05, 0.006, 0.04); g.add(base);
+  // The easel: a clear back behind the key and a lip under the bow that it rests on.
+  stand(g, tilt, pivot, { w: 0.8, back: T / 2 + 0.008, from: -0.19 }, LEAN);
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.012), acrylic());
+  lip.position.set(0, 0.025 - T / 2, BOW + 0.008); tilt.add(lip);
   return g;
 }
 
