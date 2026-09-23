@@ -7,9 +7,9 @@ import { splitTickerText, withStreakLine } from '../../../../content/ticker';
 import { instances, repeat, place, type Spot } from '../../merge';
 import { beacon } from '../../labs/props';
 import { lightShaft } from '../../labs/fixtures';
-import { dust } from '../../labs/particles';
+import { dust, sparks } from '../../labs/particles';
 import type { Placement } from '../../rig';
-import { X0, X1, Z0, Z1, H, SODIUM } from './layout';
+import { X0, X1, Z0, Z1, H, SODIUM, COLUMNS } from './layout';
 
 export interface Lighting { lights: Placement[]; update(dt: number): void; dispose(): void }
 
@@ -93,9 +93,32 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   const motes = dust([X0 + 1, 0.3, Z0 + 1], [X1 - 1, H - 0.5, Z1 - 1], tier === 'high' ? 500 : 180, { size: 0.06, opacity: 0.3, amp: 0.3 });
   root.add(motes.points);
 
+  // A junction box on column 3, the one the fabrication stop sees through the office glass, with a
+  // fault in it: every eleven to nineteen seconds it spits two or three short bursts of sparks that
+  // fall down the column and go out. The box and its conduit are dressing enough to say where the
+  // sparks come from.
+  const [cx, cz] = COLUMNS[2]!;
+  const face = cx + 0.45;
+  const boxMat = new THREE.MeshStandardMaterial({ color: 0x59636a, roughness: 0.6, metalness: 0.4 });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.34, 0.3), boxMat); box.position.set(face + 0.06, 4.2, cz); root.add(box);
+  const conduit = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, H - 4.4, 8), boxMat); conduit.position.set(face + 0.04, 4.4 + (H - 4.4) / 2, cz); root.add(conduit);
+  const spray = sparks([face + 0.13, 4.03, cz], [1, 0, 0.2], { count: tier === 'high' ? 90 : 45, size: 0.08, seed: 29 });
+  root.add(spray.points);
+  let clock = 0, next = 5 + Math.random() * 4;
+  const bursts: number[] = [];
+
   return {
     lights: lights(),
-    update(dt) { led.update(dt); motes.update(dt); },
-    dispose() { led.dispose(); motes.dispose(); },
+    update(dt) {
+      led.update(dt); motes.update(dt); spray.update(dt);
+      clock += dt;
+      if (clock >= next) {
+        const n = 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < n; i++) bursts.push(clock + i * (0.18 + Math.random() * 0.25));
+        next = clock + 11 + Math.random() * 8;
+      }
+      if (bursts.length && clock >= bursts[0]!) { bursts.shift(); spray.fire(); }
+    },
+    dispose() { led.dispose(); motes.dispose(); spray.dispose(); },
   };
 }

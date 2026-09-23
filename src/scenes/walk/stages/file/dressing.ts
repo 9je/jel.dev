@@ -149,10 +149,11 @@ function fileLines(): string[] {
  * ceiling runs at 0.4. A control room with its lights up is an office, and the reference is an
  * office at the end of a shift with the yard still working outside it.
  */
-export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<{ hotspots: Hotspot[] }> {
+export async function buildDressing(ctx: StageContext, root: THREE.Group): Promise<{ hotspots: Hotspot[]; screen: { material: THREE.MeshStandardMaterial; map: THREE.Texture } }> {
   const { store, anchors, pace } = ctx;
   const add = async (o: THREE.Object3D) => { root.add(o); await pace(); };
   const hotspots: Hotspot[] = [];
+  let screen: THREE.MeshStandardMaterial | undefined;
   const TOP = DESK.top;
 
   // ---- The desk run ----------------------------------------------------------------------------
@@ -221,7 +222,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // screen renders its type at about seven pixels whatever is drawn on it, which is the whole of the
   // note "screen hard to read". At 1.9 times the size, with three lines set large, it reads.
   const TIER = TOP + DESK.tier;
-  const live = monitor({ alive: true, size: 1.9, face: facilityPlan() });
+  const plan = facilityPlan(); plan.wrapT = THREE.RepeatWrapping;
+  const live = monitor({ alive: true, size: 1.9, face: plan });
+  live.traverse((o) => { if (o instanceof THREE.Mesh && (o.material as THREE.MeshStandardMaterial).emissiveMap === plan) screen = o.material as THREE.MeshStandardMaterial; });
   await add(place(live, DESK.tierBack - 0.2, TIER, 32.9, -Math.PI / 2 - 0.22));
   for (const [z, turn] of [[29.7, -Math.PI / 2 + 0.1], [28.6, -Math.PI / 2 - 0.15]] as [number, number][]) {
     await add(place(monitor({ alive: false }), DESK.tierBack - 0.2, TIER, z, turn));
@@ -280,5 +283,6 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const floor: Spot[] = [[-68.4, 0, 33.3, 0.5], [-69.0, 0, 32.2, 1.8], [-68.6, 0, 29.6, 2.6], [-66.4, 0, 33.5, 0.9]];
   await add(papers(floor));
 
-  return { hotspots };
+  if (!screen) throw new Error('file: the live monitor has no screen carrying the plan');
+  return { hotspots, screen: { material: screen, map: plan } };
 }

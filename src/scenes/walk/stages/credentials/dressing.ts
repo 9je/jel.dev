@@ -11,7 +11,12 @@ import certs from '../../../../content/certs.json';
 
 /** Whatever the dressing has to clean up itself. The badge textures load out of band, so the stage
  *  has to be able to tell the dressing it is gone. */
-export interface Dressing { hotspots: Hotspot[]; dispose(): void }
+export interface Dressing {
+  hotspots: Hotspot[];
+  /** The theatre lamp's lit face and cells, for the stage to brown out now and then. */
+  lampGlow: THREE.MeshStandardMaterial[];
+  dispose(): void;
+}
 
 /** The ink on a plate: dark enough to read as print on a lit panel rather than as a second light. */
 const INK = '#1e2c3a';
@@ -202,13 +207,14 @@ function theatreLamp(): THREE.Group {
     new THREE.TorusGeometry(0.44, 0.018, 6, 24).rotateX(Math.PI / 2).translate(0, -drop - 0.03, 0),
   ];
   g.add(merged(body, steel));
-  const face = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), new THREE.MeshStandardMaterial({
-    color: 0xffffff, emissive: 0xf3f9ff, emissiveIntensity: 0.6, roughness: 0.3,
-  }));
+  const faceMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf3f9ff, emissiveIntensity: 0.6, roughness: 0.3 });
+  const face = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), faceMat);
   face.rotation.x = Math.PI / 2; face.position.y = -drop - 0.04; g.add(face);
   const cells: Spot[] = [];
   for (let i = 0; i < 6; i++) cells.push([Math.cos((i / 6) * Math.PI * 2) * 0.22, -drop - 0.05, Math.sin((i / 6) * Math.PI * 2) * 0.22]);
-  g.add(instances(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.1 }), cells));
+  const cellMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.1 });
+  g.add(instances(new THREE.SphereGeometry(0.045, 8, 6), cellMat, cells));
+  g.userData.glow = [faceMat, cellMat];
   return g;
 }
 
@@ -349,5 +355,5 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // disposeObject() reaches the badge textures through their materials, so this is belt and braces
   // for the ones already assigned and the only cleanup for one still in flight.
-  return { hotspots, dispose() { disposed = true; for (const t of badges) t.dispose(); badges.length = 0; } };
+  return { hotspots, lampGlow: lamp.userData.glow as THREE.MeshStandardMaterial[], dispose() { disposed = true; for (const t of badges) t.dispose(); badges.length = 0; } };
 }

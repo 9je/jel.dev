@@ -11,7 +11,7 @@ async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'file'; scene.add(root);
   const shell = buildShell(ctx, root); await ctx.pace();
-  const { hotspots } = await buildDressing(ctx, root);
+  const { hotspots, screen } = await buildDressing(ctx, root);
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.Points) return;
     const translucent = (o.material as THREE.Material).transparent;
@@ -31,9 +31,25 @@ async function build(ctx: StageContext): Promise<Stage> {
   // than left for good: the file is open, the mug is over, the chair is turned, the glass is
   // poured, and the cigar in the ashtray is still going. The smoke off it is the only thing in the
   // room that moves under its own steam, which is what puts a person in the chair a minute ago.
+  // The live monitor on the desk loses sync now and then: the plan rolls up the screen twice,
+  // faster as it goes, and the picture flickers until it catches and settles back where it was.
+  // Every eighteen to twenty eight seconds, three quarters of a second each time.
+  const ROLL = 0.75, SCREEN_I = screen.material.emissiveIntensity;
+  let clock = 0, nextRoll = 10 + Math.random() * 8, rollAt = -1;
   return {
     id: 'file', root, lights: lights(), hotspots,
-    update(_t, dt) { for (const p of fx) p.update(dt); },
+    update(_t, dt) {
+      for (const p of fx) p.update(dt);
+      clock += dt;
+      if (rollAt < 0 && clock >= nextRoll) rollAt = clock;
+      let dim = 1;
+      if (rollAt >= 0) {
+        const e = clock - rollAt;
+        if (e > ROLL) { rollAt = -1; nextRoll = clock + 18 + Math.random() * 10; screen.map.offset.y = 0; }
+        else { screen.map.offset.y = ((e / ROLL) ** 1.6) * 2; dim = 0.55 + 0.45 * Math.abs(Math.sin(e * 40)); }
+      }
+      screen.material.emissiveIntensity = SCREEN_I * dim;
+    },
     dispose() { for (const p of fx) p.dispose(); root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
   };
 }

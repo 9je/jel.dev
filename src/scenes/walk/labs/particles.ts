@@ -194,3 +194,59 @@ export function haze(origin: [number, number, number], opts: PlumeOptions = {}):
     ...opts,
   });
 }
+
+/** A spark's flight: thrown out and up from the source, pulled down by gravity, stopped by the
+ *  floor, cooling from white to orange as it goes out. `uAge` is seconds since the burst. */
+const SPARK_VERT = `
+uniform float uAge, uSize, uFloor;
+attribute vec3 seed;
+attribute float life;
+varying float vAlpha; varying float vRot;
+void main() {
+  float t = min(uAge, life);
+  vec3 v = seed;
+  vec3 p = position + v * t + vec3(0.0, -4.9, 0.0) * t * t;
+  p.y = max(p.y, uFloor);
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  float k = clamp(uAge / life, 0.0, 1.0);
+  gl_PointSize = uSize * (1.0 - 0.6 * k) * ${SCALE.toFixed(1)} / -mv.z;
+  vAlpha = (1.0 - k) * step(uAge, life) * smoothstep(1.0, 3.0, gl_PointSize);
+  vRot = 0.0;
+  gl_Position = projectionMatrix * mv;
+}`;
+
+export interface SparkBurst extends ParticleSystem { fire(): void }
+
+/**
+ * A spray of sparks off a point, fired on demand: a short bright burst thrown mostly `toward` and
+ * up, falling to `floor` and going out within a second. Additive, so it only ever adds light, and
+ * it lights nothing: the burst is over before a light would have read as anything but a flicker.
+ */
+export function sparks(origin: [number, number, number], toward: [number, number, number], opts: { count?: number; floor?: number; size?: number; seed?: number } = {}): SparkBurst {
+  const count = opts.count ?? 40;
+  const r = rng(opts.seed ?? 13);
+  const pos = new Float32Array(count * 3), seed = new Float32Array(count * 3), life = new Float32Array(count);
+  const dir = new THREE.Vector3(...toward).normalize();
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = origin[0]; pos[i * 3 + 1] = origin[1]; pos[i * 3 + 2] = origin[2];
+    const speed = 1.2 + r() * 2.6;
+    const v = new THREE.Vector3(dir.x + (r() - 0.5) * 1.4, 0.5 + r() * 1.2, dir.z + (r() - 0.5) * 1.4).normalize().multiplyScalar(speed);
+    seed[i * 3] = v.x; seed[i * 3 + 1] = v.y; seed[i * 3 + 2] = v.z;
+    life[i] = 0.35 + r() * 0.7;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('seed', new THREE.BufferAttribute(seed, 3));
+  g.setAttribute('life', new THREE.BufferAttribute(life, 1));
+  const sys = system(g, SPARK_VERT, {
+    uAge: { value: 99 }, uSize: { value: opts.size ?? 0.028 }, uFloor: { value: opts.floor ?? 0.01 },
+    // Past white on purpose: a spark is the hottest thing in the room for a tenth of a second, and
+    // over the bloom threshold is what makes a two pixel point read as light rather than as a speck.
+    uColor: { value: new THREE.Color(3.2, 2.2, 1.0) }, uOpacity: { value: 1 },
+  }, true, radialTexture(32, 0.05));
+  const age = (sys.points.material as THREE.ShaderMaterial).uniforms.uAge!;
+  return {
+    ...sys,
+    update(dt) { sys.update(dt); age.value += dt; },
+    fire() { age.value = 0; },
+  };
+}

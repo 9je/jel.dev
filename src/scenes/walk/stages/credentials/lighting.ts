@@ -16,7 +16,7 @@ export function lights(): Placement[] {
     { kind: 'point', position: [LAB.x + LAB_PANEL.x[0], LAB.h - 0.15, LAB.z + LAB_PANEL.z[1]], color: 0xdff0f6, intensity: 5, distance: 10, decay: 1.5 },
     // The second lab point moved out of the ceiling and into the theatre lamp's dish over the draped
     // trolley, which is the one fitting in the room that is meant to be pooling light on something.
-    { kind: 'point', position: [-77.4, LAB.h - 1.0, -13.0], color: 0xf3f9ff, intensity: 6, distance: 6.5, decay: 1.7 },
+    { kind: 'point', position: [-77.4, LAB.h - 1.0, -15.4], color: 0xf3f9ff, intensity: 6, distance: 6.5, decay: 1.7 },
     spot(BATTEN_Z[0]),
     spot(BATTEN_Z[2]),
   ];
