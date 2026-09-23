@@ -42,7 +42,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0e161e);
-  scene.fog = new THREE.FogExp2(0x0e161e, 0.012);
+  const fog = new THREE.FogExp2(0x0e161e, 0.012); scene.fog = fog;
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 150);
 
   // Signage is drawn to a canvas, and canvas text does not wait for a webfont. Kick the load off
@@ -246,6 +246,8 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
     rig.update(current, dt);
+    fog.color.copy(rig.grade.haze); fog.density = rig.grade.density; (scene.background as THREE.Color).copy(rig.grade.haze);
+    renderer.toneMappingExposure = rig.grade.exposure; scene.environmentIntensity = rig.grade.env;
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
     hoverFx.update(dt);
     if (post) post.render(dt); else renderer.render(scene, camera);

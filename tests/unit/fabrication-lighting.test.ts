@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ROOM_BUDGET, checkBudget } from '../../src/scenes/walk/rig';
-import { lights, FIXTURES, FIXTURE_Y, SODIUM_LAMPS, LAMP_Y, WORKING } from '../../src/scenes/walk/stages/fabrication/lighting';
+import { lights, FIXTURES, FIXTURE_Y, SODIUM_LAMPS, LAMP_Y, WORKING, TRACK } from '../../src/scenes/walk/stages/fabrication/lighting';
 import { X0, X1, Z0, Z1 } from '../../src/scenes/walk/stages/fabrication/layout';
 import { DISPATCH_ROWS } from '../../src/scenes/walk/stages/fabrication/boards';
 
@@ -23,6 +23,8 @@ describe('the loading bay lighting', () => {
     ];
     for (const l of placed) {
       if (l.kind !== 'spot') continue;
+      // The exhibit track's spot hangs from the track and is aimed across at the plinths.
+      if (l.position[0] === TRACK.x && l.position[1] === TRACK.y && l.position[2] === TRACK.z) continue;
       const under = fittings.some(([x, y, z]) => Math.abs(l.position[0] - x) < 0.05 && Math.abs(l.position[1] - y) < 0.05 && Math.abs(l.position[2] - z) < 0.05);
       expect(under, `spot at ${l.position.join(',')} hangs from nothing`).toBe(true);
       // Straight down: a fitting throws its light under itself.

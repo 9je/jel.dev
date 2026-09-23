@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { STOPS, roomAt, type StopId } from './path';
 import type { Tier } from './quality';
+import { GRADES, GradeState } from './grade';
 
 export interface SpotPlacement { kind: 'spot'; position: [number, number, number]; target: [number, number, number]; color: number; intensity: number; distance: number; angle: number; penumbra: number; decay?: number; shadow?: boolean }
 export interface PointPlacement { kind: 'point'; position: [number, number, number]; color: number; intensity: number; distance: number; decay?: number }
@@ -93,6 +94,9 @@ export class LightRig {
   private hemi: THREE.HemisphereLight;
   private group = new THREE.Group();
   private stop: StopId | null = null;
+  /** The room's grade, eased across doorways. The hemisphere is applied here, and the scene reads
+   *  the haze and exposure off it after each update. */
+  readonly grade = new GradeState(GRADES.booth);
   readonly lightCount: number;
 
   constructor(private scene: THREE.Scene, private size: RigSize, private readonly shadows: boolean) {
@@ -111,6 +115,7 @@ export class LightRig {
     // Ambient fill for every room. Scene-wide and unshadowed, low enough that a lit room still reads
     // as its own lit room.
     this.hemi = new THREE.HemisphereLight(0x6d7f8f, 0x1a2530, 1.3); this.group.add(this.hemi);
+    this.applyGrade();
     this.lightCount = size.spots + size.points + 1;
   }
 
@@ -124,6 +129,7 @@ export class LightRig {
       const assigned = assignSlots(this.slots.map((s) => s.target), composeSet(this.rooms, stop), this.size, this.shadows);
       this.slots.forEach((s, i) => { s.target = assigned[i]; });
     }
+    this.grade.toward(GRADES[stop], dt); this.applyGrade();
     for (const s of this.slots) {
       // Fade out toward a change, snap, fade in. A slot with nothing to show fades to black and stays.
       if (s.current !== s.target) {
@@ -132,6 +138,10 @@ export class LightRig {
       } else if (s.current) s.level = damp(s.level, 1, 6, dt);
       this.apply(s);
     }
+  }
+
+  private applyGrade(): void {
+    this.hemi.color.copy(this.grade.sky); this.hemi.groundColor.copy(this.grade.ground); this.hemi.intensity = this.grade.fill;
   }
 
   private snap(s: Slot): void {

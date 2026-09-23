@@ -9,7 +9,8 @@ import { beacon } from '../../labs/props';
 import { lightShaft } from '../../labs/fixtures';
 import { dust, sparks } from '../../labs/particles';
 import type { Placement } from '../../rig';
-import { X0, X1, Z0, Z1, H, SODIUM, COLUMNS } from './layout';
+import { X0, X1, Z0, Z1, H, SODIUM, COLUMNS, OFFICE } from './layout';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export interface Lighting { lights: Placement[]; update(dt: number): void; dispose(): void }
 
@@ -21,9 +22,14 @@ export const FIXTURES: [number, number][] = FIXTURE_ROWS.flatMap((z) => FIXTURE_
 /** The fitting's underside, where its spot hangs from. */
 export const FIXTURE_Y = H - 0.55;
 
-/** The two fittings that carry the working spots: the middle fitting of the second row, over the
- *  approach to the office, and the middle of the fourth, over the run to the docks. */
-export const WORKING: [number, number][] = [[-3, 4], [-3, -20]];
+/** The fitting that carries the working spot: the middle of the second row, over the approach to
+ *  the office. The fourth row's used to carry one over the run to the docks, which the sodium lamps
+ *  light anyway, and that spot now hangs on the exhibit track. */
+export const WORKING: [number, number][] = [[-3, 4]];
+/** A gallery track on the office ceiling over the plinth row, x and z of its middle and its length
+ *  along z. Its spot is the stop's key: the three products are the lit thing in the bay, and the
+ *  hall behind them falls away. */
+export const TRACK = { x: OFFICE.x - OFFICE.w / 2 + 1.6, y: OFFICE.h - 0.12, z: OFFICE.z - 0.4, len: 5.6 };
 /** Sodium lamps over the two dock shutters, x and z, hung at LAMP_Y. */
 export const SODIUM_LAMPS: [number, number][] = [[2, -27], [9, -27]];
 export const LAMP_Y = 6.5;
@@ -37,8 +43,11 @@ export const LAMP_Y = 6.5;
 export function lights(): Placement[] {
   const out: Placement[] = [];
   for (const [x, z] of WORKING) out.push({ kind: 'spot', position: [x, FIXTURE_Y, z], target: [x, 0, z], color: 0xd9e8ee, intensity: 190, distance: 50, angle: Math.PI / 2.7, penumbra: 0.8, decay: 1.7 });
+  // Wide and soft from 2 m over the plinth tops, so one cone covers all three and still falls off
+  // before the glass. It casts, so each product throws a shadow on its own cap.
+  out.push({ kind: 'spot', position: [TRACK.x, TRACK.y, TRACK.z], target: [TRACK.x - 0.5, 0.9, TRACK.z], color: 0xf4efe6, intensity: 45, distance: 10, angle: Math.PI / 3, penumbra: 0.95, decay: 1.6, shadow: true });
   // A tight cone from 6.5 m throws a pool the eye can find.
-  for (const [x, z] of SODIUM_LAMPS) out.push({ kind: 'spot', position: [x, LAMP_Y, z], target: [x, 0, z], color: SODIUM, intensity: 180, distance: 18, angle: Math.PI / 6, penumbra: 0.5, decay: 1.8, shadow: true });
+  SODIUM_LAMPS.forEach(([x, z], i) => out.push({ kind: 'spot', position: [x, LAMP_Y, z], target: [x, 0, z], color: SODIUM, intensity: 180, distance: 18, angle: Math.PI / 6, penumbra: 0.5, decay: 1.8, shadow: i === 0 }));
   out.push({ kind: 'point', position: [4, 8.2, Z0 + 1.4], color: 0xf2c230, intensity: 8, distance: 16, decay: 2 });
   return out;
 }
@@ -56,6 +65,22 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   // The air under the two working fittings, faintly: the bay is dark and there is dust in it, and
   // a shaft is what ties a pool on the floor to the fitting above it.
   for (const [x, z] of WORKING) root.add(place(lightShaft({ top: 1.1, bottom: 4.2, height: FIXTURE_Y - 0.3, color: 0xd9e8ee, opacity: 0.035 }), x, FIXTURE_Y, z));
+
+  // The track: a steel rail on the office ceiling and three heads along it, each turned down at its
+  // plinth, lenses lit. The one spot the rig gives it hangs from the middle.
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x1c2228, roughness: 0.5, metalness: 0.6 });
+  const parts: THREE.BufferGeometry[] = [new THREE.BoxGeometry(0.05, 0.04, TRACK.len).translate(0, 0.08, 0)];
+  const lenses: THREE.BufferGeometry[] = [];
+  for (const dz of [2.6, 0, -2.6]) {
+    const can = new THREE.CylinderGeometry(0.055, 0.045, 0.2, 14).translate(0, -0.1, 0);
+    const lens = new THREE.CircleGeometry(0.045, 14).rotateX(Math.PI / 2).translate(0, -0.201, 0);
+    const turn = new THREE.Matrix4().makeRotationZ(-0.6).setPosition(0, 0.06, dz);
+    parts.push(can.applyMatrix4(turn), new THREE.BoxGeometry(0.02, 0.06, 0.02).translate(0, 0.06, dz));
+    lenses.push(lens.applyMatrix4(turn));
+  }
+  const track = new THREE.Group(); track.name = 'track';
+  track.add(new THREE.Mesh(mergeGeometries(parts), railMat), new THREE.Mesh(mergeGeometries(lenses), new THREE.MeshBasicMaterial({ color: 0xb8ae9c })));
+  root.add(place(track, TRACK.x, TRACK.y - 0.08, TRACK.z));
 
   // Sodium work lights, orange, the fabrication wing colour, one over each dock shutter. The pool
   // on the concrete is a soft sprite, additive, so it reads as light rather than as a stain.
