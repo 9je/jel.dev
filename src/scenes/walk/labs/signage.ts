@@ -290,6 +290,14 @@ export function doorway(spec: DoorwaySpec): THREE.Group {
 
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, depth), spec.floor);
   floor.rotation.x = -Math.PI / 2; floor.position.y = 0.012; floor.name = 'floor'; g.add(floor);
+  // A steel threshold across each end, where this floor meets a room's. The tile runs on one grid
+  // through the whole building, but the rooms are tinted apart, and a tint that changes on a grout
+  // line with nothing over it reads as a rendering fault rather than two floors.
+  // They are the frame's steel, so they go into its mesh below. Each stops a centimetre short of
+  // the reveals and of the vestibule's ends, so no face of one lies in a plane the doorway or a
+  // room already draws.
+  const sills: THREE.BufferGeometry[] = [];
+  for (const end of [-1, 1]) sills.push(new THREE.BoxGeometry(w - 0.02, 0.012, 0.07).translate(0, 0.017, end * (depth / 2 - 0.045)));
 
   // Ceiling and both reveals share the room's wall material, so they are one mesh.
   const shell: THREE.BufferGeometry[] = [];
@@ -308,7 +316,7 @@ export function doorway(spec: DoorwaySpec): THREE.Group {
   // then break into bands of frame and reveal as the camera moves through the doorway. A centimetre
   // of daylight behind the frame is a centimetre of the reveal, which is what is drawn there anyway.
   const section = 0.25, clear = 0.01;
-  const frame: THREE.BufferGeometry[] = [];
+  const frame: THREE.BufferGeometry[] = [...sills];
   for (const side of [-1, 1]) { const post = new THREE.BoxGeometry(section, h + section, section); post.translate(side * ((w + section) / 2 + clear), (h + section) / 2 + clear, 0); frame.push(post); }
   const header = new THREE.BoxGeometry(w + section * 2 + clear * 2, section, section); header.translate(0, h + section / 2 + clear, 0); frame.push(header);
   const frameMesh = merged(frame, labSteel(0x2b3740)); frameMesh.name = 'frame'; g.add(frameMesh);

@@ -16,14 +16,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   /** A wall piece facing the space it belongs to. Two pieces back to back on one plane are two
    *  one-sided planes with opposite normals, so only one is ever drawn and neither fights for
    *  depth: that is how this hall and the break room share the wall at X1. */
-  /** Stains run down every full height wall piece from where the services cross it. */
+  /** Grime down every wall piece from the ceiling line, lintels included. */
   const streaks: THREE.BufferGeometry[] = [];
-  const STAIN_FROM = H - 0.5;
-  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number) => { const m = plane(w, h, labWall(store, w, h)); m.rotation.y = ry; m.position.set(x, y, z); if (Math.abs(y - h / 2) < 1e-6) streaks.push(...wallStreaks(w, x, z, ry, STAIN_FROM)); return m; };
+  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number) => { const m = plane(w, h, labWall(store, w, h)); m.rotation.y = ry; m.position.set(x, y, z); streaks.push(...wallStreaks(w, x, z, ry, y + h / 2, y - h / 2)); return m; };
   const floor = plane(W, D, labFloor(store, W, D)); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
 
   // The long walls, south at Z0 and north at Z1, full width, as Recreation's.
-  for (const [z, ry] of [[Z0, 0], [Z1, Math.PI]] as [number, number][]) { const m = plane(W, H, labWall(store, W, H)); m.rotation.y = ry; m.position.set(XC, H / 2, z); streaks.push(...wallStreaks(W, XC, z, ry, STAIN_FROM)); }
+  for (const [z, ry] of [[Z0, 0], [Z1, Math.PI]] as [number, number][]) { const m = plane(W, H, labWall(store, W, H)); m.rotation.y = ry; m.position.set(XC, H / 2, z); streaks.push(...wallStreaks(W, XC, z, ry, H)); }
 
   // The end walls at X0 (west, toward Credentials) and X1 (east, toward the break room). Each is
   // built as pieces flanking its doorway plus a soffit over it, so the hall closes on every side of

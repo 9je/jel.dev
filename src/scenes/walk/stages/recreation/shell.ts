@@ -13,10 +13,9 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   /** A wall piece: `ry` turns its normal into the space it faces, so a piece is only ever drawn from
    *  the side it belongs to and two pieces back to back on one plane never fight for depth. */
-  /** Stains run down every full height wall piece from where the services cross it. */
+  /** Grime down every wall piece from the ceiling line, lintels included. */
   const streaks: THREE.BufferGeometry[] = [];
-  const STAIN_FROM = ROOM.ceiling - 0.1;
-  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number, tint?: number) => { const m = plane(w, h, labWall(store, w, h, tint)); m.rotation.y = ry; m.position.set(x, y, z); if (Math.abs(y - h / 2) < 1e-6) streaks.push(...wallStreaks(w, x, z, ry, STAIN_FROM)); return m; };
+  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number, tint?: number) => { const m = plane(w, h, labWall(store, w, h, tint)); m.rotation.y = ry; m.position.set(x, y, z); streaks.push(...wallStreaks(w, x, z, ry, Math.min(y + h / 2, ROOM.ceiling), y - h / 2)); return m; };
   const dado: THREE.BufferGeometry[] = [], lines: THREE.BufferGeometry[] = [];
   const band = (len: number, x: number, z: number, ry: number) => { const b = dadoBands(len, x, z, ry); dado.push(b.band); lines.push(b.line); };
 

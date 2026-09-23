@@ -10,7 +10,7 @@ import { greybox } from './stages/greybox';
 import { STAGE_LOADERS } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
-import { disposeStray } from './materials';
+import { disposeStray, anchorTiles } from './materials';
 import { createHover, pickHotspot } from './interact';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
@@ -92,6 +92,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       if (disposed) return;
       const stage = await def.build(ctx);
       if (disposed) { stage.dispose(); return; }
+      anchorTiles(stage.root);
       built.set(def.id, stage); if (def.replaces) grey.hide(def.replaces);
       if (stage.lights) rig.register(def.stop, stage.lights);
     })().catch((err) => {

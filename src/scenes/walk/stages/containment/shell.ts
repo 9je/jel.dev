@@ -34,10 +34,9 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // Whiter than the kit's panel tint. Under this room's cold spots the kit default came out a flat
   // mauve grey, which is the wall colour Jordan called weird: the reference is white block with
   // the blue dado on it, and a wall only reads white if it starts near white.
-  /** Stains run down every full height wall piece from where the services cross it. */
+  /** Grime down every wall piece from the ceiling line, lintels included. */
   const streaks: THREE.BufferGeometry[] = [];
-  const STAIN_FROM = H - 0.2;
-  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number) => { const m = plane(w, h, labWall(store, w, h, 0xe3edf2)); m.rotation.y = ry; m.position.set(x, y, z); if (Math.abs(y - h / 2) < 1e-6) streaks.push(...wallStreaks(w, x, z, ry, STAIN_FROM)); return m; };
+  const wall = (w: number, h: number, x: number, y: number, z: number, ry: number) => { const m = plane(w, h, labWall(store, w, h, 0xe3edf2)); m.rotation.y = ry; m.position.set(x, y, z); streaks.push(...wallStreaks(w, x, z, ry, y + h / 2, y - h / 2)); return m; };
 
   // A colder floor than the labs' own grey: this room is the far end of the walk and the tile is the
   // largest surface in it, so half a step of blue in it is what carries the temperature.

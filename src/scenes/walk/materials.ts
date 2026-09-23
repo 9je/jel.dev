@@ -82,3 +82,36 @@ export function disposeObject(root: THREE.Object3D): void {
     }
   });
 }
+
+/**
+ * Lays every tiled floor under `root` on one grid for the whole building. A floor's material says
+ * it is tiled by carrying `userData.tilePitch`, the metres one repeat of its texture covers, and its
+ * UVs are rewritten here from where each vertex stands in the world, so the tile lines run straight
+ * from one room through a doorway into the next.
+ *
+ * Every floor used to start its tiles at its own corner, at its own size, so wherever two rooms or a
+ * room and a doorway met the grout lines jumped half a tile and the tile changed size. Call it once
+ * the room is built and placed: it reads world positions.
+ */
+export function anchorTiles(root: THREE.Object3D): void {
+  root.updateMatrixWorld(true);
+  const v = new THREE.Vector3();
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || (o as THREE.InstancedMesh).isInstancedMesh || Array.isArray(mesh.material)) return;
+    const mat = mesh.material as THREE.MeshStandardMaterial;
+    const pitch = mat.userData.tilePitch as number | undefined;
+    const pos = mesh.geometry.getAttribute('position'), uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute | undefined;
+    if (!pitch || !uv) return;
+    for (let i = 0; i < uv.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+      uv.setXY(i, v.x / pitch, -v.z / pitch);
+    }
+    uv.needsUpdate = true;
+    const uv1 = mesh.geometry.getAttribute('uv1');
+    if (uv1 && uv1 !== uv) mesh.geometry.setAttribute('uv1', uv);
+    for (const key of ['map', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap'] as const) {
+      const t = mat[key]; if (t) { t.repeat.set(1, 1); t.offset.set(0, 0); }
+    }
+  });
+}

@@ -9,7 +9,7 @@ export const LABS = { panel: 0xd9e8ee, dado: 0x2455a4, tile: 0x9fb0b8, steel: 0x
 
 /** Large grey tile, from the shared `labs` group. */
 export function labFloor(store: AssetStore, w: number, d: number, tint: number = LABS.tile): THREE.MeshStandardMaterial {
-  const m = surface(store.texture('lab_tile'), w, d, 2); m.color.setHex(tint); return m;
+  const m = surface(store.texture('lab_tile'), w, d, 2); m.color.setHex(tint); m.userData.tilePitch = 2; return m;
 }
 /** Painted panel wall, cold white by default. */
 export function labWall(store: AssetStore, w: number, h: number, tint: number = LABS.panel): THREE.MeshStandardMaterial {
@@ -61,30 +61,33 @@ export function dadoBands(len: number, x: number, z: number, ry: number, h = DAD
   return { band, line };
 }
 
-/** Columns in the streak atlas: five different stains, so a wall of them does not repeat. */
-const STREAKS = 5;
+/** Columns in the streak atlas: five different stains, so a wall of them does not repeat, and a
+ *  sixth that is the dirt line along the top of a wall. */
+const STREAKS = 5, ATLAS = STREAKS + 1;
 
 /**
- * Water and rust stains running down a wall from where the services cross it, as an alpha atlas
- * of `STREAKS` stains side by side. Each is a few runs of different widths from a common source,
- * darkest at the top and thinning out as it goes, some ending in a drip.
+ * Water and rust stains running down a wall from the ceiling, as an alpha atlas of `STREAKS` stains
+ * side by side. Each is a few runs of different widths from a common source at the very top of
+ * the canvas, darkest there and thinning out as it goes, some ending in a drip. The last column is
+ * the grime line where a wall meets the ceiling: dark at the top edge, soft lobes hanging off it,
+ * drawn so it tiles side to side.
  */
 function streakAtlas(): THREE.CanvasTexture {
   const cw = 128, h = 512;
-  const [c, ctx] = canvas(cw * STREAKS, h);
-  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, cw * STREAKS, h);
+  const [c, ctx] = canvas(cw * ATLAS, h);
+  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, cw * ATLAS, h);
   const r = rng(77);
   for (let k = 0; k < STREAKS; k++) {
     const x0 = k * cw;
-    // A soft source stain across the top, where the water sat before it ran.
-    const src = ctx.createRadialGradient(x0 + cw / 2, 0, 4, x0 + cw / 2, 0, cw * 0.5);
-    src.addColorStop(0, 'rgba(255,255,255,0.55)'); src.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = src; ctx.fillRect(x0, 0, cw, cw * 0.5);
+    // A source stain along the top edge, where the water came through the ceiling line.
+    const src = ctx.createLinearGradient(0, 0, 0, cw * 0.4);
+    src.addColorStop(0, 'rgba(255,255,255,0.6)'); src.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = src; ctx.fillRect(x0 + 8, 0, cw - 16, cw * 0.4);
     const runs = 3 + Math.floor(r() * 4);
     for (let i = 0; i < runs; i++) {
       const cx = x0 + 18 + r() * (cw - 36), len = h * (0.35 + r() * 0.65), wd = 3 + r() * 10;
       const g = ctx.createLinearGradient(0, 0, 0, len);
-      g.addColorStop(0, `rgba(255,255,255,${0.45 + r() * 0.35})`); g.addColorStop(0.7, `rgba(255,255,255,${0.15 + r() * 0.15})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      g.addColorStop(0, `rgba(255,255,255,${0.55 + r() * 0.3})`); g.addColorStop(0.7, `rgba(255,255,255,${0.15 + r() * 0.15})`); g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(cx - wd / 2, 0);
       let x = cx;
@@ -94,36 +97,65 @@ function streakAtlas(): THREE.CanvasTexture {
       if (r() < 0.5) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(x, len * 0.92, wd * 0.4, wd * 0.7, 0, 0, Math.PI * 2); ctx.fill(); }
     }
   }
+  // The ceiling line. Clipped to its own column and every lobe drawn a column width either side,
+  // so segment after segment of it runs along a wall without a seam.
+  const x0 = STREAKS * cw;
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, 0, cw, h); ctx.clip();
+  const edge = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+  edge.addColorStop(0, 'rgba(255,255,255,0.75)'); edge.addColorStop(0.25, 'rgba(255,255,255,0.3)'); edge.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = edge; ctx.fillRect(x0, 0, cw, h * 0.5);
+  for (let i = 0; i < 9; i++) {
+    const lx = r() * cw, lw = 10 + r() * 26, ll = h * (0.2 + r() * 0.5), a = 0.12 + r() * 0.2;
+    for (const dx of [-cw, 0, cw]) {
+      const g = ctx.createLinearGradient(0, 0, 0, ll);
+      g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x0 + lx + dx, 0, lw, ll, 0, 0, Math.PI); ctx.fill();
+    }
+  }
+  ctx.restore();
   return own(c, false);
 }
 
-/** The stains' material: dark, faintly brown, laid over the wall without writing depth. */
-export const streakMaterial = () => new THREE.MeshBasicMaterial({
-  color: 0x1a150e, alphaMap: streakAtlas(), transparent: true, opacity: 0.85, depthWrite: false,
+/** The stains' material: dark, faintly brown, lit like the wall under it, never writing depth. */
+export const streakMaterial = () => new THREE.MeshStandardMaterial({
+  color: 0x14110c, roughness: 0.95, alphaMap: streakAtlas(), transparent: true, opacity: 0.85, depthWrite: false,
 });
 
 /**
- * Stains running down one wall piece, as placed planes to merge with the rest of the room's. The
- * piece is `w` by `h` centred on (x, z) and turned `ry`, the same way a room's wall helper turns
- * it: its normal points into the room, and the stains stand a centimetre off it on that side, so a
- * wall the other room owns never shows them. `from` is the height they start at, which is where
- * the service runs cross the wall. One stain every few metres, never within half a metre of an end.
+ * The grime on one wall piece, as placed planes to merge with the rest of the room's. The piece is
+ * `w` wide, runs from `bottom` to `top`, is centred on (x, z) and turned `ry`, the same way a
+ * room's wall helper turns it: its normal points into the room, and the grime stands a centimetre
+ * off it on that side, so a wall the other room owns never shows it.
+ *
+ * `top` is where the wall meets the ceiling, and everything hangs from there. Every piece gets the
+ * dirt line along its top edge, the lintels over doorways included, so it runs round a room
+ * unbroken. Pieces tall enough get stains down from that line, one every few metres, never within
+ * half a metre of an end and never into the blue band. They used to start at the height the
+ * services cross, which from the walk was a stain beginning in the middle of clean wall.
  */
-export function wallStreaks(w: number, x: number, z: number, ry: number, from: number): THREE.BufferGeometry[] {
-  if (w < 1.6 || from < 2.2) return [];
+export function wallStreaks(w: number, x: number, z: number, ry: number, top: number, bottom = 0): THREE.BufferGeometry[] {
+  if (w < 0.3 || top - bottom < 0.2) return [];
   const r = rng(Math.abs(Math.round(x * 97 + z * 131 + ry * 17)) + 1);
   const out: THREE.BufferGeometry[] = [];
+  const place = (g: THREE.BufferGeometry, col: number, along: number, y: number, off: number) => {
+    const uv = g.getAttribute('uv') as THREE.BufferAttribute;
+    for (let j = 0; j < uv.count; j++) uv.setX(j, (col + uv.getX(j)) / ATLAS);
+    g.translate(along, y, off); g.rotateY(ry); g.translate(x, 0, z);
+    out.push(g);
+  };
+  const lineH = Math.min(0.45, top - bottom);
+  const pieces = Math.max(1, Math.round(w / 1.2));
+  for (let i = 0; i < pieces; i++) {
+    const pw = w / pieces;
+    place(new THREE.PlaneGeometry(pw, lineH), STREAKS, -w / 2 + pw * (i + 0.5), top - lineH / 2, 0.011);
+  }
+  const room = top - Math.max(bottom, DADO_H + 0.1);
+  if (w < 1.6 || room < 0.8) return out;
   const n = Math.max(1, Math.round((w / 3.2) * (0.6 + r() * 0.8)));
   for (let i = 0; i < n; i++) {
-    const sw = 0.5 + r() * 0.6, sh = Math.min(from - 0.2, 1.1 + r() * 1.6);
+    const sw = 0.5 + r() * 0.6, sh = Math.min(room, 1.1 + r() * 1.6);
     const along = -w / 2 + 0.5 + sw / 2 + r() * Math.max(0, w - 1 - sw);
-    const k = Math.floor(r() * STREAKS);
-    const g = new THREE.PlaneGeometry(sw, sh);
-    const uv = g.getAttribute('uv') as THREE.BufferAttribute;
-    for (let j = 0; j < uv.count; j++) uv.setX(j, (k + uv.getX(j)) / STREAKS);
-    g.translate(along, from - sh / 2, 0.012 + i * 0.001);
-    g.rotateY(ry); g.translate(x, 0, z);
-    out.push(g);
+    place(new THREE.PlaneGeometry(sw, sh), Math.floor(r() * STREAKS), along, top - sh / 2, 0.012 + i * 0.001);
   }
   return out;
 }

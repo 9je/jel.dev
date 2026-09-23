@@ -6,7 +6,7 @@ import { labFloor, labWall, dadoBands, backless, dadoMaterial, dadoLineMaterial,
 import { glassRoom } from '../../labs/props';
 import { doorway } from '../../labs/signage';
 import { battens, lightShaft, troffer, lensMaterial, fixtureSteel } from '../../labs/fixtures';
-import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP, SERVICE_Y } from './layout';
+import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
@@ -48,13 +48,12 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // from them, so there is always a solid wall (and a sliver of hall floor) behind every pane. The
   // west wall is one unbroken run; the east wall opens only at the server hall gate (z -30..-27).
   const bandGeoms: THREE.BufferGeometry[] = [], lineGeoms: THREE.BufferGeometry[] = [];
-  /** Stains down the long walls and the ends from the service run, which crosses them at SERVICE_Y. */
+  /** Grime down every wall piece from the ceiling line. */
   const streaks: THREE.BufferGeometry[] = [];
-  const STAIN_FROM = SERVICE_Y - 0.1;
   const wallSegment = (x: number, ry: number, z0: number, z1: number) => {
     const len = z1 - z0, midZ = (z0 + z1) / 2;
     const m = plane(len, H, labWall(store, len, H)); m.rotation.y = ry; m.position.set(x, H / 2, midZ);
-    streaks.push(...wallStreaks(len, x, midZ, ry, STAIN_FROM));
+    streaks.push(...wallStreaks(len, x, midZ, ry, H));
     const b = dadoBands(len, x + (x === X0 ? 0.02 : -0.02), midZ, Math.PI / 2);
     bandGeoms.push(b.band); lineGeoms.push(b.line);
   };
@@ -79,11 +78,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // the run up to the vestibule, and the strip above it, so nothing is drawn twice.
   const southW = W - VESTIBULE_W;
   const south = plane(southW, H, labWall(store, southW, H)); south.position.set(X0 + southW / 2, H / 2, Z0);
-  streaks.push(...wallStreaks(southW, X0 + southW / 2, Z0, 0, STAIN_FROM));
+  streaks.push(...wallStreaks(southW, X0 + southW / 2, Z0, 0, H));
   const overDoor = plane(VESTIBULE_W, H - GATE_H, labWall(store, VESTIBULE_W, H - GATE_H));
   overDoor.position.set(X1 - VESTIBULE_W / 2, (H + GATE_H) / 2, Z0);
+  streaks.push(...wallStreaks(VESTIBULE_W, X1 - VESTIBULE_W / 2, Z0, 0, H, GATE_H));
   const head = plane(GATE_Z1 - Z0, H - GATE_H, labWall(store, GATE_Z1 - Z0, H - GATE_H));
   head.rotation.y = -Math.PI / 2; head.position.set(X1, (H + GATE_H) / 2, (Z0 + GATE_Z1) / 2);
+  streaks.push(...wallStreaks(GATE_Z1 - Z0, X1, (Z0 + GATE_Z1) / 2, -Math.PI / 2, H, GATE_H));
 
   // The north end, closed around the containment doorway. Containment closes the same plane from
   // its own side with its own 3.4 m wall, both faces turned away from each other, so the two are
@@ -91,10 +92,11 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const nd0 = NORTH_DOOR.x - NORTH_DOOR.w / 2, nd1 = NORTH_DOOR.x + NORTH_DOOR.w / 2;
   for (const [w, x] of [[nd0 - X0, (X0 + nd0) / 2], [X1 - nd1, (nd1 + X1) / 2]] as [number, number][]) {
     const m = plane(w, H, labWall(store, w, H)); m.rotation.y = Math.PI; m.position.set(x, H / 2, Z1);
-    streaks.push(...wallStreaks(w, x, Z1, Math.PI, STAIN_FROM));
+    streaks.push(...wallStreaks(w, x, Z1, Math.PI, H));
   }
   const lintel = plane(NORTH_DOOR.w, H - NORTH_DOOR.h, labWall(store, NORTH_DOOR.w, H - NORTH_DOOR.h));
   lintel.rotation.y = Math.PI; lintel.position.set(NORTH_DOOR.x, (H + NORTH_DOOR.h) / 2, Z1);
+  streaks.push(...wallStreaks(NORTH_DOOR.w, NORTH_DOOR.x, Z1, Math.PI, H, NORTH_DOOR.h));
 
   // The blue turns the corner onto both ends rather than stopping dead where the long walls do. A
   // hall painted on two walls and bare on the other two reads as two walls that were painted, which
