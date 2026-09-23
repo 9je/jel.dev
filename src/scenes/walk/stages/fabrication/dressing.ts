@@ -77,6 +77,19 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   await add(once(prop('welding_cart'), 11.8, 0, F + 0.9, -0.5));
   await add(once(prop('military_crate'), R - 1.1, 0, -27.2, 0.1, 1.4));
 
+  // The south wall between the exit and the docks, which the walk runs along on its way out and
+  // which was twelve metres of bare blockwork: a two bay run of racking against it with stock on
+  // the floor level, and a pallet left out in front of it waiting for a slot.
+  const SOUTH_RACK_X = -6;
+  await add(place(palletRack(2, 3), SOUTH_RACK_X, 0, F + 0.6, 0));
+  await add(repeat(wrappedPallet(3), rackBays(2).map((dx) => [SOUTH_RACK_X + dx, 0, F + 0.6, 0] as Spot)));
+  await add(repeat(wrappedPallet(1), [[-10.6, 0, F + 1.3, 0.12]]));
+  // The two beam levels. The third slot rackSlots gives is the top of the uprights, not a shelf.
+  const [beamLow, beamHigh] = rackSlots(3, RACK_HEIGHT);
+  const [bayA, bayB] = rackBays(2).map((dx) => SOUTH_RACK_X + dx);
+  await add(repeat(wrappedPallet(2), [[bayA!, beamLow!, F + 0.6, 0]]));
+  await add(repeat(prop('cardboard_box'), [[bayB! - 0.5, beamHigh!, F + 0.6, 0.1, 1.9], [bayB! + 0.55, beamHigh!, F + 0.55, -0.2, 1.7], [bayB! + 0.1, beamLow!, F + 0.6, 0.3, 2]]));
+
   // Left wall: a container by the exit and the tool wall by the door. The racking there is built
   // with the other runs above.
   await add(place(container(0x8a3a2e), L + 2.6, 0, -22, Math.PI / 2));

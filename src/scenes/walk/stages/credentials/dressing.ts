@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
-import { grounded, place, merged, instances, type Spot } from '../../merge';
-import { papers } from '../../labs/props';
-import { tripodCamera, cableCoil } from '../../labs/furniture';
+import { grounded, place, merged, instances, repeat, type Spot } from '../../merge';
+import { papers, wrappedPallet } from '../../labs/props';
+import { tripodCamera, cableCoil, locker, pinboard, hardCase } from '../../labs/furniture';
 import { wallPanel } from '../../labs/plant';
 import { labSteel, LABS } from '../../labs/materials';
 import { canvas, own, rng } from '../../labs/textures';
@@ -321,6 +321,18 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
 
   // Papers on the hall floor, which sits 6 mm up: laid on that, they clear it by the kit's own lift.
   await add(papers([[X1 - 2.4, HALL_FLOOR, -9.2, 0.5], [X1 - 2.0, HALL_FLOOR, -6.4, 1.3], [X0 + 2.2, HALL_FLOOR, -11.6, 0.9]]));
+
+  // The corridor as a corridor people used, not nineteen metres of floor between two rooms: a bank
+  // of lockers and a notice board on the west wall, a bench on the east wall with a flight case and
+  // a tote left on it, and stock on pallets by the containment door where a delivery was dropped and
+  // never put away. All of it stands against a wall, square to it, at least two metres off the
+  // walked line.
+  await add(place(locker(4), X0 + 0.26, HALL_FLOOR, -4.2, Math.PI / 2));
+  await add(place(pinboard(1.2, 0.9, 'NOTICES'), X0 + 0.03, 1.75, -0.8, Math.PI / 2));
+  await add(place(steelBench(1.8, 0.55, 0.85), X1 - 0.32, 0, -3.4, Math.PI / 2));
+  await add(place(hardCase(), X1 - 0.34, 0.85, -3.9, -Math.PI / 2));
+  await add(place(grounded(store.model('tote')), X1 - 0.34, 0.85, -2.9, -Math.PI / 2 + 0.1));
+  await add(repeat(wrappedPallet(2), [[X1 - 0.8, HALL_FLOOR, 4.2, 0], [X0 + 0.8, HALL_FLOOR, 3.9, 0]]));
 
   // ---- The corridor walls ------------------------------------------------------------------------
   // Nineteen metres of hall runs north from the lab to the containment door with 7 m walls on both
