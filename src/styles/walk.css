@@ -23,7 +23,7 @@
 .stop-body { max-width: 1100px; }
 /* A wing whose every project shares one status says it once, here, instead of printing the same
    plate down the side of every row. */
-.list-note { margin: 0 0 0.25rem; padding: 0 0.5rem; color: var(--text-dim); font-size: 0.9rem; font-stretch: 75%; letter-spacing: 0.04em; text-transform: uppercase; }
+.list-note { margin: 0 0 0.25rem; padding: 0 0.25rem; color: var(--text-dim); font-size: 0.9rem; }
 /* Scroll cue. The booth is the only stop that carries one: nothing has moved yet, so the first
    gesture needs naming. It repeats the lead's own last line, so it is aria-hidden, it appears only
    once scroll is actually driving a camera, and it goes on the first pixel of it. The lead stays. */
@@ -41,13 +41,13 @@
 /* Dock */
 .dock { position: fixed; right: clamp(0.75rem, 2vw, 2rem); top: 50%; transform: translateY(-50%); z-index: 5; display: grid; gap: 1rem; }
 .dock-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
-.dock-link { display: flex; align-items: center; gap: 0.6rem; color: var(--text-dim); text-decoration: none; font-stretch: 75%; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.dock-link { display: flex; align-items: center; gap: 0.6rem; color: var(--text-dim); text-decoration: none; font-stretch: 75%; font-weight: 600; font-size: 0.85rem; }
 .dock-dot { width: 10px; height: 10px; border: 1px solid var(--surface-edge); background: var(--surface); border-radius: var(--radius); }
 .dock-link[aria-current='true'] { color: var(--panel-white); }
 .dock-link[aria-current='true'] .dock-dot { background: var(--wing-light); box-shadow: 0 0 10px var(--wing-light); }
 .dock-label { opacity: 0; transform: translateX(4px); transition: opacity 150ms, transform 150ms; }
 .dock:hover .dock-label, .dock-link:focus-visible .dock-label, .dock-link[aria-current='true'] .dock-label { opacity: 1; transform: none; }
-.dock-effects { justify-self: end; background: var(--surface); color: var(--text-dim); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.3rem 0.6rem; font: inherit; font-size: 0.75rem; font-stretch: 75%; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
+.dock-effects { justify-self: end; background: var(--surface); color: var(--text-dim); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.3rem 0.6rem; font: inherit; font-size: 0.8rem; font-stretch: 75%; font-weight: 600; cursor: pointer; }
 .dock-effects[aria-pressed='true'] { color: var(--panel-white); }
 @media (max-width: 700px) { .dock { top: auto; bottom: 0.75rem; right: 0.75rem; left: 0.75rem; transform: none; grid-template-columns: 1fr auto; } .dock-list { grid-auto-flow: column; justify-content: space-between; } .dock-label { display: none; } }
 
@@ -116,6 +116,20 @@
 /* Long names wrap, balanced, rather than running out of the copy column across the room behind it:
    PERSONNEL FILE on one line crossed the open file on the desk in a nearly square window. */
 .walk[data-mode='full'] .stop-title { white-space: normal; text-wrap: balance; width: min(30rem, calc(100vw - 4rem)); line-height: 1.05; font-size: clamp(1.8rem, 4.6vw, 2.8rem); text-shadow: 0 1px 3px rgb(5 8 11 / 0.85), 0 0 24px color-mix(in srgb, var(--wing-light) 45%, transparent); }
+/* The name strikes on like a tube as the camera arrives, letter by letter, out of reading order.
+   Before it strikes a letter is a dead tube: there, faint, unlit. It strikes on every arrival,
+   because the selector stops matching when the stop is left. The only motion on the walk that is
+   not an answer to the reader's own scroll or click. */
+.stop-word { white-space: nowrap; }
+.walk[data-mode='full'] .stop-letter { opacity: 0.12; }
+.walk[data-mode='full'] .stop[data-active] .stop-letter { animation: letter-strike 620ms steps(1, end) calc(260ms + var(--d, 0ms)) both; }
+@keyframes letter-strike {
+  0% { opacity: 0.12 } 12% { opacity: 1 } 22% { opacity: 0.2 } 34% { opacity: 0.9 }
+  46% { opacity: 0.3 } 70% { opacity: 1 } 100% { opacity: 1 }
+}
+@media (prefers-reduced-motion: reduce) {
+  .walk[data-mode='full'] .stop-letter, .walk[data-mode='full'] .stop[data-active] .stop-letter { animation: none; opacity: 1; }
+}
 /* A name as long as the lobby's is set a size down, so it breaks once rather than twice. */
 .walk[data-mode='full'] .stop-title[data-long] { font-size: clamp(1.6rem, 3.6vw, 2.2rem); }
 .walk[data-mode='full'] .stop-lead { margin: 0.75rem 0 1rem; font-size: 1rem; text-shadow: 0 1px 3px rgb(5 8 11 / 0.9); }
@@ -179,7 +193,26 @@
      project: its name and the plate saying where it stands. The summary line and the body are behind
      the disclosure the row already was, so a reader with no pointer on the room can still open one.
      The list gets a solid ground of its own: rows sitting transparent over the room were unreadable. */
-  .walk[data-mode='full'] .stop [data-project-list] { background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0 0.75rem; }
+  /* No box. The column hangs off a rule in the room's colour, like the stripe along the building's
+     walls, and it reads over the room because the room is shaded behind it: a pool of dark in the
+     frame's lower left, on each stop, fading with it. A panel over the room was a game menu. */
+  .walk[data-mode='full'] .stop::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(ellipse 44rem 78% at 0% 100%, rgb(6 9 12 / 0.9), rgb(6 9 12 / 0.62) 45%, transparent 100%);
+  }
+  .walk[data-mode='full'] .stop-inner { padding-left: 1.25rem; }
+  .walk[data-mode='full'] .stop-inner::before {
+    content: ''; position: absolute; left: 0; top: 0.35rem; bottom: 0; width: 2px;
+    background: linear-gradient(to bottom, var(--wing-light), color-mix(in srgb, var(--wing-light) 25%, transparent));
+    transform-origin: top; transform: scaleY(0);
+  }
+  /* The rule draws down as the name strikes. */
+  .walk[data-mode='full'] .stop[data-active] .stop-inner::before { animation: rule-draw 700ms cubic-bezier(0.2, 0.7, 0.2, 1) 180ms both; }
+  @keyframes rule-draw { to { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { .walk[data-mode='full'] .stop-inner::before, .walk[data-mode='full'] .stop[data-active] .stop-inner::before { animation: none; transform: none; } }
+  .walk[data-mode='full'] .stop [data-project-list] { border-top: 1px solid rgb(217 232 238 / 0.14); }
+  .walk[data-mode='full'] .stop .row { border-color: rgb(217 232 238 / 0.14); }
+  .walk[data-mode='full'] .stop .row-summary:hover, .walk[data-mode='full'] .stop .row-summary:focus-visible, .walk[data-mode='full'] .stop .row[open] .row-summary { background: rgb(217 232 238 / 0.06); }
   .walk[data-mode='full'] .stop .row-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; align-items: baseline; }
   .walk[data-mode='full'] .stop .row-title { min-width: 0; overflow-wrap: anywhere; font-size: 1rem; }
   .walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
@@ -189,25 +222,23 @@
      projects. They get the list's ground for the same reason the list has one: a paragraph over a
      lit room is unreadable without it. */
   .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body,
-  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body { background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--surface-edge); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
+  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body { padding-right: 0.5rem; }
   /* Neither card holds all of its copy at 28vh, so both scroll, and a scroll cut flat ends a
      sentence in mid air. `data-more` is on the body only while there is something below the fold,
      so the last line goes under the card's own ground and comes back the moment the reader reaches
      the end. Sticky rather than fixed to the card: it rides the bottom of the scrollport, and the
      negative margins take it out of the flow and carry it over the card's padding to the edge. */
-  .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body[data-more]::after,
-  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body[data-more]::after {
-    content: ''; display: block; position: sticky; bottom: -0.75rem; height: 2.4rem;
-    margin: -2.4rem -0.9rem -0.75rem; pointer-events: none;
-    background: linear-gradient(to top, var(--surface), transparent);
+  .walk[data-mode='full'] .stop[data-stop='booth'] .stop-body[data-more],
+  .walk[data-mode='full'] .stop[data-stop='file'] .stop-body[data-more] {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 2.4rem), transparent);
   }
   .walk[data-mode='full'] .stop[data-stop='file'] .timeline { grid-template-columns: 4rem 1fr; }
   /* The flagship is the first row of that list, not a card: same line, same plate, its picture and
      its copy behind the same disclosure. */
-  .walk[data-mode='full'] .stop .bay { display: block; margin: 0; padding: 0; background: none; background-image: none; border: 0; border-bottom: 1px solid var(--surface-edge); border-radius: 0; }
+  .walk[data-mode='full'] .stop .bay { display: block; margin: 0; padding: 0; background: none; background-image: none; border: 0; border-bottom: 1px solid rgb(217 232 238 / 0.14); border-radius: 0; }
   .walk[data-mode='full'] .stop .bay[data-sealed] { border-image: none; }
   .walk[data-mode='full'] .stop .bay-head { justify-content: space-between; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; }
-  .walk[data-mode='full'] .stop .bay-head:hover, .walk[data-mode='full'] .stop .bay[open] > .bay-head { background: var(--surface); }
+  .walk[data-mode='full'] .stop .bay-head:hover, .walk[data-mode='full'] .stop .bay[open] > .bay-head { background: rgb(217 232 238 / 0.06); }
   .walk[data-mode='full'] .stop .bay-title { font-size: 1rem; font-weight: 600; }
   .walk[data-mode='full'] .stop .bay-visual { display: none; }
   .walk[data-mode='full'] .stop .bay-body { padding: 0 0.25rem 1rem; }
@@ -223,7 +254,7 @@
      without the two attributes here the 160 px plates and the clipped title win the tie on order. */
   .walk[data-mode='full'] .stop .wall { margin: 0; }
   .walk[data-mode='full'] .stop[data-stop] .wall[data-size] > summary { display: block; padding: 0.6rem 0.25rem; }
-  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] > summary:hover, .walk[data-mode='full'] .stop[data-stop] .wall[data-size][open] > summary { background: var(--surface); }
+  .walk[data-mode='full'] .stop[data-stop] .wall[data-size] > summary:hover, .walk[data-mode='full'] .stop[data-stop] .wall[data-size][open] > summary { background: rgb(217 232 238 / 0.06); }
   .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .wall-title { position: static; width: auto; height: auto; clip: auto; overflow: visible; margin: 0; font-size: 1rem; font-weight: 600; }
   .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .wall-list { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding: 0 0.25rem 0.75rem; }
   .walk[data-mode='full'] .stop[data-stop] .wall[data-size] .badge { padding: 0.5rem 0.25rem; }

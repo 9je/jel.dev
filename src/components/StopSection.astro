@@ -4,10 +4,15 @@ import type { Wing } from '../content/schema';
 interface Props { id: StopId; title: string; lead: string; wing?: Wing; level?: 1 | 2; light: string }
 const { id, title, lead, wing, level = 2, light } = Astro.props;
 const Heading = level === 1 ? 'h1' : 'h2';
+// The name strikes on like a tube when the camera arrives: each letter its own span with its own
+// delay, scattered rather than left to right, because a sign's tubes do not start in reading order.
+// Words stay whole so the name still wraps between them.
+let n = 0;
+const words = title.split(' ').map((w) => [...w].map((ch) => ({ ch, d: ((n++ * 7) % 11) * 55 + Math.floor(n / 3) * 20 })));
 ---
 <section class="stop" id={id} data-stop={id} data-wing={wing} aria-labelledby={`${id}-title`} style={`--wing-light:${light}; --still:url(/stills/${id}.webp); --still-portrait:url(/stills/${id}-portrait.webp)`}>
   <div class="stop-inner">
-    <Heading id={`${id}-title`} class="display stop-title" data-long={title.length > 16 ? '' : undefined}>{title}</Heading>
+    <Heading id={`${id}-title`} class="display stop-title" data-long={title.length > 16 ? '' : undefined}>{words.map((w, i) => <>{i > 0 && ' '}<span class="stop-word">{w.map((l) => <span class="stop-letter" style={`--d:${l.d}ms`}>{l.ch}</span>)}</span></>)}</Heading>
     <p class="stop-lead">{lead}</p>
     {id === 'booth' && (
       <p class="scroll-cue" data-scroll-cue aria-hidden="true"><span class="scroll-cue-chevron"></span></p>

@@ -137,7 +137,7 @@ test('every exhibit in the bay answers a click with the same card', async ({ pag
   // Jordan's complaint: two of the three products unfolded a row in the list and the third threw up
   // a pinned panel. All three now open the one card.
   const all = await sweep(page, 'click');
-  expect(Object.keys(all.hit).sort()).toEqual(['conch', 'ezkey', 'gc-bridge']);
+  expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey']);
 
   const card = page.locator('[data-exhibit-card]');
   const shot = (await sweep(page, 'click', 'conch')).card!;
