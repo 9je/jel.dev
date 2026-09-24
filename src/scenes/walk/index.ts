@@ -104,7 +104,6 @@ const BOOT_LINES: [number, string][] = [[0, 'Mains power'], [0.2, 'Loading bay l
 let struck = 0, lastStrike = 0, lastRatio = 0;
 function setPreloader(els: WalkElements, ratio: number) {
   const r = lastRatio = Math.min(1, Math.max(0, ratio));
-  els.preloader.style.setProperty('--progress', String(r));
   const pct = els.preloader.querySelector('[data-preloader-pct]');
   if (pct) pct.textContent = String(Math.round(r * 100));
   const now = performance.now();
@@ -571,5 +570,6 @@ async function init() {
   if (tier === 'lite') startLite(els); else await startFull(els, tier, input.coarse);
 }
 
-document.addEventListener('astro:page-load', init);
-document.addEventListener('astro:before-swap', teardown);
+// A module script runs once the document is parsed, so the elements are there to query. The guard
+// is for a script that is ever inlined ahead of them.
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { void init(); }); else void init();

@@ -36,6 +36,11 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // The low tier has no post stack, so it is the only one that needs the driver's own MSAA.
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.tier === 'low', powerPreference: 'high-performance', stencil: false, depth: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.pixelRatioCap));
+  // The first draw with each program reads its info log and both shaders' logs before it reads the
+  // link status. Each read is a round trip to the GPU process that waits for everything queued ahead
+  // of it, and across a room's programs they were most of the warm up's main thread time. The logs
+  // are for development, where they stay on.
+  renderer.debug.checkShaderErrors = import.meta.env.DEV;
   // Exposure is set once here and read by whichever operator is live: three's own ACES when there is
   // no composer, postprocessing's ToneMappingEffect when there is. Both compile
   // `<tonemapping_pars_fragment>`, and the renderer pushes `toneMappingExposure` into every program,
@@ -95,7 +100,13 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
 
   // Every await here can outlive the handle: a stage that finishes building after dispose() would
   // add itself to a scene nobody renders and leak its GPU memory, so bail at each resumption point.
-  async function ensure(def: StageDef) {
+  /**
+   * `onStep` reports the room's progress, 0 to 1, for the preloader: the build is the first two
+   * fifths, and moves on every `pace()` the build makes, the warm up is the rest, and moves on
+   * every group compiled. The build's paces are not counted ahead, so they move it along a curve
+   * that never quite arrives, and the build's end lands it.
+   */
+  async function ensure(def: StageDef, onStep?: (f: number) => void) {
     if (built.has(def.id) || pending.has(def.id)) return pending.get(def.id);
     const p = (async () => {
       if (disposed) return;
@@ -103,10 +114,12 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       if (disposed) return;
       await fontReady;
       if (disposed) return;
-      const stage = await def.build(ctx);
+      let paces = 0;
+      const stage = await def.build(onStep ? { ...ctx, pace: () => { onStep(0.4 * (++paces / (paces + 10))); return pacer.pace(); } } : ctx);
       if (disposed) { stage.dispose(); return; }
+      onStep?.(0.4);
       anchorTiles(stage.root);
-      await warmStage(stage.root);
+      await warmStage(stage.root, onStep && ((i, n) => onStep(0.4 + 0.6 * (i / n))));
       if (disposed) { stage.dispose(); return; }
       built.set(def.id, stage); if (def.replaces) grey.hide(def.replaces);
       if (stage.lights) rig.register(def.stop, stage.lights);
@@ -125,8 +138,34 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // Without a composer the renderer has to do the mapping itself, or the frame renders raw.
   const applyToneMapping = () => { renderer.toneMapping = post ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping; };
   applyToneMapping();
-  // The post stack's own programs link on their first use. Drawn once now, over the greybox, they
-  // link while the download has the main thread idle anyway.
+  let sizedW = 0, sizedH = 0, baseFov = DESK_VFOV, dipped = false;
+  /** How much of the frame's bottom the phone sheet covers: the dock bar under it and the collapsed
+   *  sheet's handle, title and lead. Only a coarse pointer gets the sheet (walk.css). */
+  const coarse = matchMedia('(pointer: coarse)');
+  const sheetCover = (h: number) => (coarse.matches && window.innerWidth < h ? 12 * parseFloat(getComputedStyle(document.documentElement).fontSize) : 0);
+  /**
+   * The drawing buffer follows `window.innerHeight`. The canvas's own box is left to the stylesheet,
+   * which pins it to the viewport with no script in the loop: a renderer that writes the box in
+   * pixels is a renderer that can leave a stale one behind, and a canvas shorter than the frame is
+   * the black band Jordan caught under the room. `visualViewport` fires where a plain resize does
+   * not: a phone's address bar collapsing, a pinch, a desktop window whose visible area changed.
+   */
+  function resize(force = false) {
+    const w = window.innerWidth, h = window.innerHeight;
+    if (!force && w === sizedW && h === sizedH) return;
+    sizedW = w; sizedH = h;
+    renderer.setSize(w, h, false); post?.setSize(w, h);
+    const lens = lensFor(w, h, sheetCover(h));
+    camera.aspect = lens.aspect; camera.fov = baseFov = lens.fov;
+    if (lens.shift) camera.setViewOffset(w, lens.shift.fullH, 0, lens.shift.y, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+    setFrame(lens);
+  }
+  const onResize = () => resize();
+  // The post stack's own programs link on their first use. Drawn once now, over the greybox, at the
+  // frame's real size, they link while the download has the main thread idle anyway. Drawn at the
+  // canvas's default size they linked twice: the ambient occlusion pass keys on its resolution.
+  resize(true);
   if (post) post.render(0); else renderer.render(scene, camera);
 
   // ---- Warming a room before it is drawn -----------------------------------------------------
@@ -149,19 +188,53 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // the normal pass and the shadow pass, get their programs the same way.
   const scratch = post ? new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }) : null;
   const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
-  const probe = new THREE.Scene(); probe.fog = scene.fog; probe.environment = scene.environment;
-  // The shadow pass draws the back faces of anything single sided, with no fog.
-  const passes: { material: THREE.Material; fog: boolean }[] = [
-    ...(post?.overrides() ?? []).map((material) => ({ material, fog: true })),
-    ...(renderer.shadowMap.enabled ? [THREE.BackSide, THREE.DoubleSide].map((side) => ({ material: new THREE.MeshDepthMaterial({ side }), fog: false })) : []),
-  ];
+  // Only a container: fog, environment and lights are read from the room's scene, passed as the target.
+  const probe = new THREE.Scene();
+  const passes: THREE.Material[] = post?.overrides() ?? [];
   const instancedDepth = new THREE.MeshDepthMaterial();
+  // The shadow pass draws each caster with a depth material carrying the caster's own map, alpha
+  // map, alpha test and displacement, its side flipped, and no fog: one program per combination.
+  // A depth material per combination, kept for the session so its program is never released,
+  // stands in for the caster while its shadow program compiles.
+  const SHADOW_SIDE: Record<number, THREE.Side> = { [THREE.FrontSide]: THREE.BackSide, [THREE.BackSide]: THREE.FrontSide, [THREE.DoubleSide]: THREE.DoubleSide };
+  const depthVariants = new Map<string, THREE.MeshDepthMaterial>();
+  const depthFor = (mat: THREE.Material) => {
+    const m = mat as THREE.MeshStandardMaterial;
+    const side = m.shadowSide ?? SHADOW_SIDE[m.side] ?? THREE.BackSide;
+    const alphaTest = m.alphaToCoverage ? 0.5 : m.alphaTest;
+    const key = `${side}|${m.map?.channel ?? -1}|${m.alphaMap?.channel ?? -1}|${alphaTest > 0 ? 1 : 0}|${m.displacementMap ? 1 : 0}`;
+    let d = depthVariants.get(key);
+    if (!d) { d = new THREE.MeshDepthMaterial({ side }); depthVariants.set(key, d); }
+    d.map = m.map ?? null; d.alphaMap = m.alphaMap ?? null; d.alphaTest = alphaTest; d.displacementMap = m.displacementMap ?? null;
+    return d;
+  };
+  const shadows = renderer.shadowMap.enabled;
   const programs = () => renderer.info.programs?.length ?? 0;
   const triangles = (o: THREE.Object3D) => { let n = 0; o.traverse((c) => { const g = (c as THREE.Mesh).geometry; if (g) n += (g.index ? g.index.count : g.attributes.position?.count ?? 0) / 3; }); return n; };
+  // The GPU process takes the commands in order, and an upload that needs buffer space waits for
+  // everything queued ahead of it. A fence, whose status is read without a round trip, waits for
+  // the queue to clear without holding the thread. Bounded, so a driver that never signals costs
+  // half a second and nothing more.
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  async function drained() {
+    const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); if (!fence) return;
+    gl.flush();
+    const until = performance.now() + 500;
+    try {
+      while (gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED && performance.now() < until && !disposed) await new Promise((r) => setTimeout(r, 4));
+    } finally { gl.deleteSync(fence); }
+  }
+  // The program keys are read from the room's scene, so the shadow pass, which draws with no scene
+  // and so no fog, compiles with the fog lifted for the synchronous part of the call.
   async function compileIn(o: THREE.Object3D, fog: boolean) {
-    probe.add(o); probe.fog = fog ? scene.fog : null;
+    probe.add(o);
     renderer.setRenderTarget(scratch);
-    try { if (parallel) await renderer.compileAsync(probe, camera, scene); else renderer.compile(probe, camera, scene); } catch { /* drivers without it still compile on first draw */ }
+    const fogWas = scene.fog; if (!fog) scene.fog = null;
+    try {
+      const done = parallel ? renderer.compileAsync(probe, camera, scene) : Promise.resolve(renderer.compile(probe, camera, scene));
+      scene.fog = fogWas;
+      await done;
+    } catch { scene.fog = fogWas; /* drivers without it still compile on first draw */ }
     renderer.setRenderTarget(null);
   }
   // While a room warms, the frames are the warm up's and not the scene's: on a driver that compiles
@@ -169,11 +242,11 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // drop the post stack, which recompiles every program for the screen in one two second block.
   const governor = new FrameGovernor();
   let warming = 0;
-  async function warmStage(root: THREE.Object3D) {
+  async function warmStage(root: THREE.Object3D, onGroup?: (done: number, total: number) => void) {
     warming++;
-    try { await warmRoot(root); } finally { warming--; governor.reset(); }
+    try { await warmRoot(root, onGroup); } finally { warming--; governor.reset(); }
   }
-  async function warmRoot(root: THREE.Object3D) {
+  async function warmRoot(root: THREE.Object3D, onGroup?: (done: number, total: number) => void) {
     // three keeps one program per material and refetches it whenever a material is drawn instanced
     // after plain, or plain after instanced, on every draw of each: nineteen materials across the
     // kit were doing that every frame, a parameter build and a cache lookup a draw. The instanced
@@ -204,11 +277,17 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     });
     const textures = new Set<THREE.Texture>();
     root.traverse((o) => { const m = (o as THREE.Mesh).material; for (const mat of Array.isArray(m) ? m : m ? [m] : []) for (const v of Object.values(mat)) if (v && (v as THREE.Texture).isTexture) textures.add(v as THREE.Texture); });
-    let since = performance.now();
+    // Uploads are queued, and a burst of them fills the buffer faster than the GPU process empties
+    // it, at which point one upload in the burst blocks for the whole backlog: a room's model
+    // textures cost the thread 110 ms in one call. So the burst is bounded in bytes, and each one
+    // waits for the queue to clear before the next.
+    let queued = 0;
     for (const t of textures) {
       if (disposed) return;
       renderer.initTexture(t);
-      if (performance.now() - since > 10) { await new Promise(requestAnimationFrame); since = performance.now(); }
+      const img = t.image as { width?: number; height?: number } | undefined;
+      queued += (img?.width ?? 256) * (img?.height ?? 256) * 4;
+      if (queued > 4_000_000) { await drained(); queued = 0; }
     }
     // Into the real scene, hidden from the frame loop, its groups held back until each is compiled.
     const groups = [...root.children];
@@ -219,21 +298,41 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     for (const [i, g] of groups.entries()) {
       if (disposed) return;
       await compileIn(g, true);
+      // Glass that is double sided draws its back faces first, in a program of their own.
+      const glass: THREE.MeshPhysicalMaterial[] = [];
+      g.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined; if (m && m.transmission > 0 && m.side === THREE.DoubleSide && !m.transparent && !glass.includes(m)) glass.push(m); });
+      if (glass.length) {
+        for (const m of glass) { m.side = THREE.BackSide; m.needsUpdate = true; }
+        await compileIn(g, true);
+        for (const m of glass) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
+      }
+      const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
       for (const pass of passes) {
-        const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
-        g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material) { swapped.push([m, m.material]); m.material = pass.material; } });
-        await compileIn(g, pass.fog);
+        g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material) { swapped.push([m, m.material]); m.material = pass; } });
+        await compileIn(g, true);
+        for (const [m, mat] of swapped) m.material = mat;
+        swapped.length = 0;
+      }
+      if (shadows) {
+        g.traverse((o) => {
+          const m = o as THREE.Mesh; if (!m.isMesh || !m.material || !m.castShadow) return;
+          swapped.push([m, m.material]);
+          m.material = Array.isArray(m.material) ? m.material.map(depthFor) : depthFor(m.material);
+        });
+        await compileIn(g, false);
         for (const [m, mat] of swapped) m.material = mat;
       }
       root.add(g);
       g.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
       batch += triangles(g); fresh += programs() - known; known = programs();
-      if (batch < 60_000 && fresh < 4 && i < groups.length - 1) continue;
-      root.visible = true;
-      renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
-      root.visible = false;
-      batch = 0; fresh = 0;
-      await new Promise(requestAnimationFrame);
+      if (batch >= 60_000 || fresh >= 4 || i === groups.length - 1) {
+        root.visible = true;
+        renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
+        root.visible = false;
+        batch = 0; fresh = 0;
+        await new Promise(requestAnimationFrame);
+      }
+      onGroup?.(i + 1, groups.length);
     }
     for (const g of groups) if (g.parent !== root) root.add(g);
     for (const o of culled) o.frustumCulled = true;
@@ -241,8 +340,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   }
 
   // The preloader gates on the booth, the bay, and the room the page opens in. Their bytes fill the
-  // tube to 85%. Their builds and the shader warm-up take it to 100%. Everything else builds after
-  // the tube clears, in path order, paced against the frame budget.
+  // readout to 85%. Their builds and the shader warm-up take it to 100%, each room an equal share,
+  // reported step by step: on a fast line with a slow GPU they are most of the load, and read by
+  // the bytes alone the readout stood at 85% for all of it. Everything else builds after the
+  // preloader clears, in path order, paced against the frame budget.
   const gated = defs.filter((d) => opts.gate.includes(d.stop));
   const later = defs.filter((d) => !gated.includes(d));
   // A room is settled once its build has been attempted, whether it stood up or failed. A failed
@@ -257,9 +358,9 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const gatedGroups = Array.from(new Set(gated.flatMap((d) => d.groups)));
   await Promise.all(gatedGroups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
   if (disposed) throw new Error('disposed during load');
-  for (const d of gated) {
+  for (const [k, d] of gated.entries()) {
     try {
-      await ensure(d);
+      await ensure(d, (f) => opts.onLoadProgress?.(Math.round(1000 * (0.85 + 0.15 * ((k + f) / gated.length))), 1000));
       if (!disposed && !built.has(d.id)) throw new Error(`stage ${d.id} did not build`);
     } catch (err) {
       console.warn(`the ${d.id} stage did not build, running on the greybox`, err);
@@ -268,30 +369,6 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     settled.add(d.id);
   }
 
-  let sizedW = 0, sizedH = 0, baseFov = DESK_VFOV, dipped = false;
-  /** How much of the frame's bottom the phone sheet covers: the dock bar under it and the collapsed
-   *  sheet's handle, title and lead. Only a coarse pointer gets the sheet (walk.css). */
-  const coarse = matchMedia('(pointer: coarse)');
-  const sheetCover = (h: number) => (coarse.matches && window.innerWidth < h ? 12 * parseFloat(getComputedStyle(document.documentElement).fontSize) : 0);
-  /**
-   * The drawing buffer follows `window.innerHeight`. The canvas's own box is left to the stylesheet,
-   * which pins it to the viewport with no script in the loop: a renderer that writes the box in
-   * pixels is a renderer that can leave a stale one behind, and a canvas shorter than the frame is
-   * the black band Jordan caught under the room. `visualViewport` fires where a plain resize does
-   * not: a phone's address bar collapsing, a pinch, a desktop window whose visible area changed.
-   */
-  function resize(force = false) {
-    const w = window.innerWidth, h = window.innerHeight;
-    if (!force && w === sizedW && h === sizedH) return;
-    sizedW = w; sizedH = h;
-    renderer.setSize(w, h, false); post?.setSize(w, h);
-    const lens = lensFor(w, h, sheetCover(h));
-    camera.aspect = lens.aspect; camera.fov = baseFov = lens.fov;
-    if (lens.shift) camera.setViewOffset(w, lens.shift.fullH, 0, lens.shift.y, w, h); else camera.clearViewOffset();
-    camera.updateProjectionMatrix();
-    setFrame(lens);
-  }
-  const onResize = () => resize();
 
   const cam = { position: new THREE.Vector3(), target: new THREE.Vector3() };
   const clock = new THREE.Clock();

@@ -3,7 +3,6 @@ import '@fontsource/michroma';
 import '@fontsource-variable/saira/wdth.css';
 import '../styles/tokens.css';
 import '../styles/base.css';
-import { ClientRouter } from 'astro:transitions';
 
 interface Props { title: string; description: string; wing?: string }
 const { title, description, wing } = Astro.props;
@@ -29,7 +28,6 @@ const ogImage = new URL('/bay-still.jpg', Astro.site);
     <meta property="og:image:height" content="1080" />
     <meta name="twitter:card" content="summary_large_image" />
     <slot name="head" />
-    <ClientRouter />
   </head>
   <body>
     <slot />

@@ -88,6 +88,28 @@ test('full path mounts the scene and the dock flies to a stop', async ({ page })
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });
 
+test('the readout keeps moving through the room builds, never parked at 85%', async ({ page }) => {
+  // The bytes take the readout to 85%. The room builds and the shader warm up are the rest of the
+  // load, and on a fast connection with a slow GPU they are most of it: the readout has to report
+  // them step by step rather than sit at 85% and jump to 100.
+  await page.addInitScript(() => {
+    const seen: number[] = [];
+    (window as unknown as { __pct: number[] }).__pct = seen;
+    setInterval(() => {
+      const t = document.querySelector('[data-preloader-pct]')?.textContent;
+      const n = Number(t);
+      if (t && Number.isFinite(n) && seen[seen.length - 1] !== n) seen.push(n);
+    }, 30);
+  });
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  const seen = await page.evaluate(() => (window as unknown as { __pct: number[] }).__pct);
+  const between = seen.filter((n) => n > 85 && n < 100);
+  expect(between.length, `readout values: ${seen.join(' ')}`).toBeGreaterThanOrEqual(3);
+  // And it only ever goes up.
+  for (let i = 1; i < seen.length; i++) expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]!);
+});
+
 test('a hash on load opens at that stop on the full path', async ({ page }) => {
   await page.goto('/?quality=low#credentials');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
