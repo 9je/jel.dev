@@ -95,7 +95,7 @@ describe('the doorway vestibules against the room walls', () => {
 
   beforeAll(async () => {
     const store = fakeStore();
-    const ctx = { store } as unknown as import('../../src/scenes/walk/stages/types').StageContext;
+    const ctx = { store, pace: async () => {} } as unknown as import('../../src/scenes/walk/stages/types').StageContext;
     const shells = [
       ['fabrication', (await import('../../src/scenes/walk/stages/fabrication/shell')).buildShell],
       ['recreation', (await import('../../src/scenes/walk/stages/recreation/shell')).buildShell],
@@ -106,7 +106,7 @@ describe('the doorway vestibules against the room walls', () => {
     ] as [string, (c: never, r: THREE.Group) => unknown][];
     for (const [name, build] of shells) {
       const root = new THREE.Group();
-      build(ctx as never, root);
+      await build(ctx as never, root);
       // The doorways name themselves, so a vestibule's own surfaces can be told from its room's.
       const doors = DOORS.map((id) => root.getObjectByName(id)).filter(Boolean) as THREE.Object3D[];
       for (const door of doors) {

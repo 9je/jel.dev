@@ -164,7 +164,16 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     try { if (parallel) await renderer.compileAsync(probe, camera, scene); else renderer.compile(probe, camera, scene); } catch { /* drivers without it still compile on first draw */ }
     renderer.setRenderTarget(null);
   }
+  // While a room warms, the frames are the warm up's and not the scene's: on a driver that compiles
+  // slowly they run at a few a second for a while, and judged as the scene they had the governor
+  // drop the post stack, which recompiles every program for the screen in one two second block.
+  const governor = new FrameGovernor();
+  let warming = 0;
   async function warmStage(root: THREE.Object3D) {
+    warming++;
+    try { await warmRoot(root); } finally { warming--; governor.reset(); }
+  }
+  async function warmRoot(root: THREE.Object3D) {
     // three keeps one program per material and refetches it whenever a material is drawn instanced
     // after plain, or plain after instanced, on every draw of each: nineteen materials across the
     // kit were doing that every frame, a parameter build and a cache lookup a draw. The instanced
@@ -340,7 +349,6 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // Spec §8: a scene tiered above what the GPU can hold is trimmed after two slow seconds, and
   // handed to the lite path after three more. Time based, so a machine at 6 fps is rescued in
   // seconds rather than after 120 frames.
-  const governor = new FrameGovernor();
   function trim() {
     post?.dispose(); post = null; applyToneMapping();
     renderer.setPixelRatio(1);
@@ -410,7 +418,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     const paced = pacer.spent();
     pacer.frame();
     const dt = Math.min(clock.getDelta(), 0.05);
-    sample(Math.max(0.001, dt - paced / 1000));
+    if (warming === 0) sample(Math.max(0.001, dt - paced / 1000));
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
     breathe(dt);
@@ -452,18 +460,14 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
           // as a missing entry. Without this check the room never degrades and never settles: the
           // tube would come back on every dock jump to it for the rest of the session.
           if (!disposed && !built.has(d.id)) throw new Error(`stage ${d.id} did not build`);
-          const stage = built.get(d.id);
-          // compileAsync traverses the whole tree regardless of visibility in three 0.185, and it needs
-          // the scene passed through so it can see the rig's lights and cache the right light count.
-          if (stage && !disposed) { await renderer.compileAsync(stage.root, camera, scene); stream(target); }
+          if (!disposed) stream(target);
         } catch (err) { console.warn(`background build of ${d.id} failed, running on the greybox`, err); opts.onDegraded?.(); }
         settled.add(d.id);
-        // loadGroup's decode and upload and compileAsync's shader work both sit outside the pacer,
-        // so the frames they stall arrive at sample() reading as 20 fps with nothing paced to
-        // discount. Forty of those in a row are enough to trim, and a second run is enough to bail
-        // the page to the lite path for the session, on a machine that would run the finished scene
-        // fine. Starting the governor's windows again per room means no window can span a room's
-        // unpaced cost.
+        // loadGroup's decode sits outside the pacer, so the frames it stalls arrive at sample()
+        // reading as 20 fps with nothing paced to discount. Forty of those in a row are enough to
+        // trim, and a second run is enough to bail the page to the lite path for the session, on a
+        // machine that would run the finished scene fine. Starting the governor's windows again per
+        // room means no window can span a room's unpaced cost.
         governor.reset();
         readiness.get(d.stop)?.resolve();
       }

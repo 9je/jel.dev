@@ -8,7 +8,7 @@ import { X1, Z0, Z1, H, W, D, XC, ZC, ROOM, ROOM_W, ROOM_XC, TILE, LIT, PANEL, L
 
 export interface Shell { planes: Set<THREE.Object3D>; flicker: THREE.InstancedMesh[] }
 
-export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
+export async function buildShell({ store, pace }: StageContext, root: THREE.Group): Promise<Shell> {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   /** A wall piece: `ry` turns its normal into the space it faces, so a piece is only ever drawn from
@@ -27,6 +27,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     wall(W, H, XC, H / 2, z, ry);
     band(W, XC, z + (z === Z0 ? 0.02 : -0.02), 0);
   }
+  await pace();
 
   // ---- The dropped ceiling, the full length of the room ----------------------------------------
   // One grid, so the troffer pattern is continuous from the landing door to the hall door and there
@@ -40,6 +41,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const room = ceilingGrid(store, ROOM_W, D, ROOM.ceiling, { ...grid, flickerIndex });
   if (room.flicker.length !== 2) throw new Error('recreation: the ceiling did not give up two panels to flicker');
   room.group.position.set(ROOM_XC, 0, ZC); root.add(room.group);
+  await pace();
   // The shell's own lid above the dropped ceiling, so the plenum is not a void at either end.
   const lid = plane(W, D, new THREE.MeshStandardMaterial({ color: 0x2b343b, roughness: 0.95 }));
   lid.rotation.x = Math.PI / 2; lid.position.set(XC, H, ZC);
@@ -59,6 +61,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const landing = ceilingGrid(store, lw, ld, H, grid);
   landing.group.position.set(lx, 0, lz); root.add(landing.group);
   band(lw, lx, LANDING.z0 + 0.02, 0); band(ld, LANDING.x1 - 0.02, lz, Math.PI / 2);
+  await pace();
 
   const bayDoor = doorway({
     w: BAY_DOOR.w, h: BAY_DOOR.h, depth: BAY_DOOR.depth, axis: 'x', sign: 'RECREATION', tape: false,
@@ -75,6 +78,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // stops on a bare wall: "still random wall". The vestibule's south flank is on the same plane as
   // both, so one band across it closes the gap and the paint reads as paint.
   band(BAY_DOOR.depth, BAY_DOOR.x, Z0 + 0.02, 0);
+  await pace();
   // There was a tape here, tied from the jamb to a stanchion two metres along. The post stands
   // behind the doorway's own pillar from every angle the walk sees this landing from, so all that
   // was ever in frame was a yellow stick lying on a wall: "random tape going into it".
@@ -105,6 +109,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // its lettering. This one hangs off the south flank beside the doorway, clear of the line.
   const postB = stanchion(); postB.position.set(hallFace + 1.9, 0, flankZ0 - 1.1); root.add(postB);
   root.add(tapeStrip([hallFace, 1.1, flankZ0 - 0.1], [hallFace + 1.9, 0.95, flankZ0 - 1.1], 0.06));
+  await pace();
 
   root.add(merged(dado, dadoMaterial()), merged(lines, dadoLineMaterial()));
   if (streaks.length) { const stains = merged(streaks, streakMaterial()); stains.name = 'stains'; root.add(stains); }

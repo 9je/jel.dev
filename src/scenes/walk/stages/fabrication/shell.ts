@@ -43,7 +43,7 @@ function stripe(points: [number, number][], offset: number, width: number): THRE
 
 /** Floor, ceiling, the two wall courses and their girts, dado, aisle paint, columns, the exit
  *  header, the trunk ducts and the cable run. */
-export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
+export async function buildShell({ store, pace }: StageContext, root: THREE.Group): Promise<Shell> {
   const concreteF = store.texture('concrete_floor'), concreteW = store.texture('concrete_wall'), sheet = store.texture('metal_sheet');
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
@@ -57,6 +57,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   floorMat.roughness = 0.75; floorMat.metalness = 0;
   const floor = plane(W, D, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(XC, 0, ZC);
   const ceil = plane(W, D, steel(sheet, W, D, 2, 0x59636b)); ceil.rotation.x = Math.PI / 2; ceil.position.set(XC, H, ZC);
+  await pace();
 
   // A bay wall is built in two courses and the flat plane Jordan saw had neither: painted blockwork
   // to 4 m, where the trucks and the pallets hit it, and profiled steel cladding for the 8 m above.
@@ -97,10 +98,12 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   for (const x of [EXIT_X0, EXIT_X1]) { const post = new THREE.BoxGeometry(section, EXIT_H + section, section); post.translate(x, (EXIT_H + section) / 2, frameZ); frameGeoms.push(post); }
   const lintel = new THREE.BoxGeometry(EXIT_X1 - EXIT_X0 + section * 2, section, section); lintel.translate((EXIT_X0 + EXIT_X1) / 2, EXIT_H + section / 2, frameZ); frameGeoms.push(lintel);
   root.add(merged(frameGeoms, new THREE.MeshStandardMaterial({ color: GIRT_TINT, roughness: 0.5, metalness: 0.6 })));
+  await pace();
   // Front wall either side of the booth door and the header above it. The door is the booth's.
   for (const [x, w] of [[(X0 - 4) / 2, -4 - X0], [(X1 + 4) / 2, X1 - 4]] as [number, number][]) run(w, x, Z1 - 0.01, Math.PI);
   run(8, 0, Z1 - 0.01, Math.PI, 4);
   root.add(bars(new THREE.BoxGeometry(1, 0.12, 0.08), new THREE.MeshStandardMaterial({ color: GIRT_TINT, roughness: 0.6, metalness: 0.5 }), girts));
+  await pace();
 
   // Dado: a band of dark machinery paint to 1.2 m with a safety line on top, along every wall. It
   // breaks the tile repeat at eye level and is the first thing that says "shop" rather than "box".
@@ -119,11 +122,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   band(-4 - X0, (X0 - 4) / 2, Z1 - 0.03, 0); band(X1 - 4, (X1 + 4) / 2, Z1 - 0.03, 0);
   root.add(merged(dado, new THREE.MeshStandardMaterial({ color: PAINT, roughness: 0.85 })));
   root.add(merged(line, new THREE.MeshStandardMaterial({ color: SAFETY, roughness: 0.6 })));
+  await pace();
 
   // The painted aisle. Two worn lines either side of the walked path, and nothing is ever placed
   // between them: an empty middle reads as a working floor only when the paint says it is kept clear.
   const aisleMat = new THREE.MeshBasicMaterial({ color: AISLE_PAINT, transparent: true, opacity: 0.55, depthWrite: false });
   root.add(merged([...stripe(AISLE, AISLE_HALF, 0.14), ...stripe(AISLE, -AISLE_HALF, 0.14), ...stripe([[EXIT_X0 + 0.4, EXIT_LINE_Z], [EXIT_X1 - 0.4, EXIT_LINE_Z]], 0, 0.14)], aisleMat));
+  await pace();
 
   // Columns, banded with hazard tape at knee height, numbered on the face toward the aisle.
   const colMat = new THREE.MeshStandardMaterial({ color: 0x1f2a34, roughness: 0.9 });
@@ -137,6 +142,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     const toward = x < XC ? 1 : -1;
     n.position.set(x + toward * 0.455, 3.0, z); n.rotation.y = toward > 0 ? Math.PI / 2 : -Math.PI / 2; root.add(n);
   });
+  await pace();
 
   // Two plain trunk ducts run the length of the ceiling on hangers. The detailed junction models
   // used to hang off them and read as black boxes floating in the dark, so they are gone.
@@ -148,6 +154,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     for (let z = -26; z <= 16; z += 6) hangers.push([x, H - 0.6, z]);
   }
   root.add(instances(new THREE.BoxGeometry(0.06, 1.1, 0.06), ductMat, hangers));
+  await pace();
   // The bundled cable model used to be repeated three times down the right wall. Clipped flat to a
   // flat wall and lit from above it read as a splat of grey paint rather than as wire, and the same
   // splat three times over is what Jordan saw. A tray the length of the hall with conduit dropping

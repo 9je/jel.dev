@@ -28,7 +28,7 @@ const TRAY_Y = 3.12;
 /** Ink for the painted stencils, the same near black the cabinet doors carry. */
 const INK = '#0e151b';
 
-export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
+export async function buildShell({ store, pace }: StageContext, root: THREE.Group): Promise<Shell> {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   // Whiter than the kit's panel tint. Under this room's cold spots the kit default came out a flat
@@ -61,6 +61,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   wall(sealW0 - X0, H, (X0 + sealW0) / 2, H / 2, Z1, Math.PI);
   wall(OFFICE_OPEN.x0 - sealW1, H, (sealW1 + OFFICE_OPEN.x0) / 2, H / 2, Z1, Math.PI);
   wall(SEALED.w, H - SEALED.h, SEALED.x, (H + SEALED.h) / 2, Z1, Math.PI);
+  await pace();
 
   // The dado, at the height it is in every Terragroup space: blue to 1.2 m with a white line on it.
   const bands = [
@@ -70,6 +71,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     dadoBands(OFFICE_OPEN.x0 - sealW1, (sealW1 + OFFICE_OPEN.x0) / 2, Z1 - 0.02, 0),
   ];
   root.add(merged(bands.map((b) => b.band), dadoMaterial()), merged(bands.map((b) => b.line), dadoLineMaterial()));
+  await pace();
 
   // ---- What the room says it is -----------------------------------------------------------------
   // The reference room names itself with hardware, not with a sign, and Jordan's read of this one
@@ -87,6 +89,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   }
   // The box the generator is plugged into, on the east wall past the bank.
   const feed = wallPanel(0.6, 0.8); feed.rotation.y = -Math.PI / 2; feed.position.set(X1 - 0.06, 1.55, GENERATOR.z); root.add(feed);
+  await pace();
 
   // ---- The ceiling and what is behind it -------------------------------------------------------
   // The grid, five tiles short, with a troffer in every eighth column and every sixth row: eighteen
@@ -101,6 +104,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     missing: MISSING,
   });
   grid.group.position.set(XC, 0, ZC); root.add(grid.group);
+  await pace();
 
   // Above it, plant space: an interior-facing box a little over a metre deep, near black. What the
   // hold sees through the gap is not the patch directly above the hole: a sightline that enters a
@@ -126,11 +130,13 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   }));
   voidLens.rotation.x = Math.PI / 2; voidLens.position.set(-79.3, H + VOID_H - 0.44, 13.1);
   voidLens.name = 'void-lens'; root.add(voidLens);
+  await pace();
 
   // Cable trays down both long walls under the tile line, the thing every run across the ceiling
   // leaves from. Each is a channel with rungs and a bed of cable in it, from the kit.
   root.add(place(cableTray(D - 1.2), X0 + 0.28, TRAY_Y, ZC, Math.PI / 2));
   root.add(place(cableTray(D - 1.2), X1 - 0.28, TRAY_Y, ZC, Math.PI / 2));
+  await pace();
 
   // The cables strung across the ceiling. This is what ref 16 is built on: black runs slung under
   // the grid from the trays, sagging between their fixings, and most of them converging on the
@@ -152,6 +158,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     { from: [west, TRAY_Y + 0.08, 16.6], to: [holeAt(6, 20)[0] - 0.3, 3.3, holeAt(6, 20)[1] - 0.2], into: [holeAt(6, 20)[0], 3.95, holeAt(6, 20)[1]], strands: 3, sag: 0.12 },
     { from: [X1 - 0.15, 1.17, GENERATOR.z + 0.05], to: [GENERATOR.x + 0.1, 0.58, GENERATOR.z - 0.05], strands: 2, sag: 0.16 },
   ]));
+  await pace();
 
   // Cables pulled through every gap and left hanging. Over the aisle they stop at 2.35 m, a clear
   // half metre above the eye: the first pass hung them to head height straight down the walked
@@ -162,12 +169,14 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     const overAisle = Math.abs(x - HALL_DOOR.x) < AISLE_CLEAR;
     root.add(cableDrop([x, top, z], top - (overAisle ? 2.35 : 1.5), 4));
   }
+  await pace();
 
   // ---- The floor ------------------------------------------------------------------------------
   // Hazard bands painted round each island's footprint, the way switchgear stands in a plant room:
   // one merged mesh of flat strips a hair above the tile, unlit so the paint reads the same at both
   // ends of the room.
   root.add(hazardBands(ISLANDS.map(([x, z]) => [x, z])));
+  await pace();
 
   // Grating strips across the aisle every three metres. The first pass alpha tested a white lattice
   // over a near black recess, which gave a hard black and white mat rather than steel over a trench:

@@ -10,7 +10,7 @@ import { X0, X1, Z0, Z1, H, W, D, XC, ZC, RACK_Z, EAST_OPEN, WEST_OPEN, HALL_DOO
 
 export interface Shell { planes: Set<THREE.Object3D> }
 
-export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
+export async function buildShell({ store, pace }: StageContext, root: THREE.Group): Promise<Shell> {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   /** A wall piece facing the space it belongs to. Two pieces back to back on one plane are two
@@ -23,6 +23,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
 
   // The long walls, south at Z0 and north at Z1, full width, as Recreation's.
   for (const [z, ry] of [[Z0, 0], [Z1, Math.PI]] as [number, number][]) { const m = plane(W, H, labWall(store, W, H)); m.rotation.y = ry; m.position.set(XC, H / 2, z); streaks.push(...wallStreaks(W, XC, z, ry, H)); }
+  await pace();
 
   // The end walls at X0 (west, toward Credentials) and X1 (east, toward the break room). Each is
   // built as pieces flanking its doorway plus a soffit over it, so the hall closes on every side of
@@ -41,6 +42,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     floor: labFloor(store, HALL_DOOR.w, HALL_DOOR.depth), wall: labWall(store, HALL_DOOR.depth, HALL_DOOR.h),
   });
   door.position.set(HALL_DOOR.x, 0, HALL_DOOR.z); door.name = 'credentials-door'; root.add(door);
+  await pace();
 
   const bands = [dadoBands(W, XC, Z0 + 0.02, 0), dadoBands(W, XC, Z1 - 0.02, 0)];
   // And round both ends, either side of each doorway, so the blue belongs to the room rather than to
@@ -55,6 +57,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     bands.push(north);
   }
   root.add(merged(bands.map((b) => b.band), dadoMaterial()), merged(bands.map((b) => b.line), dadoLineMaterial()));
+  await pace();
 
   // No suspended ceiling grid in this room: a dark steel plane with two rows of fluorescent battens
   // hung from it on rods, and a cable tray over each rack row. The battens are fittings rather than
@@ -65,6 +68,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const spots: Spot[] = [];
   for (const z of BATTEN_ROWS) for (const x of BATTEN_XS) spots.push([x, BATTEN_Y, z]);
   const row = battens({ len: 2.2, drop: BATTEN_DROP, intensity: 1.4 }, spots); row.name = 'battens'; root.add(row);
+  await pace();
 
   // A shaft of light under the two battens the spots sit in, and only those two. The hall is dark
   // and the air in it is dusty, so the cone under a lamp is the one place the light itself shows.
@@ -74,6 +78,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   }
 
   for (const z of [RACK_Z.south, RACK_Z.north]) { const tray = cableTray(W - 2); tray.position.set(XC, H - 0.4, z); root.add(tray); }
+  await pace();
 
   if (streaks.length) { const stains = merged(streaks, streakMaterial()); stains.name = 'stains'; root.add(stains); }
 

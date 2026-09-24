@@ -16,7 +16,7 @@ const RED = new THREE.Color(0xff3a1a), AMBER = new THREE.Color(0xffa62b);
 async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'operations'; scene.add(root);
-  const shell = buildShell(ctx, root); await ctx.pace();
+  const shell = await buildShell(ctx, root);
   const { hotspots, blink, fire, camera } = await buildDressing(ctx, root);
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.Points) return;

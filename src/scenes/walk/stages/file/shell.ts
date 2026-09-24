@@ -29,7 +29,7 @@ function stripe(len: number, x: number, z: number, width: number, ry: number): T
  * wall, so it is built to be read at that size: thirteen draw calls in total and nothing in it that
  * needs a second look.
  */
-export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
+export async function buildShell({ store, pace }: StageContext, root: THREE.Group): Promise<Shell> {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   const wall = (w: number, h: number, x: number, y: number, z: number, ry: number, tint?: number) => {
@@ -48,6 +48,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     floor: labFloor(store, W, D, 0x586873),
   });
   front.position.set(XC, 0, ZC); root.add(front);
+  await pace();
 
   // ---- The three solid walls -------------------------------------------------------------------
   // A colder, darker panel than the labs' own white: this is a room lit by one desk lamp and one
@@ -64,6 +65,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   wall(D, H - WINDOW.y1, X1, (H + WINDOW.y1) / 2, ZC, -Math.PI / 2, TINT);
   wall(returnS, WINDOW.y1 - WINDOW.y0, X1, (WINDOW.y0 + WINDOW.y1) / 2, Z0 + returnS / 2, -Math.PI / 2, TINT);
   wall(returnN, WINDOW.y1 - WINDOW.y0, X1, (WINDOW.y0 + WINDOW.y1) / 2, Z1 - returnN / 2, -Math.PI / 2, TINT);
+  await pace();
 
   // The window itself: one pane with a steel surround and two mullions in it. The glass sits two
   // centimetres inside the opening so it never lands on the plane of the wall it is set in.
@@ -77,6 +79,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     new THREE.BoxGeometry(0.12, 0.1, span).translate(X1 - 0.06, WINDOW.y0 - 0.05, ZC),
     new THREE.BoxGeometry(0.12, 0.1, span).translate(X1 - 0.06, WINDOW.y1 + 0.05, ZC),
   ], labSteel(0x39434b)));
+  await pace();
 
   buildYard(store, root);
   return { planes };

@@ -12,8 +12,7 @@ import { buildLighting } from './lighting';
 async function build(ctx: StageContext): Promise<Stage> {
   const { scene, anchors, tier } = ctx;
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
-  const shell = buildShell(ctx, root);
-  await ctx.pace();
+  const shell = await buildShell(ctx, root);
   const office = buildOffice(ctx, root);
   await ctx.pace();
   await buildDressing(ctx, root);

@@ -29,7 +29,7 @@ const VESTIBULE_W = 1;
  *  the opening is the frame that room is first seen in and the wall around it has to be solid. */
 const NORTH_DOOR = { x: -79, w: 3.2, h: 3.0, depth: 1.2 };
 
-export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
+export async function buildShell({ store, pace }: StageContext, root: THREE.Group): Promise<Shell> {
   const planes = new Set<THREE.Object3D>();
   const plane = (w: number, h: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); prepareAO(m.geometry); m.receiveShadow = true; planes.add(m); root.add(m); return m; };
   // This hall and the server hall overlap by the metre their shared doorway is cut through, and both
@@ -69,6 +69,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const east = new THREE.Vector3(1, 0, 0);
   bandGeoms.splice(-1, 1, backless(inside.band, east), rest.band);
   lineGeoms.splice(-1, 1, backless(inside.line, east), rest.line);
+  await pace();
   /** A band on an end wall, turned to face down the hall. */
   const endBand = (len: number, x: number, z: number) => {
     const b = dadoBands(len, x, z, 0); bandGeoms.push(b.band); lineGeoms.push(b.line);
@@ -86,6 +87,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   const head = plane(GATE_Z1 - Z0, H - GATE_H, labWall(store, GATE_Z1 - Z0, H - GATE_H));
   head.rotation.y = -Math.PI / 2; head.position.set(X1, (H + GATE_H) / 2, (Z0 + GATE_Z1) / 2);
   streaks.push(...wallStreaks(GATE_Z1 - Z0, X1, (Z0 + GATE_Z1) / 2, -Math.PI / 2, H, GATE_H));
+  await pace();
 
   // The north end, closed around the containment doorway. Containment closes the same plane from
   // its own side with its own 3.4 m wall, both faces turned away from each other, so the two are
@@ -106,6 +108,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   for (const [w, x] of [[nd0 - X0, (X0 + nd0) / 2], [X1 - nd1, (nd1 + X1) / 2]] as [number, number][]) endBand(w, x, Z1 - 0.02);
   root.add(merged(bandGeoms, dadoMaterial()), merged(lineGeoms, dadoLineMaterial()));
   const stains = merged(streaks, streakMaterial()); stains.name = 'stains'; root.add(stains);
+  await pace();
 
   const north = doorway({
     w: NORTH_DOOR.w, h: NORTH_DOOR.h, depth: NORTH_DOOR.depth, axis: 'z', sign: 'CONTAINMENT', tape: false,
@@ -115,6 +118,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
   // than over the one it leaves by. The vestibule itself is symmetric either way.
   north.rotation.y = Math.PI;
   north.position.set(NORTH_DOOR.x, 0, Z1); north.name = 'containment-door'; root.add(north);
+  await pace();
 
   // A dark steel ceiling the room's full length. Over the corridor north of the lab, four battens
   // hung on rods off it, and under the two the spots sit at, a faint shaft: the hall is dark, and
@@ -125,6 +129,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     const shaft = lightShaft({ top: 0.4, bottom: 2.4, height: BATTEN_Y - 0.1, opacity: 0.05 });
     shaft.position.set(XC, BATTEN_Y - 0.06, z); root.add(shaft);
   }
+  await pace();
 
   // The glass lab itself, inset within the hall, a door in its south and north faces at the same
   // x, straddling the walked line.
@@ -146,6 +151,7 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     floor: new THREE.MeshStandardMaterial({ map: vinylFloor(LAB.w - 0.2, LAB.d - 0.2), roughness: 0.42, metalness: 0.02 }),
   });
   const [pw, pd] = LAB_PANEL.size;
+  await pace();
   const { frame, lens } = troffer(pw, pd);
   const panelSpots: Spot[] = LAB_PANEL.x.flatMap((x) => LAB_PANEL.z.map((z) => [x, LAB.h - 0.004, z] as Spot));
   lab.add(instances(frame, fixtureSteel(), panelSpots));
