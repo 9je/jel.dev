@@ -3,6 +3,7 @@ import type { Stage, StageContext, StageDef } from './types';
 import { surface, prepareAO, disposeObject } from '../materials';
 import { merged } from '../merge';
 import { LABS } from '../labs/materials';
+import { batten } from '../labs/fixtures';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
 import type { Placement, PointPlacement, SpotPlacement } from '../rig';
@@ -72,8 +73,10 @@ export function build({ scene, store, anchors, tier, typeface }: StageContext): 
   root.add(merged(hexes, new THREE.MeshStandardMaterial({ color: LABS.dado, roughness: 0.9, transparent: true, opacity: 0.5 })));
   root.traverse((o) => { if (o instanceof THREE.Mesh) { o.castShadow = tier === 'high'; o.receiveShadow = true; } });
 
-  // Cool ceiling strip washing down the shutter, warm pool at the desk.
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.07, 0.3), new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xcfe6ee, emissiveIntensity: 2.2 })); strip.position.set(0, H - 0.05, 25.2); root.add(strip);
+  // Cool ceiling batten washing down the shutter, warm pool at the desk. A real fitting, with a
+  // housing and a lens: the opening's phone pose looks up past the sign at it, and a bare emissive
+  // box there was a flat white bar across the top of the frame for the first second.
+  const strip = batten({ len: 2.4, intensity: 2.2, color: 0xcfe6ee }); strip.position.set(0, H - 0.05, 25.2); root.add(strip);
 
   anchors.set('booth', new THREE.Vector3(-2.5, 1.6, 23));
 
@@ -83,7 +86,7 @@ export function build({ scene, store, anchors, tier, typeface }: StageContext): 
   // frame, so the stutter is made by moving that number.
   const placements = boothLights(door.lamp, door.glow);
   const wash = placements[0]!, WASH_I = wash.intensity;
-  const tube = strip.material as THREE.MeshStandardMaterial, TUBE_I = tube.emissiveIntensity;
+  const tube = (strip.getObjectByName('tube') as THREE.Mesh).material as THREE.MeshStandardMaterial, TUBE_I = tube.emissiveIntensity;
   // Off and on times inside one stutter, in seconds.
   const STUTTER = [0, 0.05, 0.11, 0.2, 0.26, 0.29, 0.43];
   let clock = 0, next = 6 + Math.random() * 5, at = -1;

@@ -7,6 +7,7 @@ import { labSteel } from '../../labs/materials';
 import { crtSet } from '../../labs/furniture';
 import { signBox, tapeCross } from '../../labs/signage';
 import { chainlink, passerby, redactedSheet, staticNoise } from '../../labs/textures';
+import { radialTexture } from '../../textures';
 import { X1, Z1, AISLE_CLEAR, BANK, CRT, HALL_DOOR, ISLANDS, MISSING, SEALED, TABLE } from './layout';
 import { holeAt } from './shell';
 
@@ -166,6 +167,27 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const rangeSign = signBox('PRACTICE RANGE', { w: 0.9, h: 0.2, on: true });
   rangeSign.rotation.y = Math.PI; rangeSign.position.set(-78.1, 2.72, Z1 - 0.09); range.add(rangeSign);
   await add(range);
+  // Over it, a twin head emergency lamp, lit: the room runs on emergency power, and this strip of
+  // wall is what the walk faces for a second on its way out to the control room, where the panel
+  // read as a dark slab. The lamp lights the wall the way it would, as two pools drawn on it: no
+  // rig slot for a fitting seen for a second, and the pools are two draws.
+  const unit = new THREE.Group(); unit.position.set(-78.1, 3.12, Z1 - 0.07);
+  unit.add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.11, 0.1), labSteel(0x8f979d)));
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff1d6, emissiveIntensity: 2.5, roughness: 0.4 });
+  for (const side of [-1, 1]) {
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 0.09, 12), headMat);
+    head.rotation.x = Math.PI / 2 + 0.6; head.rotation.z = -side * 0.4; head.position.set(side * 0.12, -0.04, -0.08);
+    unit.add(head);
+  }
+  await add(unit);
+  const poolMat = new THREE.MeshBasicMaterial({ map: radialTexture(128, 0.1), color: 0xfff1d6, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  const pools = new THREE.Group();
+  for (const side of [-1, 1]) {
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.4), poolMat);
+    pool.rotation.y = Math.PI; pool.rotation.z = -side * 0.22; pool.position.set(-78.1 + side * 0.6, 1.9, Z1 - 0.03);
+    pools.add(pool);
+  }
+  await add(pools);
   anchors.set('pentest-practice', new THREE.Vector3(-78.1, 2.0, Z1 - 0.3));
   hotspots.push({ id: 'pentest-practice', kind: 'project', label: 'Practice range', object: range, stop: 'containment' });
 

@@ -401,7 +401,9 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
       if (link) { link.href = `/?effects=off${location.hash}`; link.removeAttribute('hidden'); }
     }
   }, 8000);
-  const giveUp = setTimeout(() => { if (gen === generation && els.preloader.dataset.state !== 'hidden') { teardown(); startLite(els); } }, 45000);
+  // The visitor has had the way out since 8 s. This is for a load that never lands: at 45 s it cut
+  // off a slow machine a few seconds short of a three room gate it was still visibly working through.
+  const giveUp = setTimeout(() => { if (gen === generation && els.preloader.dataset.state !== 'hidden') { teardown(); startLite(els); } }, 75000);
   // The sign's clock: the load only reports when something lands, and a tube is owed by time too.
   struck = 0; lastStrike = performance.now(); lastRatio = 0;
   const tick = setInterval(() => setPreloader(els, lastRatio), 100);

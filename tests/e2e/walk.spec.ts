@@ -112,7 +112,8 @@ test('the readout keeps moving through the room builds, never parked at 85%', as
 
 test('a hash on load opens at that stop on the full path', async ({ page }) => {
   await page.goto('/?quality=low#credentials');
-  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
+  // Three rooms gate a deep link, and SwiftShader links their programs one at a time.
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 15_000 });
 });
 
