@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ROOM_BUDGET, checkBudget } from '../../src/scenes/walk/rig';
-import { lights, FIXTURES, FIXTURE_Y, SODIUM_LAMPS, LAMP_Y, WORKING, TRACK } from '../../src/scenes/walk/stages/fabrication/lighting';
+import { lights, FIXTURES, FIXTURE_Y, FIXTURE_ROWS, SODIUM_LAMPS, LAMP_Y, WORKING, TRACK, rowStrikeAt, tubeStrike } from '../../src/scenes/walk/stages/fabrication/lighting';
 import { X0, X1, Z0, Z1 } from '../../src/scenes/walk/stages/fabrication/layout';
 import { DISPATCH_ROWS } from '../../src/scenes/walk/stages/fabrication/boards';
+import { DOOR_RANGE } from '../../src/scenes/walk/path';
 
 // Jordan's note on the bay was that the lights do not line up: a pool on the floor with nothing
 // above it, and a fitting with nothing under it. The placements are data now, so the rule that
@@ -54,5 +55,22 @@ describe('the dispatch board', () => {
       expect(row?.struck).toBeFalsy();
     }
     expect(DISPATCH_ROWS.some((r) => r.struck)).toBe(true);
+  });
+});
+
+describe('the bay lights on the first scroll', () => {
+  it('strikes every row, nearest the door first, while the shutter is still lifting', () => {
+    for (let i = 0; i < FIXTURE_ROWS.length; i++) {
+      expect(rowStrikeAt(i)).toBeGreaterThan(0);
+      expect(rowStrikeAt(i)).toBeLessThan(DOOR_RANGE[1]);
+      if (i > 0) expect(rowStrikeAt(i)).toBeGreaterThan(rowStrikeAt(i - 1));
+    }
+    expect(FIXTURE_ROWS[0]).toBeGreaterThan(FIXTURE_ROWS[FIXTURE_ROWS.length - 1]!);
+  });
+  it('stutters and then holds full', () => {
+    expect(tubeStrike(-1)).toBe(0);
+    expect(tubeStrike(0.1)).toBe(0);
+    expect(tubeStrike(0.6)).toBe(1);
+    expect(tubeStrike(5)).toBe(1);
   });
 });

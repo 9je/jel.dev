@@ -90,10 +90,19 @@ let unwire: (() => void) | null = null;
 let sheetOff: (() => void) | null = null;
 let columnOff: (() => void) | null = null;
 
+/** What the facility log says as the load passes each share of it. */
+const BOOT_LINES: [number, string][] = [[0, 'Mains power'], [0.2, 'Loading bay lights'], [0.45, 'Dispatch office'], [0.7, 'Booth'], [0.9, 'Door controller']];
+
+/** The load drives the sign: one more tube strikes for each seventh of it, and the log line moves on. */
 function setPreloader(els: WalkElements, ratio: number) {
-  els.preloader.style.setProperty('--progress', String(Math.min(1, ratio)));
+  const r = Math.min(1, Math.max(0, ratio));
+  els.preloader.style.setProperty('--progress', String(r));
   const pct = els.preloader.querySelector('[data-preloader-pct]');
-  if (pct) pct.textContent = String(Math.round(ratio * 100));
+  if (pct) pct.textContent = String(Math.round(r * 100));
+  const lit = Math.floor(r * 7 + 1e-6);
+  for (const l of els.preloader.querySelectorAll<HTMLElement>('[data-n]')) l.toggleAttribute('data-lit', Number(l.dataset.n) < lit);
+  const line = els.preloader.querySelector('[data-preloader-line]');
+  if (line) line.textContent = BOOT_LINES.reduce((a, [at, text]) => (r >= at ? text : a), BOOT_LINES[0]![1]);
 }
 
 function activate(els: WalkElements, id: StopId) {
@@ -441,12 +450,28 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     }
     unwire = wirePointer(els, coarse, interact);
     columnOff = wireColumnScroll(els);
-    activate(els, initial);
     if (initial !== 'booth') scroll.jumpTo(initial, true);
+    // The opening. Arriving at the booth, the camera starts on the sign at the size the preloader
+    // drew it, so the preloader's fade is a cut from one sign to the same sign in the room, and then
+    // it pulls back to the booth. The booth's copy strikes on once the pull back has landed, so the
+    // room is revealed before anything is written over it. A deep link, or reduced motion, skips it.
+    const sign = els.preloader.querySelector<HTMLElement>('[data-preloader-sign]');
+    const open = initial === 'booth' && !matchMedia('(prefers-reduced-motion: reduce)').matches && !!sign;
+    activate(els, initial);
+    if (open) {
+      const HOLD = 620, PULL = 2900;
+      h.intro(sign!.getBoundingClientRect().width / window.innerWidth, HOLD, PULL);
+      // walk.css holds the copy off and its strike back while this is set.
+      els.root.dataset.opening = '';
+      const end = () => { if (gen === generation) delete els.root.dataset.opening; };
+      setTimeout(end, HOLD + PULL * 0.8);
+      // A scroll cuts the pull back short, and the copy comes with it.
+      scroll.onProgress((t) => { if (t > 0.004) end(); });
+    }
     els.preloader.dataset.state = 'done';
     els.preloader.setAttribute('aria-busy', 'false');
-    // 700 ms of tube flicker, then a 350 ms fade out. Hide once that has finished playing.
-    hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
+    // The run catches for 420 ms, then the frame fades to the room over 480. Hide once that has played.
+    hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 950);
   } catch (err) {
     console.warn('walk failed to start, using the lite path', err);
     teardown();

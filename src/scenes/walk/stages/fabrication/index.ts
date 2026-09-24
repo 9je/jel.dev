@@ -35,7 +35,7 @@ async function build(ctx: StageContext): Promise<Stage> {
 
   return {
     id: 'fabrication', root, lights, hotspots: office.hotspots,
-    update(_t, dt) { lighting.update(dt); },
+    update(t, dt) { lighting.update(t, dt); },
     dispose() {
       lighting.dispose();
       root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); });

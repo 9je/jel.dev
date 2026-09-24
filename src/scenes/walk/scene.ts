@@ -22,6 +22,10 @@ export interface WalkHandle {
   /** Registers where an exhibit's card should hang, measured off the prop, unless the stage that
    *  built it already named a point by hand. */
   ensureAnchor(h: Hotspot): void;
+  /** The opening: the camera starts on the sign over the shutter at the size the preloader drew it,
+   *  `width` as a share of the frame's width, holds for `holdMs`, and pulls back to the booth over
+   *  `ms`. A scroll during it cuts it short. */
+  intro(width: number, holdMs: number, ms: number): void;
   camera: THREE.PerspectiveCamera; store: AssetStore; hotspots(): Hotspot[]; pick(nx: number, ny: number): Hotspot | null; hover(h: Hotspot | null): void; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void;
 }
 
@@ -163,6 +167,37 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const clock = new THREE.Clock();
   cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
 
+  // ---- The opening --------------------------------------------------------------------------
+  // The preloader's sign cuts to this one: the camera stands square to the run at the distance that
+  // makes it the same width on screen, holds while the HTML fades off it, then eases back to the
+  // booth's own pose. Orientation is slerped, not the aim point lerped, so the pull back is one turn.
+  let opening: { width: number; start: number; ms: number; cut: boolean } | null = null;
+  const openFrom = new THREE.Vector3(), openAim = new THREE.Vector3(), openQ = new THREE.Quaternion(), endQ = new THREE.Quaternion();
+  const openBox = new THREE.Box3();
+  const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  function openingPose() {
+    if (!opening) return;
+    const letters = built.get('booth')?.root.getObjectByName('letters');
+    if (!letters) { opening = null; return; }
+    openBox.setFromObject(letters); openBox.getCenter(openAim);
+    const runW = openBox.max.x - openBox.min.x;
+    const hHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    // Never further back than the booth leaves room for: the booth's back wall is 7.7 m behind the
+    // run, and a sign drawn small on a very wide screen would otherwise start the camera behind it.
+    openFrom.set(openAim.x, openAim.y, openAim.z + Math.min(5.5, runW / (opening.width * 2 * hHalf)));
+    // A scroll during the opening is the reader wanting to walk: finish in a third of a second.
+    const now = performance.now();
+    if (!opening.cut && target > 0.004) { opening.cut = true; const done = Math.max(0, (now - opening.start) / opening.ms); opening.start = now - done * 350; opening.ms = 350; }
+    const e = Math.min(1, Math.max(0, (now - opening.start) / opening.ms));
+    if (e >= 1) { opening = null; return; }
+    const k = ease(e);
+    endQ.copy(camera.quaternion);
+    camera.position.lerpVectors(openFrom, cam.position, k);
+    // Square to the run: straight down -z from wherever the pull back has got to.
+    camera.lookAt(camera.position.x, camera.position.y, camera.position.z - 1); openQ.copy(camera.quaternion);
+    camera.quaternion.slerpQuaternions(openQ, endQ, k);
+  }
+
   let post: Post | null = createPost(renderer, scene, camera, opts.tier);
   // The composer tone maps in its own pass, so the renderer must hand it untouched linear HDR.
   // Without a composer the renderer has to do the mapping itself, or the frame renders raw.
@@ -245,6 +280,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     sample(Math.max(0.001, dt - paced / 1000));
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
+    if (opening) openingPose();
     rig.update(current, dt);
     fog.color.copy(rig.grade.haze); fog.density = rig.grade.density; (scene.background as THREE.Color).copy(rig.grade.haze);
     renderer.toneMappingExposure = rig.grade.exposure; scene.environmentIntensity = rig.grade.env;
@@ -307,6 +343,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
 
   return {
     setProgress(t) { target = t; stream(t); },
+    intro(width, holdMs, ms) { opening = { width, start: performance.now() + holdMs, ms, cut: false }; },
     anchors, camera, store,
     ensureAnchor(h) {
       if (anchors.has(h.id) || disposed) return;

@@ -12,7 +12,7 @@ import type { Placement } from '../../rig';
 import { X0, X1, Z0, Z1, H, SODIUM, COLUMNS, OFFICE } from './layout';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-export interface Lighting { lights: Placement[]; update(dt: number): void; dispose(): void }
+export interface Lighting { lights: Placement[]; update(t: number, dt: number): void; dispose(): void }
 
 /** Where the fluorescent fittings hang, x and z. Three across the aisle, one row every twelve
  *  metres down the hall. The centre of each row is over the walked line. */
@@ -52,19 +52,41 @@ export function lights(): Placement[] {
   return out;
 }
 
+/** The scroll at which each row of fittings strikes, nearest the door first, all of them inside the
+ *  shutter's own lift (DOOR_RANGE in path.ts runs to 0.075). */
+export const rowStrikeAt = (i: number) => 0.012 + i * 0.016;
+
+/**
+ * A fluorescent starting, 0 to 1 over the seconds since it was switched on: the starter's flashes,
+ * a half lit hesitation, then on. Pure, so the sequence can be pinned without a scene.
+ */
+export function tubeStrike(s: number): number {
+  if (s < 0) return 0;
+  if (s < 0.06) return 0.9; if (s < 0.14) return 0; if (s < 0.19) return 0.7; if (s < 0.3) return 0.05;
+  if (s < 0.36) return 1; if (s < 0.44) return 0.35; if (s < 0.55) return 0.8;
+  return 1;
+}
+
 /** Fixtures, the working spots, the sodium lamps and their pools, the LED board, the dust. */
 export function buildLighting({ store, tier }: StageContext, root: THREE.Group): Lighting {
   // Fluorescent housings in three lines over the aisle, each with its own emissive tube. Every
   // spot the room declares hangs under one of these, so where the light comes from and what it
   // appears to come from agree.
-  const stripMat = new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 2.2 });
-  const fixtures: Spot[] = [], strips: Spot[] = [];
-  for (const [x, z] of FIXTURES) { fixtures.push([x, H - 0.4, z, 0, 2.6]); strips.push([x, H - 0.52, z]); }
+  // One strip material per row, because the rows come on one at a time: the bay is dark behind the
+  // closed shutter, and as the shutter lifts on the first scroll the rows strike from the door
+  // inward, each with a fluorescent's stutter. A row that has struck stays on.
+  const fixtures: Spot[] = [];
+  for (const [x, z] of FIXTURES) fixtures.push([x, H - 0.4, z, 0, 2.6]);
   root.add(repeat(store.model('fluorescent'), fixtures));
-  root.add(instances(new THREE.BoxGeometry(2.2, 0.06, 0.16), stripMat, strips));
+  const rowMats = FIXTURE_ROWS.map((z) => {
+    const m = new THREE.MeshStandardMaterial({ color: 0x0a0f14, emissive: 0xd9e8ee, emissiveIntensity: 0 });
+    root.add(instances(new THREE.BoxGeometry(2.2, 0.06, 0.16), m, FIXTURE_X.map((x) => [x, H - 0.52, z] as Spot)));
+    return m;
+  });
+  const rowStruck: (number | null)[] = FIXTURE_ROWS.map(() => null);
   // The air under the two working fittings, faintly: the bay is dark and there is dust in it, and
   // a shaft is what ties a pool on the floor to the fitting above it.
-  for (const [x, z] of WORKING) root.add(place(lightShaft({ top: 1.1, bottom: 4.2, height: FIXTURE_Y - 0.3, color: 0xd9e8ee, opacity: 0.035 }), x, FIXTURE_Y, z));
+  const shafts = WORKING.map(([x, z]) => { const s = lightShaft({ top: 1.1, bottom: 4.2, height: FIXTURE_Y - 0.3, color: 0xd9e8ee, opacity: 0.035 }); root.add(place(s, x, FIXTURE_Y, z)); return s; });
 
   // The track: a steel rail on the office ceiling and three heads along it, each turned down at its
   // plinth, lenses lit. The one spot the rig gives it hangs from the middle.
@@ -132,11 +154,23 @@ export function buildLighting({ store, tier }: StageContext, root: THREE.Group):
   let clock = 0, next = 5 + Math.random() * 4;
   const bursts: number[] = [];
 
+  const placed = lights();
+  const working = placed.filter((l) => l.kind === 'spot' && WORKING.some(([x, z]) => l.position[0] === x && l.position[2] === z));
+  const workingFull = working.map((l) => l.intensity);
+  const shaftFull = shafts.map((m) => (m.material as THREE.Material).opacity);
   return {
-    lights: lights(),
-    update(dt) {
+    lights: placed,
+    update(t, dt) {
       led.update(dt); motes.update(dt); spray.update(dt);
       clock += dt;
+      FIXTURE_ROWS.forEach((z, i) => {
+        if (rowStruck[i] === null && t >= rowStrikeAt(i)) rowStruck[i] = clock;
+        const at = rowStruck[i];
+        const level = at === null ? 0 : tubeStrike(clock - at + (t > rowStrikeAt(i) + 0.04 ? 1 : 0));
+        rowMats[i]!.emissiveIntensity = 2.2 * level;
+        const w = WORKING.findIndex(([, wz]) => wz === z);
+        if (w >= 0) { working[w]!.intensity = workingFull[w]! * level; (shafts[w]!.material as THREE.Material).opacity = shaftFull[w]! * level; }
+      });
       if (clock >= next) {
         const n = 2 + Math.floor(Math.random() * 2);
         for (let i = 0; i < n; i++) bursts.push(clock + i * (0.18 + Math.random() * 0.25));

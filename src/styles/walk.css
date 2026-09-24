@@ -51,33 +51,43 @@
 .dock-effects[aria-pressed='true'] { color: var(--panel-white); }
 @media (max-width: 700px) { .dock { top: auto; bottom: 0.75rem; right: 0.75rem; left: 0.75rem; transform: none; grid-template-columns: 1fr auto; } .dock-list { grid-auto-flow: column; justify-content: space-between; } .dock-label { display: none; } }
 
-/* Preloader */
-.preloader { position: fixed; inset: 0; z-index: 10; display: none; place-content: center; text-align: center; background: var(--bay-black); }
-/* base.css caps every paragraph at the reading measure, which would leave these two narrower
-   than the tube and their centred text off the bar's centre. */
-.preloader-mark, .preloader-label { max-width: none; justify-self: center; }
-.preloader-mark { font-size: 1.5rem; margin-bottom: 2rem; color: var(--panel-white); opacity: 0.25; }
-.tube { width: min(60vw, 720px); height: 3px; margin: 0 auto; background: #1a2530; }
-.tube-fill { height: 100%; width: calc(var(--progress, 0) * 100%); background: var(--panel-white); box-shadow: 0 0 18px var(--glass-cyan), 0 0 40px rgb(110 193 214 / 0.35); transition: width 120ms linear; }
-.preloader-label { margin: 1rem 0 0; color: var(--text-dim); font-size: 0.85rem; font-stretch: 75%; }
+/* Preloader: the sign over the shutter, dead in the dark, striking on as the rooms load. */
+.preloader { position: fixed; inset: 0; z-index: 10; display: none; place-content: center; justify-items: center; text-align: center; background: #05080b; }
+/* base.css caps every paragraph at the reading measure. */
+.preloader-sign, .preloader-label { max-width: none; }
+.preloader-sign {
+  margin: 0; font-family: var(--font-display); text-transform: uppercase; white-space: nowrap;
+  font-size: clamp(2.4rem, min(8.2vw, 17vh), 13rem); letter-spacing: 0; line-height: 1;
+  --neon: #3fd7f0;
+}
+/* A dead tube: the glass is there, unlit, a thin cold outline with nothing in it. */
+.preloader-letter { color: transparent; -webkit-text-stroke: 1px rgb(63 215 240 / 0.22); }
+.preloader-letter[data-lit] {
+  color: #e6fdff; -webkit-text-stroke: 0;
+  text-shadow: 0 0 0.04em #fff, 0 0 0.12em var(--neon), 0 0 0.35em var(--neon), 0 0 0.9em rgb(63 215 240 / 0.55);
+  animation: tube-strike 520ms steps(1, end) both;
+}
+@keyframes tube-strike {
+  0% { opacity: 1 } 12% { opacity: 0.15 } 24% { opacity: 1 } 36% { opacity: 0.3 } 52% { opacity: 1 } 64% { opacity: 0.55 } 76% { opacity: 1 }
+}
+.preloader-label { display: flex; gap: 0.9rem; justify-content: center; margin: 1.6rem 0 0; color: var(--text-dim); font-size: 0.9rem; font-stretch: 75%; min-height: 1.4em; }
+.preloader-pct { opacity: 0.6; font-variant-numeric: tabular-nums; }
 .preloader-lite { display: none; margin-top: 1.5rem; }
 .preloader[data-state='slow'] .preloader-lite { display: block; }
-/* The tube strikes like a fluorescent starting: four dips, then it holds. The JEL mark is dark
-   until the strike, then it is on with the tube. */
-.preloader[data-state='done'] .tube-fill,
-.preloader[data-state='done'] .preloader-mark { animation: tube-on 700ms steps(1, end) both; }
-@keyframes tube-on {
-  0% { opacity: 1 } 9% { opacity: 0.15 } 17% { opacity: 1 } 27% { opacity: 0.1 }
-  36% { opacity: 1 } 48% { opacity: 0.2 } 57% { opacity: 1 } 69% { opacity: 0.12 }
-  78% { opacity: 1 } 100% { opacity: 1 }
-}
-.preloader[data-state='done'] { animation: preloader-out 350ms 700ms ease both; }
-@keyframes preloader-out { to { opacity: 0 } }
+/* Done: the whole run catches once like a transformer, the log goes, and the frame cuts to the same
+   sign in the room: the ground goes transparent while the lettering fades over the one in 3D. */
+.preloader[data-state='done'] .preloader-sign { animation: sign-catch 420ms steps(1, end) both; }
+@keyframes sign-catch { 0% { opacity: 1 } 20% { opacity: 0.25 } 35% { opacity: 1 } 55% { opacity: 0.6 } 70% { opacity: 1 } }
+.preloader[data-state='done'] .preloader-label { opacity: 0; transition: opacity 200ms; }
+.preloader[data-state='done'] { animation: preloader-out 480ms 420ms ease-in both; }
+@keyframes preloader-out { to { background-color: rgb(5 8 11 / 0); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .preloader[data-state='done'] .tube-fill,
-  .preloader[data-state='done'] .preloader-mark { animation: none; opacity: 1 }
+  .preloader-letter[data-lit], .preloader[data-state='done'] .preloader-sign { animation: none; }
 }
 .preloader[data-state='hidden'] { display: none; }
+/* On a phone the camera's aim sits above the sheet, 6rem over the middle (framing.ts), so the sign
+   does too, and the cut lands on the sign in the room. */
+@media (pointer: coarse) and (orientation: portrait) { .preloader { align-content: center; padding-bottom: 12rem; } }
 
 /* Ticker (HTML version, lite path) */
 .ticker { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; height: 28px; overflow: hidden; background: #05080b; border-top: 1px solid #1a2530; font-stretch: 75%; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--led); display: none; }
@@ -85,6 +95,14 @@
 .ticker-track span { padding: 0.45rem 2rem; white-space: nowrap; }
 @keyframes ticker { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+
+/* The opening: while the camera pulls back from the sign the copy is held off, and its strike held
+   back, so the room is revealed before anything is written over it. */
+.walk[data-mode='full'][data-opening] .stops { opacity: 0; }
+.walk[data-mode='full'] .stops { transition: opacity 400ms ease; }
+.walk[data-mode='full'][data-opening] .stop-letter, .walk[data-mode='full'][data-opening] .stop-inner::before { animation: none !important; }
+.walk[data-mode='full'][data-opening] .dock { opacity: 0; }
+.dock { transition: opacity 600ms ease 200ms; }
 
 /* Clicking through the room must never leave a highlight across the copy: on the full walk nothing
    selects except what is there to be read and quoted, a project's own words and an exhibit card's. */
