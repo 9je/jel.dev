@@ -79,13 +79,19 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const store = await AssetStore.open(opts.tier);
   const anchors = new Map<string, THREE.Vector3>();
   const pacer = createPacer(4);
-  const ctx: StageContext = { scene, tier: opts.tier, anchors, store, typeface: await typefaceReady, pace: pacer.pace };
-  const grey = greybox(ctx);
+  // A room is built into a hidden scene under the real one, and moves across once it is warm (see
+  // `warmStage` below). Built in the open, a room's props were drawn as they landed, and each one's
+  // first draw linked its programs and uploaded its geometry in the middle of a frame.
+  const staging = new THREE.Scene(); staging.visible = false; staging.name = 'staging'; scene.add(staging);
+  const ctx: StageContext = { scene: staging, tier: opts.tier, anchors, store, typeface: await typefaceReady, pace: pacer.pace };
+  const grey = greybox({ ...ctx, scene });
   // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
   // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
   // the first frame when the walk opens there.
   const defs = opts.stages ?? await Promise.all(STAGE_LOADERS.map((load) => load()));
   const built = new Map<string, Stage>(); const pending = new Map<string, Promise<void>>();
+  // Scroll: where the walk is asked to be, and where the camera is on its way there.
+  let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, raf = 0;
 
   // Every await here can outlive the handle: a stage that finishes building after dispose() would
   // add itself to a scene nobody renders and leak its GPU memory, so bail at each resumption point.
@@ -100,13 +106,16 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       const stage = await def.build(ctx);
       if (disposed) { stage.dispose(); return; }
       anchorTiles(stage.root);
+      await warmStage(stage.root);
+      if (disposed) { stage.dispose(); return; }
       built.set(def.id, stage); if (def.replaces) grey.hide(def.replaces);
       if (stage.lights) rig.register(def.stop, stage.lights);
+      stream(current);
     })().catch((err) => {
       console.warn(`stage ${def.id} failed`, err);
       // The stage never handed back a dispose(), so the partial root it added is the caller's to
       // clear: the greybox space it replaces is still standing and the two would draw over each other.
-      disposeStray(scene, def.id);
+      disposeStray(scene, def.id); disposeStray(staging, def.id);
     }).finally(() => pending.delete(def.id));
     pending.set(def.id, p); return p;
   }
@@ -116,11 +125,111 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // Without a composer the renderer has to do the mapping itself, or the frame renders raw.
   const applyToneMapping = () => { renderer.toneMapping = post ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping; };
   applyToneMapping();
-  // The post stack's own programs link on their first use. Used first in the first frame of the
-  // room, with the rooms' textures going up in the same frame, that was a second and a half of
-  // frozen sign. Drawn once now, over the greybox, they link while the download has the main
-  // thread idle anyway.
+  // The post stack's own programs link on their first use. Drawn once now, over the greybox, they
+  // link while the download has the main thread idle anyway.
   if (post) post.render(0); else renderer.render(scene, camera);
+
+  // ---- Warming a room before it is drawn -----------------------------------------------------
+  // Left to its first frame, a room's textures went up, its triangles went up, and its programs
+  // had their source built, were submitted and were waited on one at a time, all in that frame.
+  // For the two rooms behind the preloader that was a second and a half of frozen sign. For the
+  // rooms that build behind the walk it was the same again, spread as a stall on every prop as it
+  // landed and another on the whole room when the camera came near. So a room comes up in the
+  // hidden staging scene, and this warms it before it is seen, spread over frames in three parts.
+  //
+  // A program is keyed on the output it draws to, and the composer draws the room into a linear
+  // half float buffer, so every compile runs with a scratch target bound or it is the wrong
+  // variant, which the old warm up's all were. Each group compiles on its own, in a probe scene
+  // carrying the room's fog and environment with the lights gathered from the real scene, so a
+  // compile costs what the group costs. Without parallel shader compile in the driver a program's
+  // first draw stalls on its link (and the async compile only adds a poll), so a batch is drawn to
+  // the scratch target as soon as it holds a few new programs, and the stalls land a frame apart.
+  // That draw is also what puts the geometry up, with nothing culled so the whole room goes up now
+  // and not on the first step into it. The passes that draw the room with a material of their own,
+  // the normal pass and the shadow pass, get their programs the same way.
+  const scratch = post ? new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }) : null;
+  const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
+  const probe = new THREE.Scene(); probe.fog = scene.fog; probe.environment = scene.environment;
+  // The shadow pass draws the back faces of anything single sided, with no fog.
+  const passes: { material: THREE.Material; fog: boolean }[] = [
+    ...(post?.overrides() ?? []).map((material) => ({ material, fog: true })),
+    ...(renderer.shadowMap.enabled ? [THREE.BackSide, THREE.DoubleSide].map((side) => ({ material: new THREE.MeshDepthMaterial({ side }), fog: false })) : []),
+  ];
+  const instancedDepth = new THREE.MeshDepthMaterial();
+  const programs = () => renderer.info.programs?.length ?? 0;
+  const triangles = (o: THREE.Object3D) => { let n = 0; o.traverse((c) => { const g = (c as THREE.Mesh).geometry; if (g) n += (g.index ? g.index.count : g.attributes.position?.count ?? 0) / 3; }); return n; };
+  async function compileIn(o: THREE.Object3D, fog: boolean) {
+    probe.add(o); probe.fog = fog ? scene.fog : null;
+    renderer.setRenderTarget(scratch);
+    try { if (parallel) await renderer.compileAsync(probe, camera, scene); else renderer.compile(probe, camera, scene); } catch { /* drivers without it still compile on first draw */ }
+    renderer.setRenderTarget(null);
+  }
+  async function warmStage(root: THREE.Object3D) {
+    // three keeps one program per material and refetches it whenever a material is drawn instanced
+    // after plain, or plain after instanced, on every draw of each: nineteen materials across the
+    // kit were doing that every frame, a parameter build and a cache lookup a draw. The instanced
+    // meshes get a copy of theirs. A copy shares the textures, so nothing more goes up.
+    const users = new Map<THREE.Material, { plain: boolean; instanced: THREE.InstancedMesh[] }>();
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh; if (!mesh.isMesh || !mesh.material) return;
+      for (const mat of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        const u = users.get(mat) ?? { plain: false, instanced: [] };
+        if ((mesh as THREE.InstancedMesh).isInstancedMesh) u.instanced.push(mesh as THREE.InstancedMesh); else u.plain = true;
+        users.set(mat, u);
+      }
+    });
+    for (const [mat, u] of users) {
+      if (!u.plain || !u.instanced.length) continue;
+      const copy = mat.clone();
+      for (const m of u.instanced) m.material = Array.isArray(m.material) ? m.material.map((x) => (x === mat ? copy : x)) : copy;
+    }
+    // Two passes draw every object with one material of their own, the normal pass and the shadow
+    // pass, and the same rule holds for them: drawn plain, instanced, plain, that one material
+    // refetched its program on every draw, thirty times a frame in the steady state. So the opaque
+    // instanced meshes draw after everything plain, one change a pass, and cast their shadows with
+    // a depth material that is theirs alone.
+    root.traverse((o) => {
+      const m = o as THREE.InstancedMesh; if (!m.isInstancedMesh) return;
+      if (!(Array.isArray(m.material) ? m.material.some((x) => x.transparent) : m.material.transparent)) m.renderOrder = 1;
+      m.customDepthMaterial = instancedDepth;
+    });
+    const textures = new Set<THREE.Texture>();
+    root.traverse((o) => { const m = (o as THREE.Mesh).material; for (const mat of Array.isArray(m) ? m : m ? [m] : []) for (const v of Object.values(mat)) if (v && (v as THREE.Texture).isTexture) textures.add(v as THREE.Texture); });
+    let since = performance.now();
+    for (const t of textures) {
+      if (disposed) return;
+      renderer.initTexture(t);
+      if (performance.now() - since > 10) { await new Promise(requestAnimationFrame); since = performance.now(); }
+    }
+    // Into the real scene, hidden from the frame loop, its groups held back until each is compiled.
+    const groups = [...root.children];
+    for (const g of groups) root.remove(g);
+    scene.add(root); root.visible = false;
+    const culled: THREE.Object3D[] = [];
+    let batch = 0, fresh = 0, known = programs();
+    for (const [i, g] of groups.entries()) {
+      if (disposed) return;
+      await compileIn(g, true);
+      for (const pass of passes) {
+        const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+        g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material) { swapped.push([m, m.material]); m.material = pass.material; } });
+        await compileIn(g, pass.fog);
+        for (const [m, mat] of swapped) m.material = mat;
+      }
+      root.add(g);
+      g.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
+      batch += triangles(g); fresh += programs() - known; known = programs();
+      if (batch < 60_000 && fresh < 4 && i < groups.length - 1) continue;
+      root.visible = true;
+      renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
+      root.visible = false;
+      batch = 0; fresh = 0;
+      await new Promise(requestAnimationFrame);
+    }
+    for (const g of groups) if (g.parent !== root) root.add(g);
+    for (const o of culled) o.frustumCulled = true;
+    root.visible = true;
+  }
 
   // The preloader gates on the booth, the bay, and the room the page opens in. Their bytes fill the
   // tube to 85%. Their builds and the shader warm-up take it to 100%. Everything else builds after
@@ -175,7 +284,6 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   }
   const onResize = () => resize();
 
-  let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, raf = 0;
   const cam = { position: new THREE.Vector3(), target: new THREE.Vector3() };
   const clock = new THREE.Clock();
   cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
@@ -320,69 +428,6 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   }
   resize(true); window.addEventListener('resize', onResize); window.visualViewport?.addEventListener('resize', onResize);
   grey.setNear(nearStops(current));
-  // ---- Warming the GPU before the preloader clears ---------------------------------------------
-  // Left to the first frame, all of this happened in it: two hundred textures went up, two million
-  // triangles went up, and sixty programs had their source built, were submitted and were waited
-  // on one at a time. The frame that cut from the sign to the room stood on a frozen main thread
-  // for a second and a half, and the sign froze with it. Now it is spread over frames, in three
-  // parts, and the first frame draws on a warm GPU.
-  //
-  // The textures, a frame's worth at a time.
-  const textures = new Set<THREE.Texture>();
-  scene.traverse((o) => { const m = (o as THREE.Mesh).material; for (const mat of Array.isArray(m) ? m : m ? [m] : []) for (const v of Object.values(mat)) if (v && (v as THREE.Texture).isTexture) textures.add(v as THREE.Texture); });
-  let since = performance.now();
-  for (const t of textures) {
-    if (disposed) break;
-    renderer.initTexture(t);
-    if (performance.now() - since > 10) { await new Promise(requestAnimationFrame); since = performance.now(); }
-  }
-  // The programs and the geometry, a group at a time. A program is keyed on the output it draws
-  // to, and the composer draws the room into a linear half float buffer, so the compiles run with
-  // a scratch target bound or every one of them is the wrong variant, which they were. Each group
-  // compiles on its own, in a probe scene carrying the room's fog and environment with the lights
-  // gathered from the real scene, so a compile costs what the group costs and not a walk of all
-  // the groups before it. Without parallel shader compile in the driver a program's first draw
-  // stalls on its link (and the async compile only adds a poll), so a batch is drawn to the scratch
-  // target as soon as it holds a few new programs, and the stalls land a frame apart. That draw is
-  // also what puts the geometry up, with nothing culled so the hall behind the shutter goes up now
-  // and not on the first step into it.
-  const scratch = post ? new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }) : null;
-  const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
-  const probe = new THREE.Scene(); probe.fog = scene.fog; probe.environment = scene.environment;
-  const groups = [...built.values()].flatMap((st) => st.root.children.map((c) => [st.root, c] as const));
-  const culled: THREE.Object3D[] = [];
-  scene.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
-  const triangles = (o: THREE.Object3D) => { let n = 0; o.traverse((c) => { const g = (c as THREE.Mesh).geometry; if (g) n += (g.index ? g.index.count : g.attributes.position?.count ?? 0) / 3; }); return n; };
-  for (const [root, g] of groups) root.remove(g);
-  let batch = 0, fresh = 0, known = renderer.info.programs?.length ?? 0;
-  for (const [i, [root, g]] of groups.entries()) {
-    if (disposed) break;
-    probe.add(g);
-    renderer.setRenderTarget(scratch);
-    try { if (parallel) await renderer.compileAsync(probe, camera, scene); else renderer.compile(probe, camera, scene); } catch { /* drivers without it still compile on first draw */ }
-    renderer.setRenderTarget(null);
-    root.add(g);
-    batch += triangles(g); fresh += (renderer.info.programs?.length ?? 0) - known; known = renderer.info.programs?.length ?? 0;
-    if (batch < 60_000 && fresh < 4 && i < groups.length - 1) continue;
-    renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
-    batch = 0; fresh = 0;
-    await new Promise(requestAnimationFrame);
-  }
-  for (const [root, g] of groups) if (!g.parent) root.add(g);
-  for (const o of culled) o.frustumCulled = true;
-  // The passes that draw the whole scene with a material of their own: the normal pass, and the
-  // shadow pass, which draws the back faces of anything single sided with no fog.
-  const warm = async (override: THREE.Material) => {
-    const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
-    scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material) { swapped.push([m, m.material]); m.material = override; } });
-    renderer.setRenderTarget(scratch);
-    try { if (!disposed) await renderer.compileAsync(scene, camera); } catch { /* drivers without it still compile on first draw */ }
-    renderer.setRenderTarget(null);
-    for (const [m, mat] of swapped) m.material = mat;
-  };
-  for (const m of post?.overrides() ?? []) await warm(m);
-  if (renderer.shadowMap.enabled) { const had = scene.fog; scene.fog = null; for (const side of [THREE.BackSide, THREE.DoubleSide]) await warm(new THREE.MeshDepthMaterial({ side })); scene.fog = had; }
-  scratch?.dispose();
   if (!disposed) { if (post) post.render(0); else renderer.render(scene, camera); }
   opts.onLoadProgress?.(1, 1);
   stream(target);
@@ -454,7 +499,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       window.removeEventListener('resize', onResize); window.visualViewport?.removeEventListener('resize', onResize);
       canvas.removeEventListener('webglcontextlost', onContextLost);
       hoverFx.dispose();
-      for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); disposeObject(thresholds); post?.dispose(); store.dispose();
+      for (const s of built.values()) { s.dispose(); s.root.removeFromParent(); } grey.dispose(); rig.dispose(); disposeObject(thresholds); post?.dispose(); scratch?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
       settleReadiness();
     },

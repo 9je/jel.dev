@@ -35,11 +35,19 @@ export class AssetStore {
     return new AssetStore((await res.json()) as AssetManifest);
   }
 
+  // Decoded off the main thread where the browser can: an image decodes on its first upload, and a
+  // room's shell drawn for the first time paid 30 to 60 ms a texture, three to a set, in the one
+  // frame. A bitmap is flipped as it is made, since it cannot be flipped at upload the way an
+  // image is, and its colours are left alone so the texture is what the file says.
+  private bitmaps = typeof createImageBitmap === 'function' ? new THREE.ImageBitmapLoader().setOptions({ imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }) : null;
+
   private loadTexture(url: string, srgb: boolean, repeat: [number, number]): Promise<THREE.Texture> {
-    return new Promise((resolve, reject) => this.texLoader.load(url, (t) => {
+    const finish = (t: THREE.Texture) => {
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); t.anisotropy = 4;
-      t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; resolve(t);
-    }, undefined, reject));
+      t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; return t;
+    };
+    if (this.bitmaps) return new Promise((resolve, reject) => this.bitmaps!.load(url, (bmp) => { const t = new THREE.Texture(bmp); t.flipY = false; t.needsUpdate = true; resolve(finish(t)); }, undefined, reject));
+    return new Promise((resolve, reject) => this.texLoader.load(url, (t) => resolve(finish(t)), undefined, reject));
   }
 
   loadGroup(id: string, onProgress?: (loaded: number, total: number) => void): Promise<void> {
