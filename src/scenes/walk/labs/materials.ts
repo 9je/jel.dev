@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { AssetStore } from '../assets';
 import { surface, prepareAO } from '../materials';
 import { troffer, lensMaterial, fixtureSteel } from './fixtures';
-import { canvas, own, rng } from './textures';
+import { acousticTile, canvas, own, rng } from './textures';
 
 /** The Labs palette. Cold white panels, the Terragroup blue dado, grey tile, dark steel. */
 export const LABS = { panel: 0xd9e8ee, dado: 0x2455a4, tile: 0x9fb0b8, steel: 0x2b3740, glassTint: 0xcfe6ee, cold: 0xdff0f6, warn: 0xc8322b, hazard: 0xe8b923 } as const;
@@ -305,6 +305,8 @@ export interface CeilingGridOptions {
    *  reaches it and this is the only thing that keeps it off black. A room with a low ceiling and a
    *  tall frame shows a lot of it and needs more than a room that shows a strip of it. */
   tileGlow?: number;
+  /** Mineral acoustic tile, drawn, instead of the shared sprayed plaster map. */
+  acoustic?: boolean;
   /** Fitting size of one lit panel, `[along x, along z]`. Defaults to a panel the size of a tile.
    *  A 0.6 m tile grid hung with 1.2 m troffers is the usual suspended ceiling, and it is what
    *  stops a sparse pattern reading as a scatter of glowing postage stamps. */
@@ -339,6 +341,11 @@ function tiledCeiling(w: number, d: number, cols: number, rows: number, missing:
   return g;
 }
 
+function acousticMaterial(w: number, d: number, tile: number): THREE.MeshStandardMaterial {
+  const map = acousticTile(); map.repeat.set(w / tile, d / tile);
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.95 });
+}
+
 /** A suspended ceiling: tiles at a pitch with a pattern of them replaced by recessed troffers. One
  *  draw call for tiles, one for the troffer frames, one for the lenses, one more for each lens the
  *  caller asked to drive itself. The lit panels are emissive geometry, not lights. */
@@ -351,7 +358,8 @@ export function ceilingGrid(store: AssetStore | null, w: number, d: number, y: n
   const group = new THREE.Group();
   // Without a store the tiles are flat paint: the dispatch office sits behind the preloader and the
   // shared labs textures do not, so it gets the grid without the tile map.
-  const tileMat = store ? surface(store.texture('ceiling_tile'), w, d, tile) : new THREE.MeshStandardMaterial({ roughness: 0.9 });
+  const tileMat = opts.acoustic ? acousticMaterial(w, d, tile)
+    : store ? surface(store.texture('ceiling_tile'), w, d, tile) : new THREE.MeshStandardMaterial({ roughness: 0.9 });
   // A ceiling faces down, so the hemisphere gives it only its dark ground colour and the spots never
   // reach it. A little emissive makes the tiles read as a lit suspended ceiling instead of a void.
   // The emissive follows the tile map rather than sitting flat over it: a flat emissive washes the

@@ -6,7 +6,7 @@ import { papers } from '../../labs/props';
 import { labSteel } from '../../labs/materials';
 import { controlConsole, controlDesk, monitor, openFile, pinboard, taskChair } from '../../labs/furniture';
 import { consoleFace, facilityPlan, personnelSheet } from '../../labs/textures';
-import { ASHTRAY, DESK, FILE, GLASS, MUG, X1, Z1 } from './layout';
+import { ASHTRAY, DESK, FILE, GLASS, X1, Z1 } from './layout';
 
 /** A four drawer steel filing cabinet with the top drawer standing open on its folders, 0.5 by 0.62
  *  on plan and 1.32 tall, origin at floor centre, fronts to +z. Room furniture rather than kit: it
@@ -40,7 +40,9 @@ function filingCabinet(): THREE.Group {
  */
 function ashtray(): THREE.Group {
   const g = new THREE.Group();
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x39434b, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  // Pressed steel, the kind every control room has one of. The see-through glass dish read as a
+  // grey smear at this distance, and next to scanned props it was the cheapest thing on the desk.
+  const glass = new THREE.MeshStandardMaterial({ color: 0x8a9297, roughness: 0.38, metalness: 0.85, side: THREE.DoubleSide });
   const profile = [
     new THREE.Vector2(0, 0.004), new THREE.Vector2(0.056, 0.004), new THREE.Vector2(0.066, 0.01),
     new THREE.Vector2(0.068, 0.03), new THREE.Vector2(0.056, 0.032), new THREE.Vector2(0.046, 0.014),
@@ -88,34 +90,6 @@ export const CIGAR_TIP: [number, number, number] = (() => {
   const v = EMBER.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), ASHTRAY_TURN);
   return [ASHTRAY[0] + v.x, DESK.top + v.y, ASHTRAY[1] + v.z];
 })();
-
-/**
- * A cut tumbler with two fingers of bourbon in it, life size, origin at the foot. Built as a wall,
- * a thick base and the liquid inside it, because a glass reads by what the light does at its
- * shoulder and at the meniscus, and both of those want the wall to be open ended. Four draw calls.
- */
-function tumbler(): THREE.Group {
-  const g = new THREE.Group();
-  // The wall carries enough opacity to have a silhouette. Under 0.2 the glass disappeared and all
-  // that was left on the desk was the liquid, which read as a clay cup.
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0xe8f2f7, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.32, side: THREE.DoubleSide });
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.032, 0.094, 22, 1, true), glass);
-  wall.position.y = 0.047; g.add(wall);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.033, 0.018, 22), glass);
-  base.position.y = 0.009; g.add(base);
-  // Opaque, and darker than it looks in a glass: read through a pale wall at 0.26 the first pour
-  // came out pink. Bourbon is a deep amber that the lamp lights from the side.
-  const bourbon = new THREE.Mesh(new THREE.CylinderGeometry(0.0344, 0.0322, 0.04, 22), new THREE.MeshStandardMaterial({
-    color: 0x7a3206, roughness: 0.07, metalness: 0.08, emissive: 0x933c06, emissiveIntensity: 0.18,
-  }));
-  bourbon.position.y = 0.038; g.add(bourbon);
-  // One cube, mostly under: ice that floats proud of the surface is ice in a glass of water.
-  const ice = new THREE.Mesh(new THREE.BoxGeometry(0.021, 0.021, 0.021), new THREE.MeshPhysicalMaterial({
-    color: 0xeef6fa, roughness: 0.1, metalness: 0, transparent: true, opacity: 0.4,
-  }));
-  ice.position.set(0.006, 0.046, -0.004); ice.rotation.set(0.4, 0.7, 0.2); g.add(ice);
-  return g;
-}
 
 /** The lines the form on the open leaf carries, off `site.about` and nothing retyped. The name is
  *  the one derived string: a personnel file is filed under the surname, so the sentence's own
@@ -171,22 +145,16 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // Turned so the propped leaf faces the lens rather than the desk. The hold is west south west of
   // the folder, and 1.14 radians is the heading from the folder back to it: the form is the only
   // thing in this room anybody is meant to read, and square to the desk it reads edge on.
-  place(folder, FILE.x, TOP, FILE.z, 1.14);
+  place(folder, FILE.x, TOP + 0.004, FILE.z, 1.14);
   exhibit.add(folder);
 
-  // The mug, on its side where it was knocked over, and the ring it left. Not a prop for its own
-  // sake: a tidy desk under a lamp reads as a set, and one thing out of place is what makes it a
-  // desk somebody left.
-  const mug = new THREE.Group();
-  const white = new THREE.MeshStandardMaterial({ color: 0xdfe3e2, roughness: 0.45 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.09, 14), white);
-  body.rotation.z = Math.PI / 2; body.position.y = 0.04; mug.add(body);
-  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.007, 6, 14), white);
-  handle.position.set(0.01, 0.04, 0.04); mug.add(handle);
-  const stain = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.12), new THREE.MeshStandardMaterial({ color: 0x5a4126, transparent: true, opacity: 0.35, roughness: 0.9, depthWrite: false }));
-  stain.rotation.x = -Math.PI / 2; stain.position.set(-0.07, 0.004, 0.01); mug.add(stain);
-  place(mug, MUG[0], TOP, MUG[1], 0.7);
-  exhibit.add(mug);
+  // A desk pad under the file: dark green vinyl with a stitched edge, which is what the file was
+  // actually opened on, and a pair of reading glasses folded on the corner of it.
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.004, 0.66), new THREE.MeshStandardMaterial({ color: 0x1d3a30, roughness: 0.78 }));
+  pad.position.set(FILE.x + 0.02, TOP + 0.002, FILE.z + 0.02); pad.rotation.y = 0.08; exhibit.add(pad);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.003, 0.67), new THREE.MeshStandardMaterial({ color: 0x0e1c17, roughness: 0.6 }));
+  edge.position.set(FILE.x + 0.02, TOP + 0.0015, FILE.z + 0.02); edge.rotation.y = 0.08; exhibit.add(edge);
+  exhibit.add(place(grounded(store.model('spectacles')), FILE.x + 0.12, TOP + 0.004, FILE.z - 0.3, 2.3));
   await add(exhibit);
 
   // The lamp, at the back of the desk with its head over the folder. Its bulb is the room's one
@@ -198,11 +166,15 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   place(lamp, DESK.back - 0.22, TOP, FILE.z + 0.5, 0.9);
   await add(lamp);
 
-  // What the person at this desk was doing a minute ago: a cigar still going in the ashtray and a
-  // glass poured. Both stand south of the file on the front edge of the top, in the spill off the
-  // lamp rather than the middle of its pool, and a metre clear of the console.
+  // What the person at this desk was doing a minute ago: a cigar still going in the ashtray, the
+  // pack and the lighter beside it, and the thermos they brought for the shift. All south of the
+  // file on the front edge of the top, in the spill off the lamp, a metre clear of the console.
+  // Scanned props, where the glass and the mug were built from cylinders.
   await add(place(ashtray(), ASHTRAY[0], TOP, ASHTRAY[1], ASHTRAY_TURN));
-  await add(place(tumbler(), GLASS[0], TOP, GLASS[1], 0));
+  await add(place(grounded(store.model('cig_pack')), ASHTRAY[0] + 0.02, TOP, ASHTRAY[1] - 0.17, 0.4));
+  await add(place(grounded(store.model('lighter')), ASHTRAY[0] - 0.1, TOP, ASHTRAY[1] - 0.1, 1.9));
+  await add(place(grounded(store.model('thermos')), GLASS[0] - 0.02, TOP, GLASS[1] - 0.32, 0.3));
+  await add(place(grounded(store.model('stapler')), DESK.x - 0.2, TOP, 29.75, 0.9));
 
   // The anchor a pinned panel would hang off, half a metre in front of the folder. Nothing in the
   // page carries `data-anchor="file"` yet: the pinned rule in walk.css draws no ground of its own,

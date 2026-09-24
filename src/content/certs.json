@@ -4,5 +4,7 @@
   { "id": "ejpt", "name": "eJPT", "issuer": "INE Security", "badgeImage": "/certs/ejpt.png", "verifyUrl": "https://www.credential.net/88c88694-d926-4d2a-acfe-e262bea8b4ac" },
   { "id": "isc2-cc", "name": "Certified in Cybersecurity", "issuer": "ISC2", "badgeImage": "/certs/isc2-cc.png" },
   { "id": "md-102", "name": "MD-102 Endpoint Administrator", "issuer": "Microsoft", "badgeImage": "/certs/md-102.svg" },
-  { "id": "security-plus", "name": "Security+", "issuer": "CompTIA", "badgeImage": "/certs/security-plus.png" }
+  { "id": "security-plus", "name": "Security+", "issuer": "CompTIA", "badgeImage": "/certs/security-plus.png" },
+  { "id": "az-900", "name": "AZ-900 Azure Fundamentals", "issuer": "Microsoft", "badgeImage": "/certs/az-900.svg" },
+  { "id": "sc-900", "name": "SC-900 Security, Compliance, and Identity Fundamentals", "issuer": "Microsoft", "badgeImage": "/certs/sc-900.svg" }
 ]

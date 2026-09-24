@@ -34,7 +34,7 @@ export const site = {
     fabrication: { title: 'Fabrication', lead: 'Products built to be used by the world.' },
     recreation: { title: 'Recreation', lead: "Tools for the games and communities I'm passionate about." },
     operations: { title: 'Operations', lead: 'Platform development and automation at a CMMC compliant MSP.' },
-    credentials: { title: 'Credentials', lead: 'Six plates on the wall: networking, endpoints and offensive security.' },
+    credentials: { title: 'Credentials', lead: 'Networking, security, endpoints and the cloud, eight films on the viewers.' },
     containment: { title: 'Containment', lead: 'Offensive security work. Most of it stays sealed until disclosure clears.' },
     file: { title: 'Personnel file', lead: 'Who is behind the door.' },
   } satisfies Record<StopId, { title: string; lead: string }>,

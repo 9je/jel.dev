@@ -6,6 +6,7 @@ import { labFloor, labWall, dadoBands, backless, dadoMaterial, dadoLineMaterial,
 import { glassRoom } from '../../labs/props';
 import { doorway } from '../../labs/signage';
 import { battens, lightShaft, troffer, lensMaterial, fixtureSteel } from '../../labs/fixtures';
+import { vinylFloor } from '../../labs/textures';
 import { X0, X1, Z0, Z1, H, W, D, XC, ZC, LAB, LAB_PANEL, BATTEN_Z, BATTEN_Y, BATTEN_DROP } from './layout';
 
 export interface Shell { planes: Set<THREE.Object3D> }
@@ -139,8 +140,10 @@ export function buildShell({ store }: StageContext, root: THREE.Group): Shell {
     // (nothing on its diagonal fits a 2.2 m fitting) and the six panels are laid below by hand,
     // with the grid's own troffer and lens so they are the same fitting every other ceiling has.
     // Tinted whiter than the shared tile so the lid reads as a white box, not a grey one.
-    litEvery: 1000, panel: LAB_PANEL.size, tint: 0xe4ecf0, frosted: true,
-    floor: labFloor(store, LAB.w, LAB.d, LABS.panel),
+    litEvery: 1000, panel: LAB_PANEL.size, tint: 0xe4ecf0, frosted: true, acoustic: true,
+    // Sheet vinyl with the blue hexagons laid in, not the hall's tile: a clean room's floor is
+    // welded sheet so nothing collects in the joints, and the hexagons are the reference's own.
+    floor: new THREE.MeshStandardMaterial({ map: vinylFloor(LAB.w - 0.2, LAB.d - 0.2), roughness: 0.42, metalness: 0.02 }),
   });
   const [pw, pd] = LAB_PANEL.size;
   const { frame, lens } = troffer(pw, pd);

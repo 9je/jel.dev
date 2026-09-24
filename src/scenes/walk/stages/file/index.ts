@@ -24,12 +24,12 @@ async function build(ctx: StageContext): Promise<Stage> {
     dust([DESK.x - 0.9, 0.75, DESK.z0 + 1.2], [DESK.x + 0.9, 1.7, DESK.z1 - 1.2], tier === 'high' ? 160 : 60, { size: 0.035, opacity: 0.42, color: 0xffe0a8, amp: 0.1 }),
     // The cigar. A thread rather than a cloud: it leaves the coal narrow, widens as it rises, and
     // leans the way the room's air moves, which is toward the window the yard is outside of.
-    plume(CIGAR_TIP, { count: 26, life: 3.6, rise: 0.5, spread: 0.11, size: 0.095, grow: 2.8, drift: [0.008, 0, 0.022], color: 0xccd4d9, opacity: 0.6, seed: 23 }),
+    plume(CIGAR_TIP, { count: 70, life: 4.6, rise: 0.62, spread: 0.07, size: 0.05, grow: 5, drift: [0.01, 0, 0.026], color: 0xc4ccd1, opacity: 0.2, seed: 23 }),
   ];
   for (const p of fx) root.add(p.points);
   // This is the last frame of the walk, and it is a room somebody has just stepped out of rather
-  // than left for good: the file is open, the mug is over, the chair is turned, the glass is
-  // poured, and the cigar in the ashtray is still going. The smoke off it is the only thing in the
+  // than left for good: the file is open, the glasses are off, the chair is turned, the thermos is
+  // out, and the cigar in the ashtray is still going. The smoke off it is the only thing in the
   // room that moves under its own steam, which is what puts a person in the chair a minute ago.
   // The live monitor on the desk loses sync now and then: the plan rolls up the screen twice,
   // faster as it goes, and the picture flickers until it catches and settles back where it was.

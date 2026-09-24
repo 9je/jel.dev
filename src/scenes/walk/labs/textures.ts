@@ -556,3 +556,61 @@ export function neonGlow(text: string, color: string): { texture: THREE.CanvasTe
   for (const blur of [22, 70, 22]) { ctx.shadowBlur = blur; ctx.fillText(text, x, y); }
   return { texture: own(c), w, h, ink: { x: x - left, y: y - asc, w: inkW, h: inkH } };
 }
+
+/**
+ * One acoustic ceiling tile, off white with the pinholes and fissures mineral tile is pressed with,
+ * and a slightly darker bevel where it sits in the grid. Clean rooms have these. The shared
+ * ceiling texture is a sprayed plaster that goes brown under a bright lamp, which is what made the
+ * lab's lid read as a cheap stucco ceiling. Repeat it once per tile.
+ */
+export function acousticTile(size = 256): THREE.CanvasTexture {
+  const [c, ctx] = canvas(size, size); const r = rng(77);
+  ctx.fillStyle = '#eef1f2'; ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 90; i++) {
+    ctx.strokeStyle = `rgba(150,160,166,${0.12 + r() * 0.12})`; ctx.lineWidth = 0.8 + r();
+    ctx.beginPath(); let x = r() * size, y = r() * size; ctx.moveTo(x, y);
+    for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 16; y += (r() - 0.5) * 16; ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  for (let i = 0; i < 700; i++) { ctx.fillStyle = `rgba(120,130,136,${0.25 + r() * 0.3})`; ctx.fillRect(r() * size, r() * size, 1.5, 1.5); }
+  ctx.fillStyle = 'rgba(90,100,106,0.18)';
+  ctx.fillRect(0, 0, size, 5); ctx.fillRect(0, size - 5, size, 5); ctx.fillRect(0, 0, 5, size); ctx.fillRect(size - 5, 0, 5, size);
+  const t = own(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+
+/**
+ * A clean room's sheet vinyl, `w` by `d` metres, 64 px to the metre: pale and faintly mottled, a
+ * welded seam every two metres, scuffed along the line people walk, and a band of blue hexagons
+ * laid into it across the middle of the room, which is the one pattern the reference labs floor has.
+ */
+export function vinylFloor(w: number, d: number): THREE.CanvasTexture {
+  const ppm = 64, W = Math.round(w * ppm), Hh = Math.round(d * ppm);
+  const [c, ctx] = canvas(W, Hh); const r = rng(19);
+  ctx.fillStyle = '#d3dade'; ctx.fillRect(0, 0, W, Hh);
+  for (let i = 0; i < W * Hh * 0.02; i++) {
+    const v = 190 + Math.floor(r() * 40);
+    ctx.fillStyle = `rgba(${v},${v + 6},${v + 10},0.35)`; ctx.fillRect(r() * W, r() * Hh, 2, 2);
+  }
+  // The hexagons: a band of them down the middle third, alternate cells blue, some half worn.
+  const R = 0.42 * ppm, hx = R * Math.sqrt(3);
+  for (let row = 0; row * R * 1.5 < Hh; row++) {
+    for (let col = -1; col * hx < W + hx; col++) {
+      const cx = col * hx + (row % 2 ? hx / 2 : 0), cy = row * R * 1.5;
+      if (Math.abs(cx - W / 2) > W * 0.22) continue;
+      if (r() < 0.45) continue;
+      ctx.fillStyle = r() < 0.7 ? `rgba(36,85,164,${0.55 + r() * 0.3})` : `rgba(110,193,214,${0.35 + r() * 0.2})`;
+      ctx.beginPath();
+      for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + (k * Math.PI) / 3; const x = cx + Math.cos(a) * (R - 2), y = cy + Math.sin(a) * (R - 2); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  ctx.fillStyle = 'rgba(90,100,108,0.35)';
+  for (let x = 2 * ppm; x < W; x += 2 * ppm) ctx.fillRect(x, 0, 1.5, Hh);
+  // Scuffing down the walked line.
+  for (let i = 0; i < 260; i++) {
+    ctx.strokeStyle = `rgba(60,64,66,${0.05 + r() * 0.08})`; ctx.lineWidth = 1 + r() * 2;
+    const x = W / 2 + (r() - 0.5) * W * 0.35, y = r() * Hh;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (r() - 0.5) * 30, y + (r() - 0.5) * 10); ctx.stroke();
+  }
+  return own(c);
+}

@@ -1434,6 +1434,30 @@ export function drinksMachine(spec: DrinksSpec): THREE.Group {
  *
  * Four draw calls whatever the length.
  */
+/**
+ * A worktop's laminate, one texture for the whole run: charcoal speckle, a paler band of wear along
+ * the front edge, and a few rings. Laid on the box's top face, whose u runs across the depth and
+ * v along the length, so the canvas is long in v.
+ */
+function laminate(len: number): THREE.CanvasTexture {
+  const W = 128, Hh = Math.min(2048, Math.round(len * 256));
+  const [c, ctx] = canvas(W, Hh); const r = rng(41);
+  ctx.fillStyle = '#3b4247'; ctx.fillRect(0, 0, W, Hh);
+  for (let i = 0; i < W * Hh * 0.08; i++) {
+    const v = 50 + Math.floor(r() * 40);
+    ctx.fillStyle = `rgba(${v},${v + 6},${v + 10},0.5)`; ctx.fillRect(r() * W, r() * Hh, 1, 1);
+  }
+  // The front edge is u 0 on the top face once the box is placed front west: wear there.
+  const wear = ctx.createLinearGradient(0, 0, W * 0.45, 0);
+  wear.addColorStop(0, 'rgba(150,160,166,0.22)'); wear.addColorStop(1, 'rgba(150,160,166,0)');
+  ctx.fillStyle = wear; ctx.fillRect(0, 0, W * 0.45, Hh);
+  ctx.strokeStyle = 'rgba(20,16,12,0.35)';
+  for (let i = 0; i < Math.max(3, len); i++) {
+    ctx.lineWidth = 1.5 + r(); ctx.beginPath(); ctx.arc(20 + r() * 70, r() * Hh, 9 + r() * 3, 0, Math.PI * 2); ctx.stroke();
+  }
+  return own(c);
+}
+
 export function controlDesk(opts: { len: number; depth?: number; top?: number; tier?: number; tierDepth?: number }): THREE.Group {
   const { len } = opts;
   const depth = opts.depth ?? 0.8, top = opts.top ?? 0.79;
@@ -1454,7 +1478,14 @@ export function controlDesk(opts: { len: number; depth?: number; top?: number; t
     // The plinth each pedestal stands on, set back so the desk reads as having a toe space.
     body.push(new THREE.BoxGeometry(depth - 0.24, 0.09, 0.5).translate(depth / 2 + 0.07, 0.045, z));
   }
-  g.add(merged(body, new THREE.MeshStandardMaterial({ color: 0xa9b2b6, roughness: 0.6, metalness: 0.1 })));
+  // The carcass is powder coated steel, and the worktop is laid on it as its own piece: a dark
+  // speckled laminate worn paler along the front where forearms rest, and ringed where mugs stood.
+  // One flat pale grey for all of it read as a white box under the lamp, the cheapest thing in the
+  // last room of the walk.
+  const worktop = body.shift()!;
+  g.add(merged(body, new THREE.MeshStandardMaterial({ color: 0x8f989d, roughness: 0.55, metalness: 0.25 })));
+  const lam = laminate(len);
+  g.add(new THREE.Mesh(worktop, new THREE.MeshStandardMaterial({ map: lam, roughness: 0.62, metalness: 0.05 })));
   // The nosing: a rounded front edge along the whole run, which is the one line that tells you the
   // top is a made thing and not a slab.
   const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, len, 10), new THREE.MeshStandardMaterial({ color: 0x2f3940, roughness: 0.5, metalness: 0.3 }));
@@ -1467,7 +1498,7 @@ export function controlDesk(opts: { len: number; depth?: number; top?: number; t
       fronts.push([0.1, y, z]); handles.push([0.075, y + 0.055, z]);
     }
   }
-  g.add(instances(new THREE.BoxGeometry(0.03, 0.18, 0.5), new THREE.MeshStandardMaterial({ color: 0xb6bec0, roughness: 0.5, metalness: 0.2 }), fronts));
+  g.add(instances(new THREE.BoxGeometry(0.03, 0.18, 0.5), new THREE.MeshStandardMaterial({ color: 0x98a1a6, roughness: 0.5, metalness: 0.25 }), fronts));
   g.add(instances(new THREE.BoxGeometry(0.02, 0.022, 0.16), labSteel(0x39434b), handles));
   return g;
 }

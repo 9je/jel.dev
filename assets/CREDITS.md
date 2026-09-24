@@ -57,6 +57,12 @@ Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](
 | binder | [binder_notebook](https://polyhaven.com/a/binder_notebook) | model |
 | clipboard | [clipboard](https://polyhaven.com/a/clipboard) | model |
 | notepads | [office_notepads](https://polyhaven.com/a/office_notepads) | model |
+| spectacles | [round_spectacles](https://polyhaven.com/a/round_spectacles) | model |
+| thermos | [plastic_thermos](https://polyhaven.com/a/plastic_thermos) | model |
+| cig_pack | [cigarette_pack](https://polyhaven.com/a/cigarette_pack) | model |
+| lighter | [vintage_lighter](https://polyhaven.com/a/vintage_lighter) | model |
+| stapler | [vintage_stapler](https://polyhaven.com/a/vintage_stapler) | model |
+| medical_tape | [medical_tape](https://polyhaven.com/a/medical_tape) | model |
 
 ## Other sources
 

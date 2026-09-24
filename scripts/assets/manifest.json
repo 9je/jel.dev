@@ -265,6 +265,30 @@
         "license": "CC-BY-4.0",
         "licenseUrl": "http://creativecommons.org/licenses/by/4.0/"
       }
+    },
+    "spectacles": {
+      "id": "round_spectacles",
+      "group": "file"
+    },
+    "thermos": {
+      "id": "plastic_thermos",
+      "group": "file"
+    },
+    "cig_pack": {
+      "id": "cigarette_pack",
+      "group": "file"
+    },
+    "lighter": {
+      "id": "vintage_lighter",
+      "group": "file"
+    },
+    "stapler": {
+      "id": "vintage_stapler",
+      "group": "file"
+    },
+    "medical_tape": {
+      "id": "medical_tape",
+      "group": "credentials"
     }
   },
   "sizes": {

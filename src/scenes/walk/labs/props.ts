@@ -267,6 +267,8 @@ export interface GlassRoomSpec {
    *  glazed (ref 02). It reads from outside as privacy glass and from inside as a soft band that
    *  hides the floor clutter of the hall beyond. */
   frosted?: boolean;
+  /** Mineral acoustic tile for the lid instead of the shared plaster. */
+  acoustic?: boolean;
 }
 
 /**
@@ -287,7 +289,7 @@ export function glassRoom(store: AssetStore | null, spec: GlassRoomSpec): THREE.
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.2, D - 0.2), spec.floor);
     floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; g.add(floor);
   }
-  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9, panel: spec.panel, tint: spec.tint });
+  const { group: ceiling } = ceilingGrid(store, W, D, H, { tile: 1.2, litEvery: spec.litEvery ?? 2, intensity: spec.panelIntensity ?? 0.9, panel: spec.panel, tint: spec.tint, acoustic: spec.acoustic });
   g.add(ceiling);
   const lid = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.12, D + 0.2), labSteel(0x2b3740)); lid.position.y = H + 0.12; g.add(lid); // clear of the ceiling plane, or the two fight for the pixel
 

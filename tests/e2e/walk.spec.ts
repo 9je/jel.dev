@@ -1,4 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
+import certs from '../../src/content/certs.json' with { type: 'json' };
 
 const STOPS = ['booth', 'fabrication', 'recreation', 'operations', 'credentials', 'containment', 'file'];
 
@@ -12,7 +13,7 @@ test('lite path renders every stop in order with a dock', async ({ page }) => {
   const wall = page.locator('section[data-stop="credentials"] [data-cert-wall]');
   await expect(wall).toBeVisible();
   await expect(wall).toHaveAttribute('open', '');
-  await expect(wall.locator('li')).toHaveCount(6);
+  await expect(wall.locator('li')).toHaveCount(certs.length);
   // The wall is a disclosure for the walk's sake. On the stacked page it is simply there, so its
   // control is not: the page reads as it did before the walk had a compact column.
   expect(await wall.locator('summary').evaluate((el) => getComputedStyle(el).display)).toBe('none');
@@ -37,19 +38,16 @@ test('the full path never requests a still', async ({ page }) => {
   expect(stillRequests).toEqual([]);
 });
 
-test('the lite path lays the flagship out in two columns', async ({ page }) => {
+test('the lite path sets a flagship with no picture as one column, with no empty panel', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto('/?effects=off');
   const bay = page.locator('section[data-stop="fabrication"] [data-flagship]');
-  // A details puts a box between itself and its children, and the picture and the copy stopped
-  // being grid items: both ended up stacked in the first column with the second one empty.
-  const cols = await bay.evaluate((el) => {
-    const visual = el.querySelector('.bay-visual')!.getBoundingClientRect();
-    const text = el.querySelector('.bay-text')!.getBoundingClientRect();
-    return { visualLeft: visual.left, textLeft: text.left, sameRow: Math.abs(visual.top - text.top) < 2 };
-  });
-  expect(cols.textLeft).toBeGreaterThan(cols.visualLeft + 100);
-  expect(cols.sameRow).toBe(true);
+  // The hex panel that stood in for a missing picture was an empty box beside every flagship.
+  await expect(bay.locator('.bay-visual')).toHaveCount(0);
+  const text = await bay.locator('.bay-text').evaluate((el) => el.getBoundingClientRect().width);
+  // At the reading measure, not stretched across the card.
+  expect(text).toBeLessThan(760);
+  expect(text).toBeGreaterThan(300);
 });
 
 test('dock anchors reach their sections on the lite path', async ({ page }) => {
@@ -187,7 +185,7 @@ test('the certification wall is one row on the walk, with its badges a click beh
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
   const wall = page.locator('[data-cert-wall]');
-  // One more row of the same list, closed, so the six plates in the room carry it.
+  // One more row of the same list, closed, so the viewers in the room carry it.
   expect(await wall.evaluate((el) => el.parentElement?.hasAttribute('data-project-list'))).toBe(true);
   await expect(wall).not.toHaveAttribute('open', '');
   await expect(wall.locator('.wall-list')).toBeHidden();
@@ -198,7 +196,7 @@ test('the certification wall is one row on the walk, with its badges a click beh
   // verification link. Opened, it is the compact grid: small plates, no issuer.
   await summary.click();
   await expect(wall).toHaveAttribute('open', '');
-  await expect(wall.locator('li')).toHaveCount(6);
+  await expect(wall.locator('li')).toHaveCount(certs.length);
   await expect(wall.locator('li').first()).toBeVisible();
   expect(await wall.locator('.badge img').first().evaluate((el) => el.clientWidth)).toBe(40);
   await expect(wall.locator('.badge-issuer').first()).toBeHidden();

@@ -72,8 +72,6 @@ export const FILE = { x: -67.85, z: 31.0 };
  */
 export const ASHTRAY: [number, number] = [-67.72, 30.46];
 export const GLASS: [number, number] = [-67.93, 30.20];
-/** The mug, on its side where somebody knocked it. */
-export const MUG: [number, number] = [-67.85, 29.62];
 
 /** The ceiling grid the glass room hangs, which is where the one cold ceiling spot has to sit:
  *  `lighting.ts` enumerates the lit troffers from these numbers exactly the way `ceilingGrid` does,

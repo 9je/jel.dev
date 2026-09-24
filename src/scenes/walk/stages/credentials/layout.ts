@@ -21,20 +21,19 @@ export const SERVICE_Y = 3.9, PANEL_Y = 3.1;
 /** Where the panels hang along the corridor north of the lab, as z. */
 export const PANEL_Z = [-11.2, -4.6, 2.0];
 
-/** Plate centres, three per side, on the same three z so the hold sees a matched pair at each step
- *  up the aisle. Jordan's read of the first pass was that the room never showed both walls: the
- *  west three were in shot and the east three sat behind the camera. Every plate stands 0.45 m
- *  inside its own glass.
- *  The near pair starts at -17.4 rather than -18. The rows are 6.3 m apart and the hold stands
- *  4.97 m short of the near pair: at -18 that pair subtends more than the 85.6 degree horizontal
- *  frame a 55 degree lens gives a 16 by 9 shot, and both near plates are cut by its edges. At
- *  -17.4 the whole run fits, and the far pair still clears the lab's north face. */
-export const PLATE_Z = { west: [-17.4, -15.6, -13.8], east: [-17.4, -15.6, -13.8] };
-export const PLATE_X = { west: XC - 3.6 + 0.45, east: XC + 3.6 - 0.45 };
-/** How far each plate turns off its wall toward the aisle. None: they were turned a quarter radian
- *  so both rows faced the hold, which is a display posed for the camera rather than one somebody
- *  hung. Plates on rods hang square to the wall they run along. */
-export const PLATE_TURN = 0;
+/** The viewers: four film viewers on mobile stands down each side of the lab, square to the glass
+ *  and facing the aisle, 1.6 m apart. The nearest pair is the one the hold frames largest, and it
+ *  carries the two CCNAs. Every stand stands 0.55 m inside its own glass, and the far pair stops
+ *  0.2 m short of the lab's north face. */
+export const VIEWER_Z = [-18.6, -17.0, -15.4, -13.8];
+export const VIEWER_X = { west: XC - 3.6 + 0.55, east: XC + 3.6 - 0.55 };
+/** Which certification hangs where, by id, west then east, nearest first: the two CCNAs, then the
+ *  security certifications, then Microsoft's. `null` would be a viewer with no film on it,
+ *  switched off. */
+export const VIEWER_ORDER: { west: (string | null)[]; east: (string | null)[] } = {
+  west: ['ccna', 'ejpt', 'md-102', 'az-900'],
+  east: ['ccna-cybersecurity', 'security-plus', 'isc2-cc', 'sc-900'],
+};
 
 /** Four battens down the corridor north of the lab, hung half a metre off the dark steel ceiling
  *  on rods. The room's two spots sit under the first and the third. `BATTEN_Y` is where a housing
