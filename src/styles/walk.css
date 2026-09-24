@@ -200,7 +200,15 @@
     backdrop-filter: blur(14px) saturate(1.2);
     box-shadow: inset 0 2px 0 color-mix(in srgb, var(--wing-light) 70%, transparent);
     border-radius: 14px 14px 0 0;
+    /* The stop's own crossfade is moved onto the sheet here. A backdrop filter inside an ancestor
+       whose opacity or transform is mid transition takes that ancestor's box as its backdrop, and
+       the stop's box is the viewport: for half a second at every doorway the whole room was blurred
+       and washed. Faded on the sheet itself, the blur stays inside the sheet. */
+    opacity: 0; transform: translateY(12px); transition: opacity 180ms ease, transform 180ms ease;
   }
+  .walk[data-mode='full'] .stop { opacity: 1; transform: none; transition: visibility 0s linear 180ms; }
+  .walk[data-mode='full'] .stop[data-active] { transition: visibility 0s; }
+  .walk[data-mode='full'] .stop[data-active] .stop-inner { opacity: 1; transform: none; transition: opacity 320ms ease 200ms, transform 320ms ease 200ms; }
   /* So the summary can be a row of the sheet's own grid and sit above the title. */
   .walk[data-mode='full'] .stop-more { display: contents; }
   /* The unconditional `.stop-more[open] > summary { display: none }` above still applies to this
