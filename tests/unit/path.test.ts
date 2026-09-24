@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Vector3 } from 'three';
-import { STOPS, cameraAt, stopAt, roomAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, EYE, TURN_LEAD } from '../../src/scenes/walk/path';
+import { STOPS, BEATS, cameraAt, stopAt, roomAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, EYE, TURN_LEAD } from '../../src/scenes/walk/path';
 
 describe('stops', () => {
   it('are seven, in increasing t, from 0 to 1', () => {
@@ -177,6 +177,23 @@ describe('camera motion', () => {
       const c = cameraAt(s.t);
       const want = c.target.clone().set(s.lookAt[0], s.lookAt[1], s.lookAt[2]).sub(c.position).normalize();
       expect(dirAt(s.t).dot(want)).toBeGreaterThan(0.9999);
+    }
+  });
+  it('gives every beat a look: the camera is on the point through the beat, and off it well past', () => {
+    for (const b of BEATS) {
+      // Through the beat the look is turned toward the point, well past what the path heading
+      // gives: a point off to the side is a partial turn, let go by angle, so the test is the
+      // turn's direction, not that the point sits dead centre.
+      for (const u of [b.from, (b.from + b.to) / 2, b.to]) {
+        const c = cameraAt(u), ahead = cameraAt(u + 0.005);
+        const look = c.target.clone().sub(c.position).normalize(), path = ahead.position.clone().sub(c.position).normalize();
+        const to = new Vector3(...b.at).sub(c.position).normalize();
+        expect(look.angleTo(to), `beat at ${b.at} not looked at by ${u}`).toBeLessThan(path.angleTo(to) - 0.12);
+      }
+      const after = b.to + 0.05, c = cameraAt(after), ahead = cameraAt(after + 0.005);
+      const look = c.target.clone().sub(c.position).normalize(), path = ahead.position.clone().sub(c.position).normalize();
+      const { weight } = lookWeight(after);
+      if (weight === 0) expect(look.angleTo(path) * 180 / Math.PI, `beat at ${b.at} still holding at ${after}`).toBeLessThan(6);
     }
   });
   it('eases into and out of every hold instead of stopping dead', () => {

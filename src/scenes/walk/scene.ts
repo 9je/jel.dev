@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
 import { cameraAt, holdWeight, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
 import { buildThresholds } from './thresholds';
-import { lensFor } from './framing';
+import { DESK_VFOV, lensFor } from './framing';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
@@ -139,7 +139,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     settled.add(d.id);
   }
 
-  let sizedW = 0, sizedH = 0;
+  let sizedW = 0, sizedH = 0, baseFov = DESK_VFOV, dipped = false;
   /** How much of the frame's bottom the phone sheet covers: the dock bar under it and the collapsed
    *  sheet's handle, title and lead. Only a coarse pointer gets the sheet (walk.css). */
   const coarse = matchMedia('(pointer: coarse)');
@@ -157,7 +157,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     sizedW = w; sizedH = h;
     renderer.setSize(w, h, false); post?.setSize(w, h);
     const lens = lensFor(w, h, sheetCover(h));
-    camera.aspect = lens.aspect; camera.fov = lens.fov;
+    camera.aspect = lens.aspect; camera.fov = baseFov = lens.fov;
     if (lens.shift) camera.setViewOffset(w, lens.shift.fullH, 0, lens.shift.y, w, h); else camera.clearViewOffset();
     camera.updateProjectionMatrix();
     setFrame(lens);
@@ -304,8 +304,11 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (opening) openingPose();
     rig.update(current, dt);
     fog.color.copy(rig.grade.haze); fog.density = rig.grade.density; (scene.background as THREE.Color).copy(rig.grade.haze);
-    // A beat of shade on each threshold, and the room beyond opens as the camera comes through.
-    renderer.toneMappingExposure = rig.grade.exposure * (1 - 0.2 * thresholdDip(current)); scene.environmentIntensity = rig.grade.env;
+    // A beat of shade on each threshold, and the room beyond opens as the camera comes through: the
+    // lens closes a few degrees in the vestibule and widens again with the room.
+    const dip = thresholdDip(current);
+    renderer.toneMappingExposure = rig.grade.exposure * (1 - 0.2 * dip); scene.environmentIntensity = rig.grade.env;
+    if (dip > 0.002 || dipped) { camera.fov = baseFov * (1 - 0.07 * dip); camera.updateProjectionMatrix(); dipped = dip > 0.002; }
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
     hoverFx.update(dt);
     if (post) post.render(dt); else renderer.render(scene, camera);

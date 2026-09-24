@@ -222,6 +222,33 @@ function lookQuat(stop: Stop, u: number): Quaternion {
 }
 
 /**
+ * What the walk looks at on the way between holds. Left to itself the camera stares down the path,
+ * and a corridor with its one lit thing off to the side reads as a plain wall going by. Each beat
+ * is a point worth a look and the scroll over which the walk gives it one: the camera turns to it,
+ * follows it, and lets it go as it passes. The release is by angle, not scroll: the weight fades as
+ * the point swings past 35 degrees off the heading and is gone by 75, so the head never wrenches
+ * round after something beside it, and the turn back runs at the rate the thing itself goes by.
+ */
+export const BEATS: { at: [number, number, number]; from: number; to: number }[] = [
+  // Leaving the office, the sodium pool under the first dock lamp, across the bay to the right.
+  { at: [2, 0.2, -27], from: 0.275, to: 0.285 },
+  // Leaving the arcade, the eye runs on down the row to the snack machine before the corridor.
+  { at: [-33, 1.3, -34.3], from: 0.44, to: 0.45 },
+  // The last cage of racks on the south side, before the turn into the lab.
+  { at: [-70, 1.4, -37], from: 0.6, to: 0.6 },
+  // The lamp on the containment table, kept as the walk comes up to it and let go a few metres
+  // short: it passes three metres off the path, and following it past that would wrench the head.
+  { at: [-82.05, 1.2, 12.25], from: 0.885, to: 0.885 },
+  // The desk lamp, from the moment the file door shows it: the eye is on the door's edge as the
+  // desk comes round it. The hold's own turn in aims from where the camera parks, and blended from
+  // the door that swept a blank wall for a second before the desk.
+  { at: [-68, 1.0, 31], from: 0.932, to: 0.955 },
+];
+export const BEAT_RAMP = 0.025;
+const _dir = new Vector3();
+const _qBeat = new Quaternion();
+
+/**
  * Position on the spline plus the point to look at. The look direction is blended as a rotation
  * between the travel heading and the stop's line of sight. Blending the two aim points in a straight
  * line used to send the aim point past the camera's own position at the fabrication hold, where the
@@ -237,6 +264,13 @@ export function cameraAt(t: number, out = { position: new Vector3(), target: new
   const { stop, weight } = lookWeight(u);
   _qAhead.setFromRotationMatrix(_m.lookAt(out.position, _ahead, UP));
   _qAhead.slerp(lookQuat(stop, u), weight);
+  for (const b of BEATS) {
+    if (u < b.from - BEAT_RAMP || u > b.to + BEAT_RAMP) continue;
+    _dir.set(b.at[0], b.at[1], b.at[2]).sub(out.position);
+    const off = _dir.angleTo(_tangent.subVectors(_ahead, out.position));
+    const w = Math.min(smoothstep((u - b.from) / BEAT_RAMP + 1), 1 - smoothstep((u - b.to) / BEAT_RAMP)) * (1 - smoothstep((off - 0.44) / 0.96));
+    if (w > 0) _qAhead.slerp(_qBeat.setFromRotationMatrix(_m.lookAt(out.position, _dir.add(out.position), UP)), w);
+  }
   out.target.copy(FORWARD).applyQuaternion(_qAhead).add(out.position);
   return out;
 }
