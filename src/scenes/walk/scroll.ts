@@ -2,7 +2,7 @@ import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { stopAt, tForStop, type StopId } from './path';
+import { roomAt, tForStop, type StopId } from './path';
 
 export interface ScrollController {
   progress(): number;
@@ -32,7 +32,10 @@ export function createScroll(): ScrollController {
     onUpdate: (self) => {
       t = self.progress;
       for (const cb of progressCbs) cb(t);
-      const id = stopAt(t).id;
+      // The room the camera is standing in, not the nearest stop: the copy and its title strike as the
+      // walk crosses a room's threshold, which is the reveal, rather than halfway down the corridor
+      // before it.
+      const id = roomAt(t).id;
       if (id !== current) {
         current = id;
         history.replaceState(null, '', `#${id}`);

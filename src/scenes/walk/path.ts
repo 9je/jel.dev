@@ -91,8 +91,41 @@ export function doorOpenAmount(t: number): number {
   return smoothstep((t - DOOR_RANGE[0]) / (DOOR_RANGE[1] - DOOR_RANGE[0]));
 }
 
+/**
+ * The doorways the walk passes through between holds, as the plane each one stands in: the room
+ * beyond it, the axis the plane is square to, and where on that axis it stands. The shutter is not
+ * here: the booth's hold lifts it, and the camera never walks through it at speed.
+ */
+export const DOORS: { room: StopId; axis: 'x' | 'z'; at: number; span: [number, number] }[] = [
+  { room: 'recreation', axis: 'x', at: -20, span: [-34, -28] },
+  { room: 'operations', axis: 'x', at: -58, span: [-34, -28] },
+  { room: 'credentials', axis: 'x', at: -75, span: [-30, -27] },
+  { room: 'containment', axis: 'z', at: 6, span: [-81, -77] },
+  { room: 'file', axis: 'z', at: 26, span: [-77.5, -73.5] },
+];
+
+/** Where the walk crosses a doorway: the transit it happens in (the index of the stop it leaves),
+ *  how far through that transit's scroll it happens (0 to 1), and the scroll itself. */
+export interface Crossing { room: StopId; transit: number; x: number; u: number }
+
+/** The inverse of smoothstep on 0..1, by bisection: pure and only ever run at module load. */
+function unsmooth(y: number): number {
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (smoothstep(mid) < y) lo = mid; else hi = mid; }
+  return (lo + hi) / 2;
+}
+
+/** How hard the walk slows through a doorway (the speed there is 1 - THRESHOLD_SLOW of what it would
+ *  be) and over how much of the transit, as the Gaussian's width. The speed is made up either side,
+ *  so every crossing still happens at the scroll it always did and the rig's `enter` still holds. */
+export const THRESHOLD_SLOW = 0.55, THRESHOLD_WIDTH = 0.09;
+// Tapered to nothing at both ends of the transit, so the walk still leaves one hold and reaches the
+// next exactly where it did.
+const threshold = (x: number, at: number) => (x - at) * THRESHOLD_SLOW * Math.exp(-(((x - at) / THRESHOLD_WIDTH) ** 2)) * 16 * x * x * (1 - x) * (1 - x);
+
 /** Scroll progress to spline parameter. Flat through each hold, eased between holds so the camera
- *  slows into a stop and pulls away from it rather than hitting the hold edge at full speed. */
+ *  slows into a stop and pulls away from it rather than hitting the hold edge at full speed, and
+ *  slowed again through every doorway, a beat on the threshold before the room opens up. */
 export function travelParam(t: number): number {
   const u = clamp01(t);
   for (let i = 0; i < STOPS.length; i++) {
@@ -100,7 +133,9 @@ export function travelParam(t: number): number {
     if (u >= s.hold[0] && u <= s.hold[1]) return s.t;
     const next = STOPS[i + 1];
     if (next && u > s.hold[1] && u < next.hold[0]) {
-      const k = smoothstep((u - s.hold[1]) / (next.hold[0] - s.hold[1]));
+      let x = (u - s.hold[1]) / (next.hold[0] - s.hold[1]);
+      for (const c of CROSSINGS) if (c.transit === i) x -= threshold(x, c.x);
+      const k = smoothstep(x);
       return s.t + (next.t - s.t) * k;
     }
   }
@@ -211,4 +246,35 @@ export function roomAt(t: number): Stop {
   let room = STOPS[0];
   for (const s of STOPS) if (t >= s.enter) room = s;
   return room;
+}
+
+/** Every doorway crossing, found once by walking the unslowed mapping (the slowing leaves each
+ *  crossing where it was, so the result is the same either way). */
+export const CROSSINGS: Crossing[] = (() => {
+  const out: Crossing[] = [];
+  const v = new Vector3();
+  for (let i = 0; i < STOPS.length - 1; i++) {
+    const s = STOPS[i], next = STOPS[i + 1];
+    for (const d of DOORS) {
+      const side = (p: number) => { curve.getPointAt(p, v); return (d.axis === 'x' ? v.x : v.z) - d.at; };
+      const a0 = side(s.t), b0 = side(next.t);
+      if (Math.sign(a0) === Math.sign(b0)) continue;
+      let lo = s.t, hi = next.t;
+      for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (Math.sign(side(mid)) === Math.sign(a0)) lo = mid; else hi = mid; }
+      curve.getPointAt((lo + hi) / 2, v);
+      const across = d.axis === 'x' ? v.z : v.x;
+      if (across < d.span[0] || across > d.span[1]) continue;
+      const x = unsmooth(((lo + hi) / 2 - s.t) / (next.t - s.t));
+      out.push({ room: d.room, transit: i, x, u: s.hold[1] + x * (next.hold[0] - s.hold[1]) });
+    }
+  }
+  return out;
+})();
+
+/** 1 in a doorway's vestibule, falling to 0 a little way either side: the exposure dips on the
+ *  threshold and opens as the room does. Centred a touch before the plane, in the vestibule. */
+export function thresholdDip(t: number): number {
+  let d = 0;
+  for (const c of CROSSINGS) d = Math.max(d, Math.exp(-(((t - c.u + 0.002) / 0.009) ** 2)));
+  return d;
 }

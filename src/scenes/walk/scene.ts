@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
-import { cameraAt, setFrame, stopAt, STOPS, type StopId } from './path';
+import { cameraAt, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
+import { buildThresholds } from './thresholds';
 import { lensFor } from './framing';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
@@ -11,7 +12,7 @@ import { greybox } from './stages/greybox';
 import { STAGE_LOADERS } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
-import { disposeStray, anchorTiles } from './materials';
+import { disposeStray, disposeObject, anchorTiles } from './materials';
 import { createHover, pickHotspot } from './interact';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
@@ -72,6 +73,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // The scene's fixed set of lights: rooms declare placements into it rather than owning lights of
   // their own, so the light count never changes at a stop transition and no material recompiles.
   const rig = new LightRig(scene, rigSizeFor(opts.tier, !!opts.coarse), opts.tier === 'high');
+  const thresholds = buildThresholds(); scene.add(thresholds);
 
   let disposed = false;
   const store = await AssetStore.open(opts.tier);
@@ -283,7 +285,8 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (opening) openingPose();
     rig.update(current, dt);
     fog.color.copy(rig.grade.haze); fog.density = rig.grade.density; (scene.background as THREE.Color).copy(rig.grade.haze);
-    renderer.toneMappingExposure = rig.grade.exposure; scene.environmentIntensity = rig.grade.env;
+    // A beat of shade on each threshold, and the room beyond opens as the camera comes through.
+    renderer.toneMappingExposure = rig.grade.exposure * (1 - 0.2 * thresholdDip(current)); scene.environmentIntensity = rig.grade.env;
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
     hoverFx.update(dt);
     if (post) post.render(dt); else renderer.render(scene, camera);
@@ -365,7 +368,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       window.removeEventListener('resize', onResize); window.visualViewport?.removeEventListener('resize', onResize);
       canvas.removeEventListener('webglcontextlost', onContextLost);
       hoverFx.dispose();
-      for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); post?.dispose(); store.dispose();
+      for (const s of built.values()) s.dispose(); grey.dispose(); rig.dispose(); disposeObject(thresholds); post?.dispose(); store.dispose();
       envRT.dispose(); renderer.dispose(); setTimeout(() => renderer.forceContextLoss(), 1000);
       settleReadiness();
     },
