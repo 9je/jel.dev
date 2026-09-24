@@ -11,7 +11,7 @@ const spans = letters.map((ch) => (ch === ' ' ? { ch, n: -1 } : { ch, n: order.i
 ---
 <div class="preloader" data-preloader data-state="loading" role="status" aria-live="polite" aria-busy="true">
   <p class="preloader-sign" data-preloader-sign aria-label="JEL Labs">
-    {spans.map((s) => (s.n < 0 ? <span class="preloader-gap" aria-hidden="true"> </span> : <span class="preloader-letter" data-n={s.n} aria-hidden="true">{s.ch}</span>))}
+    {spans.map((s) => (s.n < 0 ? <span class="preloader-gap" aria-hidden="true"> </span> : <span class="preloader-letter" data-n={s.n} style={`--n:${s.n}`} aria-hidden="true">{s.ch}</span>))}
   </p>
   <p class="preloader-label"><span data-preloader-line>Mains power</span><span class="preloader-pct"><span data-preloader-pct>0</span>%</span></p>
   <a class="preloader-lite" href="/?effects=off" data-preloader-lite hidden>Slow connection. Continue without effects</a>

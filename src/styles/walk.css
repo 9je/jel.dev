@@ -60,8 +60,17 @@
   font-size: clamp(2.4rem, min(8.2vw, 17vh), 13rem); letter-spacing: 0; line-height: 1;
   --neon: #3fd7f0;
 }
-/* A dead tube: the glass is there, unlit, a thin cold outline with nothing in it. */
-.preloader-letter { color: transparent; -webkit-text-stroke: 1px rgb(63 215 240 / 0.22); }
+/* A dead tube: the glass is there, unlit, a thin cold outline with nothing in it. Now and then one
+   arcs, a blink of the gas trying to start, each tube on its own phase, so a sign waiting on a slow
+   stage is never a still frame. */
+.preloader-letter { color: transparent; -webkit-text-stroke: 1px rgb(63 215 240 / 0.22); animation: tube-arc 3.7s steps(1, end) infinite; animation-delay: calc(var(--n, 0) * -0.61s); }
+@keyframes tube-arc {
+  0%, 100% { -webkit-text-stroke-color: rgb(63 215 240 / 0.22); text-shadow: none; }
+  86% { -webkit-text-stroke-color: rgb(63 215 240 / 0.55); text-shadow: 0 0 0.18em rgb(63 215 240 / 0.3); }
+  87.5% { -webkit-text-stroke-color: rgb(63 215 240 / 0.22); text-shadow: none; }
+  89% { -webkit-text-stroke-color: rgb(63 215 240 / 0.4); text-shadow: 0 0 0.12em rgb(63 215 240 / 0.2); }
+  90% { -webkit-text-stroke-color: rgb(63 215 240 / 0.22); text-shadow: none; }
+}
 .preloader-letter[data-lit] {
   color: #e6fdff; -webkit-text-stroke: 0;
   text-shadow: 0 0 0.04em #fff, 0 0 0.12em var(--neon), 0 0 0.35em var(--neon), 0 0 0.9em rgb(63 215 240 / 0.55);
@@ -82,9 +91,14 @@
 .preloader[data-state='done'] { animation: preloader-out 480ms 420ms ease-in both; }
 @keyframes preloader-out { to { background-color: rgb(5 8 11 / 0); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .preloader-letter[data-lit], .preloader[data-state='done'] .preloader-sign { animation: none; }
+  .preloader-letter, .preloader-letter[data-lit], .preloader[data-state='done'] .preloader-sign { animation: none; }
 }
 .preloader[data-state='hidden'] { display: none; }
+/* The first paint, before the script has run, is the dead sign in the dark, so the page never
+   shows its copy for a moment and then cuts to the preloader. Without script the noscript rule in
+   the layout hides this. A script that never arrives gives way to the page after six seconds. */
+.walk[data-mode='boot'] .preloader[data-state='loading'] { display: grid; animation: give-way 0s 6s both; }
+@keyframes give-way { to { visibility: hidden; opacity: 0; } }
 /* On a phone the camera's aim sits above the sheet, 6rem over the middle (framing.ts), so the sign
    does too, and the cut lands on the sign in the room. */
 @media (pointer: coarse) and (orientation: portrait) { .preloader { align-content: center; padding-bottom: 12rem; } }

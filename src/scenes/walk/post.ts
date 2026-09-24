@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { EffectComposer, RenderPass, EffectPass, NormalPass, BloomEffect, VignetteEffect, NoiseEffect, SMAAEffect, SSAOEffect, ToneMappingEffect, ToneMappingMode, BlendFunction, type Effect } from 'postprocessing';
 import type { Tier } from './quality';
 
-export interface Post { render(dt: number): void; setSize(w: number, h: number): void; dispose(): void }
+/** `overrides` are the materials the stack draws the whole scene with itself, for the scene to warm
+ *  their programs before the first frame. */
+export interface Post { render(dt: number): void; setSize(w: number, h: number): void; overrides(): THREE.Material[]; dispose(): void }
 
 /**
  * The composer renders into a half float buffer with the renderer's own tone mapping switched off
@@ -19,11 +21,15 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   composer.addPass(new RenderPass(scene, camera));
 
   const effects: Effect[] = [new SMAAEffect()];
+  const overrides: THREE.Material[] = [];
   // Ambient occlusion is the expensive one, so only the high tier pays for it. It runs off a
   // normal buffer rendered at full size and occludes at half resolution.
   if (tier === 'high') {
     const normals = new NormalPass(scene, camera);
     composer.addPass(normals);
+    // The pass keeps its render pass to itself in the typings, and the material it overrides with.
+    const inner = (normals as unknown as { renderPass?: { overrideMaterial: THREE.Material | null } }).renderPass;
+    if (inner?.overrideMaterial) overrides.push(inner.overrideMaterial);
     effects.push(new SSAOEffect(camera, normals.texture, {
       blendFunction: BlendFunction.MULTIPLY,
       samples: 16, rings: 5, distanceScaling: true, depthAwareUpsampling: true,
@@ -41,6 +47,7 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   return {
     render(dt) { composer.render(dt); },
     setSize(w, h) { composer.setSize(w, h); },
+    overrides() { return overrides; },
     dispose() { composer.dispose(); },
   };
 }

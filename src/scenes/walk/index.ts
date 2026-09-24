@@ -93,14 +93,24 @@ let columnOff: (() => void) | null = null;
 /** What the facility log says as the load passes each share of it. */
 const BOOT_LINES: [number, string][] = [[0, 'Mains power'], [0.2, 'Loading bay lights'], [0.45, 'Dispatch office'], [0.7, 'Booth'], [0.9, 'Door controller']];
 
-/** The load drives the sign: one more tube strikes for each seventh of it, and the log line moves on. */
+/**
+ * The load drives the sign, and a clock keeps it moving. A tube strikes when the load reaches its
+ * seventh of the run, or when the last one struck 450 ms ago and the load has not moved on, so
+ * the sign never sits half lit through a long stage: the last two sevenths are the room builds and
+ * the shader warm up, and read by the load alone the sign stood at "J LL BS" for two seconds. No two
+ * strike inside 140 ms of each other, so a load that jumps still lights them one at a time. The
+ * percentage and the log line stay on the load itself.
+ */
+let struck = 0, lastStrike = 0, lastRatio = 0;
 function setPreloader(els: WalkElements, ratio: number) {
-  const r = Math.min(1, Math.max(0, ratio));
+  const r = lastRatio = Math.min(1, Math.max(0, ratio));
   els.preloader.style.setProperty('--progress', String(r));
   const pct = els.preloader.querySelector('[data-preloader-pct]');
   if (pct) pct.textContent = String(Math.round(r * 100));
-  const lit = Math.floor(r * 7 + 1e-6);
-  for (const l of els.preloader.querySelectorAll<HTMLElement>('[data-n]')) l.toggleAttribute('data-lit', Number(l.dataset.n) < lit);
+  const now = performance.now();
+  if (r >= 1) struck = 7;
+  else if (struck < 7 && now - lastStrike > 140 && (struck < Math.floor(r * 7 + 1e-6) || (r > 0.1 && now - lastStrike > 450))) { struck++; lastStrike = now; }
+  for (const l of els.preloader.querySelectorAll<HTMLElement>('[data-n]')) l.toggleAttribute('data-lit', Number(l.dataset.n) < struck);
   const line = els.preloader.querySelector('[data-preloader-line]');
   if (line) line.textContent = BOOT_LINES.reduce((a, [at, text]) => (r >= at ? text : a), BOOT_LINES[0]![1]);
 }
@@ -384,6 +394,9 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     }
   }, 8000);
   const giveUp = setTimeout(() => { if (gen === generation && els.preloader.dataset.state !== 'hidden') { teardown(); startLite(els); } }, 45000);
+  // The sign's clock: the load only reports when something lands, and a tube is owed by time too.
+  struck = 0; lastStrike = performance.now(); lastRatio = 0;
+  const tick = setInterval(() => setPreloader(els, lastRatio), 100);
   try {
     // overlays.ts pulls three in, so it rides with the scene chunk rather than the eager bundle.
     const [{ mountWalk }, { createScroll }, { pinOverlays }, interact] = await Promise.all([import('./scene'), import('./scroll'), import('./overlays'), import('./interact')]);
@@ -476,7 +489,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     console.warn('walk failed to start, using the lite path', err);
     teardown();
     startLite(els);
-  } finally { clearTimeout(slow); clearTimeout(giveUp); }
+  } finally { clearTimeout(slow); clearTimeout(giveUp); clearInterval(tick); }
 }
 
 function teardown() {
