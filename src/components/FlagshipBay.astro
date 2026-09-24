@@ -16,9 +16,11 @@ const sealed = d.status === 'pending-release';
     <h3 class="bay-title">{d.title}</h3>
     {!hideStatus && <StatusPlate status={d.status} />}
   </summary>
-  <div class="bay-visual" aria-hidden="true">
-    {d.image && !sealed ? <Image src={d.image} alt="" width={960} height={540} loading="eager" /> : <div class="bay-hex"></div>}
-  </div>
+  {/* Only a real picture earns the space. The hex panel that stood in for a missing one was an
+      empty box beside every flagship on the stacked page. */}
+  {d.image && !sealed && (
+    <div class="bay-visual" aria-hidden="true"><Image src={d.image} alt="" width={960} height={540} loading="eager" /></div>
+  )}
   <div class="bay-text">
     {sealed ? (
       <div class="bay-body">
@@ -44,28 +46,22 @@ const sealed = d.status === 'pending-release';
 </details>
 
 <style>
+  /* The flagship on the stacked page: no box, the same rule in the wing's colour the walk's copy
+     column hangs off, and the copy at a reading measure. A picture, when there is one, sits
+     beside it. */
   .bay {
     display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr);
-    gap: 2rem;
-    margin-bottom: 3rem;
-    padding: 1.5rem;
-    background: var(--surface);
-    border-top: 1px solid var(--surface-edge);
-    border-radius: var(--radius);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem 2rem;
+    margin-bottom: 2.5rem;
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    box-shadow: inset 2px 0 0 var(--wing-light);
     position: relative;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 1l26 15v30L28 61 2 46V16z M28 49l26 15v30L28 109 2 94V64z' fill='none' stroke='%232455A4' stroke-opacity='0.16' stroke-width='1.5'/%3E%3C/svg%3E");
-    background-size: 56px 97px;
   }
-  .bay[data-sealed] { border-top: 6px solid transparent; border-image: repeating-linear-gradient(135deg, var(--hazard) 0 12px, #111 12px 24px) 6; }
+  .bay:has(.bay-visual) { grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr); }
+  .bay[data-sealed] { box-shadow: inset 2px 0 0 var(--hazard); }
   .bay-visual { min-height: 16rem; background: var(--bg); border-radius: var(--radius); overflow: hidden; display: grid; place-items: center; }
   .bay-visual img { width: 100%; height: 100%; object-fit: cover; }
-  .bay-hex {
-    width: 100%; height: 100%; min-height: 16rem; opacity: 0.4;
-    background-color: var(--bg);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 1l26 15v30L28 61 2 46V16z M28 49l26 15v30L28 109 2 94V64z' fill='none' stroke='%232455A4' stroke-width='1.5'/%3E%3C/svg%3E");
-    background-size: 56px 97px;
-  }
   /* A details puts a `::details-content` box between itself and its children, which made the
      picture and the copy two blocks inside the 3fr column instead of one grid item each. This
      hands them back to the grid. Only while it is open: that box is what carries the UA's
@@ -77,6 +73,7 @@ const sealed = d.status === 'pending-release';
   .bay-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; list-style: none; cursor: pointer; }
   .bay-head::-webkit-details-marker { display: none; }
   .bay-title { font-size: 1.6rem; }
+  .bay-text { max-width: var(--measure); }
   .bay-summary { font-size: 1.1rem; }
   .bay-warning, .bay-stack, .bay-unlocks { color: var(--text-dim); font-size: 0.95rem; }
   .bay-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
@@ -88,5 +85,5 @@ const sealed = d.status === 'pending-release';
     background: #05080b;
     user-select: none;
   }
-  @media (max-width: 899px) { .bay { grid-template-columns: 1fr; } }
+  @media (max-width: 899px) { .bay:has(.bay-visual) { grid-template-columns: 1fr; } }
 </style>

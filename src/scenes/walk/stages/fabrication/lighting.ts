@@ -45,7 +45,7 @@ export function lights(): Placement[] {
   for (const [x, z] of WORKING) out.push({ kind: 'spot', position: [x, FIXTURE_Y, z], target: [x, 0, z], color: 0xd9e8ee, intensity: 190, distance: 50, angle: Math.PI / 2.7, penumbra: 0.8, decay: 1.7 });
   // Wide and soft from 2 m over the plinth tops, so one cone covers all three and still falls off
   // before the glass. It casts, so each product throws a shadow on its own cap.
-  out.push({ kind: 'spot', position: [TRACK.x, TRACK.y, TRACK.z], target: [TRACK.x - 0.5, 0.9, TRACK.z], color: 0xf4efe6, intensity: 45, distance: 10, angle: Math.PI / 3, penumbra: 0.95, decay: 1.6, shadow: true });
+  out.push({ kind: 'spot', position: [TRACK.x, TRACK.y, TRACK.z], target: [TRACK.x - 0.5, 0.9, TRACK.z], color: 0xf4efe6, intensity: 24, distance: 8, angle: Math.PI / 3.2, penumbra: 0.95, decay: 1.6, shadow: true });
   // A tight cone from 6.5 m throws a pool the eye can find.
   SODIUM_LAMPS.forEach(([x, z], i) => out.push({ kind: 'spot', position: [x, LAMP_Y, z], target: [x, 0, z], color: SODIUM, intensity: 180, distance: 18, angle: Math.PI / 6, penumbra: 0.5, decay: 1.8, shadow: i === 0 }));
   out.push({ kind: 'point', position: [4, 8.2, Z0 + 1.4], color: 0xf2c230, intensity: 8, distance: 16, decay: 2 });

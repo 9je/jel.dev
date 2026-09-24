@@ -44,7 +44,7 @@ function nameplate(label: string): THREE.Group {
   const plate = new THREE.Mesh(new THREE.BoxGeometry(W, Hp, 0.012), labSteel(0x9aa5ad));
   plate.position.set(0, Hp / 2, 0); plate.name = 'plate'; tilt.add(plate);
   const face = nameplateFace(label, SUBTITLES[label] ?? '', label.length);
-  const ink = new THREE.Mesh(new THREE.PlaneGeometry(W, Hp), new THREE.MeshStandardMaterial({ map: face, color: 0xffffff, metalness: 0.45, roughness: 0.42 }));
+  const ink = new THREE.Mesh(new THREE.PlaneGeometry(W, Hp), new THREE.MeshStandardMaterial({ map: face, color: 0xffffff, metalness: 0.2, roughness: 0.72 }));
   ink.position.set(0, Hp / 2, 0.0065); ink.name = 'ink'; tilt.add(ink);
   // The lit edge: a bar of acrylic along the top of the plate, lit from its ends.
   const strip = new THREE.Mesh(new THREE.BoxGeometry(W + 0.02, 0.022, 0.022), new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: SODIUM, emissiveIntensity: 2.2 }));
