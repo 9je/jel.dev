@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
-import { cameraAt, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
+import { cameraAt, holdWeight, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
 import { buildThresholds } from './thresholds';
 import { lensFor } from './framing';
 import { FrameGovernor, type Tier } from './quality';
@@ -169,6 +169,24 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const clock = new THREE.Clock();
   cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
 
+  // ---- The held frame breathes ----------------------------------------------------------------
+  // A hold is where the reader stops to read, eight seconds or more of one frame, and a frame that
+  // is perfectly still reads as a screenshot. Held, the camera drifts a few centimetres and a
+  // fraction of a degree on slow clocks that share no factor, the way a camera on a person does,
+  // and settles as the walk moves on. Not with reduced motion.
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let drift = 0;
+  function breathe(dt: number) {
+    if (still) return;
+    drift += dt;
+    const w = holdWeight(current);
+    if (w <= 0) return;
+    camera.position.x += w * 0.045 * Math.sin(drift * 0.23);
+    camera.position.y += w * 0.02 * Math.sin(drift * 0.31 + 1.3);
+    camera.rotateY(w * 0.0025 * Math.sin(drift * 0.17 + 0.6));
+    camera.rotateX(w * 0.002 * Math.sin(drift * 0.29 + 2.1));
+  }
+
   // ---- The opening --------------------------------------------------------------------------
   // The preloader's sign cuts to this one: the camera stands square to the run at the distance that
   // makes it the same width on screen, holds while the HTML fades off it, then eases back to the
@@ -282,6 +300,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     sample(Math.max(0.001, dt - paced / 1000));
     current = damp(current, target, 8, dt);
     cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
+    breathe(dt);
     if (opening) openingPose();
     rig.update(current, dt);
     fog.color.copy(rig.grade.haze); fog.density = rig.grade.density; (scene.background as THREE.Color).copy(rig.grade.haze);
