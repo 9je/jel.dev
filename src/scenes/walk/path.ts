@@ -18,7 +18,7 @@ export const EYE = 1.7;
 export const CONTROL_POINTS: [number, number, number][] = [
   [0, EYE, 26], [0, EYE, 22.5], [0, EYE, 12], [-1, EYE, 0], [-3, EYE, -14], [-8, EYE, -26],
   [-16, EYE, -31], [-30, EYE, -31], [-44, EYE, -31], [-58, EYE, -31], [-70, EYE, -31],
-  [-79, EYE, -26], [-79, EYE, -12], [-79, EYE, 4], [-79, EYE, 18], [-75, EYE, 27], [-70, EYE, 30],
+  [-79, EYE, -26], [-79, EYE, -12], [-79, EYE, 4], [-79, EYE, 18], [-76.4, EYE, 24.4], [-74.6, EYE, 28.2], [-70, EYE, 30],
 ];
 
 export const STOPS: Stop[] = [
@@ -277,4 +277,16 @@ export function thresholdDip(t: number): number {
   let d = 0;
   for (const c of CROSSINGS) d = Math.max(d, Math.exp(-(((t - c.u + 0.002) / 0.009) ** 2)));
   return d;
+}
+
+/**
+ * The room the camera is physically standing in, by the doorways it has actually walked through.
+ * Not the same as `roomAt`, which switches a room's lights and copy on where the hold that looks
+ * into it starts: containment's hold stands in the credentials hall looking through the door, and
+ * graded as containment that hall went black around the camera. The grade follows this.
+ */
+export function standingIn(t: number): StopId {
+  let room: StopId | null = null;
+  for (const c of CROSSINGS) if (t >= c.u) room = c.room;
+  return room ?? roomAt(t).id;
 }

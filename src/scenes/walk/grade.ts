@@ -22,7 +22,7 @@ export const GRADES: Record<StopId, Grade> = {
   // The cabinets and the machines are the light. The room around them is blue and low.
   recreation: { sky: 0x3b5178, ground: 0x0f141d, fill: 0.35, env: 0.06, haze: 0x0b111c, density: 0.018, exposure: 1.0 },
   // Cold, and hazy down the aisle, so the far cages fade instead of stopping.
-  operations: { sky: 0x4a5f6f, ground: 0x0a0f14, fill: 0.25, env: 0.05, haze: 0x0b1218, density: 0.026, exposure: 1.0 },
+  operations: { sky: 0x4a5f6f, ground: 0x0a0f14, fill: 0.34, env: 0.06, haze: 0x0b1218, density: 0.026, exposure: 1.0 },
   // The clean lab is the one bright room in the building. It keeps most of its fill.
   credentials: { sky: 0x8499a6, ground: 0x263038, fill: 0.75, env: 0.12, haze: 0x151c22, density: 0.01, exposure: 1.0 },
   // Emergency power. Red in the shadows, one lamp on the table.

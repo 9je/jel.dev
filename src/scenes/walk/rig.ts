@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { STOPS, roomAt, type StopId } from './path';
+import { STOPS, roomAt, standingIn, type StopId } from './path';
 import type { Tier } from './quality';
 import { GRADES, GradeState } from './grade';
 
@@ -129,7 +129,7 @@ export class LightRig {
       const assigned = assignSlots(this.slots.map((s) => s.target), composeSet(this.rooms, stop), this.size, this.shadows);
       this.slots.forEach((s, i) => { s.target = assigned[i]; });
     }
-    this.grade.toward(GRADES[stop], dt); this.applyGrade();
+    this.grade.toward(GRADES[standingIn(t)], dt); this.applyGrade();
     for (const s of this.slots) {
       // Fade out toward a change, snap, fade in. A slot with nothing to show fades to black and stays.
       if (s.current !== s.target) {
