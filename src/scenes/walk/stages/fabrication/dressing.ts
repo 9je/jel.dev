@@ -1,9 +1,10 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
+import { stencilTexture } from '../../textures';
 import type { StageContext } from '../types';
 import { grounded, once, repeat, place, type Spot } from '../../merge';
 import { palletRack, wrappedPallet, rackBays, rackSlots, container, papers, RACK_BAY, RACK_HEIGHT } from '../../labs/props';
 import { rng } from '../../labs/textures';
-import { X0, X1, Z0, COLUMNS } from './layout';
+import { X0, X1, Z0, COLUMNS, SAFETY } from './layout';
 
 /** The three racking runs, all turned a quarter so their bays face the aisle. */
 const RACKS: { bays: number; x: number; z: number }[] = [
@@ -89,6 +90,24 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const [bayA, bayB] = rackBays(2).map((dx) => SOUTH_RACK_X + dx);
   await add(repeat(wrappedPallet(2), [[bayA!, beamLow!, F + 0.6, 0]]));
   await add(repeat(prop('cardboard_box'), [[bayB! - 0.5, beamHigh!, F + 0.6, 0.1, 1.9], [bayB! + 0.55, beamHigh!, F + 0.55, -0.2, 1.7], [bayB! + 0.1, beamLow!, F + 0.6, 0.3, 2]]));
+
+  // The four metres of blockwork between the exit and the south racking, which the walk turns past
+  // close enough for the wall to fill the frame: a fire point by the exit under its plate, the exit
+  // painted on the block with an arrow, and a power box with its conduit run up into the girt.
+  await add(once(prop('fire_extinguisher'), -11.5, 0, F + 0.32, 0));
+  const plate = new THREE.Group();
+  plate.add(new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshStandardMaterial({ color: 0xb3251e, roughness: 0.55 })));
+  const glyph = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.55 })); glyph.position.z = 0.002; plate.add(glyph);
+  const core = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0xb3251e, roughness: 0.55 })); core.position.z = 0.004; plate.add(core);
+  await add(place(plate, -11.5, 1.9, F + 0.03));
+  const exitPaint = new THREE.MeshBasicMaterial({ map: stencilTexture('EXIT', { width: 512, height: 192, color: `#${SAFETY.toString(16)}`, font: '600 150px Michroma, system-ui, sans-serif', alpha: 0.82 }), transparent: true, depthWrite: false });
+  await add(place(new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.64), exitPaint), -10.1, 2.75, F + 0.03));
+  // The tip at the origin and the shaft out to +x: on a wall facing +z that points the way out, -x.
+  const arrow = new THREE.Shape([[0, 0], [0.42, 0.34], [0.42, 0.13], [0.95, 0.13], [0.95, -0.13], [0.42, -0.13], [0.42, -0.34]].map(([x, y]) => new THREE.Vector2(x, y)));
+  await add(place(new THREE.Mesh(new THREE.ShapeGeometry(arrow), new THREE.MeshBasicMaterial({ color: SAFETY, transparent: true, opacity: 0.82, depthWrite: false })), -11.95, 2.75, F + 0.03));
+  await add(once(store.model('power_box'), -8.9, 1.6, F + 0.08, 0));
+  const conduit = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 4, 8), new THREE.MeshStandardMaterial({ color: 0x8e969c, roughness: 0.5, metalness: 0.6 }));
+  await add(place(conduit, -8.9, 2, F + 0.06));
 
   // Left wall: a container by the exit and the tool wall by the door. The racking there is built
   // with the other runs above.
