@@ -10,7 +10,7 @@ import { CROSSINGS, STOPS, cameraAt } from './path';
  */
 function spillTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas'); c.width = 128; c.height = 256;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
   // v runs from the threshold (top of the canvas) back toward the approach.
   const along = ctx.createLinearGradient(0, 0, 0, 256);
   along.addColorStop(0, 'rgba(255,255,255,1)'); along.addColorStop(0.35, 'rgba(255,255,255,0.45)'); along.addColorStop(1, 'rgba(255,255,255,0)');
@@ -25,7 +25,7 @@ function spillTexture(): THREE.CanvasTexture {
 
 function curtainTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
   const up = ctx.createLinearGradient(0, 128, 0, 0);
   up.addColorStop(0, 'rgba(255,255,255,0.9)'); up.addColorStop(0.5, 'rgba(255,255,255,0.35)'); up.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = up; ctx.fillRect(0, 0, 128, 128);

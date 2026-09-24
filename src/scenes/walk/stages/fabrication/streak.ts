@@ -134,8 +134,8 @@ export function streakBoard(): THREE.Group {
   onStreak((next) => {
     if (next.current === data.current && next.recent === data.recent) return;
     for (const f of [map, glow]) {
-      f.c.getContext('2d')!.clearRect(0, 0, W, H);
-      paint(f.c.getContext('2d')!, next, f.glow);
+      f.c.getContext('2d', { willReadFrequently: true })!.clearRect(0, 0, W, H);
+      paint(f.c.getContext('2d', { willReadFrequently: true })!, next, f.glow);
       f.tex.needsUpdate = true;
     }
   });

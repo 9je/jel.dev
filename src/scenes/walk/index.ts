@@ -366,8 +366,17 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
   };
 }
 
-async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
+async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?: WebGL2RenderingContext | null) {
   const gen = ++generation;
+  // The tier probe made its context on the canvas with the driver's MSAA only on a coarse pointer.
+  // The low tier is the one that needs it, having no post stack to smooth edges, so a low tier on
+  // a fine pointer swaps in a fresh canvas and lets the renderer make its own.
+  let context = probed ?? undefined;
+  if (context && (tier === 'low') !== coarse) {
+    context.getExtension('WEBGL_lose_context')?.loseContext();
+    const fresh = els.canvas.cloneNode() as HTMLCanvasElement; els.canvas.replaceWith(fresh); els.canvas = fresh;
+    context = undefined;
+  }
   // Capture the requested stop before the scroll controller exists: ScrollTrigger's first
   // onUpdate can fire off a stale scroll position (left over from the browser's own
   // scroll-to-fragment while the page was still in boot layout) and rewrite location.hash via
@@ -403,6 +412,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean) {
     const h = await mountWalk(els.canvas, {
       tier,
       coarse,
+      context,
       pixelRatioCap: pixelRatioCap(tier, coarse),
       gate: initial === 'booth' ? ['booth', 'fabrication'] : ['booth', 'fabrication', initial],
       initialProgress: tForStop(initial),
@@ -562,12 +572,12 @@ async function init() {
   const els = queryElements();
   if (!els) return;
   wireStreak();
-  const input = readTierInput();
+  const input = readTierInput(els.canvas);
   const tier = decideTier(input);
   // Readable from devtools on a machine that runs badly: which tier it got and why.
   els.root.dataset.tier = tier; els.root.dataset.renderer = input.renderer;
   wireEffectsToggle(els, tier);
-  if (tier === 'lite') startLite(els); else await startFull(els, tier, input.coarse);
+  if (tier === 'lite') { input.context?.getExtension('WEBGL_lose_context')?.loseContext(); startLite(els); } else await startFull(els, tier, input.coarse, input.context);
 }
 
 // A module script runs once the document is parsed, so the elements are there to query. The guard

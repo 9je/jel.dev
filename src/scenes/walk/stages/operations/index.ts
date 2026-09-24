@@ -6,6 +6,7 @@ import { buildDressing } from './dressing';
 import { lights } from './lighting';
 import { dust, plume, type ParticleSystem } from '../../labs/particles';
 import { X0, X1, Z0, Z1 } from './layout';
+import { STAGE_META } from '../registry';
 
 /** The camera's sweep: a 1.2 rad arc at about 0.25 rad/s, easing to a stop at each end. */
 const SWEEP_ARC = 1.2, SWEEP_PERIOD = (2 * SWEEP_ARC) / 0.25;
@@ -13,7 +14,7 @@ const ease = (v: number) => v * v * (3 - 2 * v);
 
 const RED = new THREE.Color(0xff3a1a), AMBER = new THREE.Color(0xffa62b);
 
-async function build(ctx: StageContext): Promise<Stage> {
+export async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'operations'; scene.add(root);
   const shell = await buildShell(ctx, root);
@@ -92,4 +93,4 @@ async function build(ctx: StageContext): Promise<Stage> {
   };
 }
 
-export const OPERATIONS_DEF: StageDef = { id: 'operations', stop: 'operations', groups: ['labs', 'operations'], near: ['recreation', 'operations', 'credentials'], replaces: 'lab', build };
+export const OPERATIONS_DEF: StageDef = { ...STAGE_META.operations, build };

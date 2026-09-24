@@ -15,4 +15,4 @@ export interface StageContext { scene: Scene; tier: Tier; anchors: Map<string, V
  *  whole prop group, and `stop` is the stop whose panel holds the copy it opens. */
 export interface Hotspot { id: string; kind: 'project' | 'cert'; label: string; object: Object3D; stop: StopId }
 export interface Stage { id: string; root: Object3D; lights?: Placement[]; hotspots?: Hotspot[]; update(t: number, dt: number): void; dispose(): void }
-export interface StageDef { id: string; stop: StopId; groups: string[]; near: StopId[]; replaces?: GreyboxSpace; build(ctx: StageContext): Promise<Stage> | Stage }
+export interface StageDef { id: string; stop: StopId; groups: string[]; near: StopId[]; replaces?: GreyboxSpace; build(ctx: StageContext): Promise<Stage> | Stage; /** Fetches the room's code ahead of its build. */ preload?(): Promise<unknown> }

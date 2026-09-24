@@ -6,6 +6,7 @@ import { LABS } from '../labs/materials';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
 import type { Placement, PointPlacement, SpotPlacement } from '../rig';
+import { STAGE_META } from './registry';
 
 // The booth is the room the walk opens in. The camera stands at z 26 on the path and looks at the
 // shutter at z 22, so only the front half of the room is ever in frame and everything that has to
@@ -27,7 +28,7 @@ export function boothLights(lamp: PointPlacement, glow: SpotPlacement): Placemen
   ];
 }
 
-function build({ scene, store, anchors, tier, typeface }: StageContext): Stage {
+export function build({ scene, store, anchors, tier, typeface }: StageContext): Stage {
   const root = new THREE.Group(); root.name = 'booth'; scene.add(root);
   const plate = store.texture('metal_plate'), rubber = store.texture('rubber_floor');
   const zc = (Z0 + Z1) / 2;
@@ -103,4 +104,4 @@ function build({ scene, store, anchors, tier, typeface }: StageContext): Stage {
   };
 }
 
-export const BOOTH_DEF: StageDef = { id: 'booth', stop: 'booth', groups: ['booth'], near: ['booth', 'fabrication'], replaces: 'booth', build };
+export const BOOTH_DEF: StageDef = { ...STAGE_META.booth, build };

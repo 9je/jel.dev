@@ -9,14 +9,14 @@ import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
 import type { Hotspot, Stage, StageDef, StageContext } from './stages/types';
 import { greybox } from './stages/greybox';
-import { STAGE_LOADERS } from './stages/registry';
+import { STAGES } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
 import { disposeStray, disposeObject, anchorTiles } from './materials';
 import { createHover, pickHotspot } from './interact';
 
 export type FallbackReason = 'context-lost' | 'too-slow';
-export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean; pixelRatioCap: number }
+export interface WalkOptions { tier: Tier; stages?: StageDef[]; gate: StopId[]; /** A context already made on the canvas, by the tier probe, so the renderer makes no second one. */ context?: WebGL2RenderingContext;  onLoadProgress?(loaded: number, total: number): void; onDegraded?(): void; onFallback?(reason: FallbackReason): void; initialProgress?: number; coarse?: boolean; pixelRatioCap: number }
 export interface WalkHandle {
   setProgress(t: number): void;
   anchors: Map<string, THREE.Vector3>;
@@ -34,7 +34,7 @@ const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) *
 
 export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): Promise<WalkHandle> {
   // The low tier has no post stack, so it is the only one that needs the driver's own MSAA.
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.tier === 'low', powerPreference: 'high-performance', stencil: false, depth: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, context: opts.context, antialias: opts.tier === 'low', powerPreference: 'high-performance', stencil: false, depth: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.pixelRatioCap));
   // The first draw with each program reads its info log and both shaders' logs before it reads the
   // link status. Each read is a round trip to the GPU process that waits for everything queued ahead
@@ -93,7 +93,27 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // `defs.find` below takes the first stage claiming the opening stop, so the booth leads: both it
   // and the fabrication floor list `booth` in `near`, and the booth is the one that has to be up in
   // the first frame when the walk opens there.
-  const defs = opts.stages ?? await Promise.all(STAGE_LOADERS.map((load) => load()));
+  const defs = opts.stages ?? STAGES;
+  // The preloader gates on the booth, the bay, and the room the page opens in. Their bytes fill the
+  // readout to 85%. Their builds and the shader warm-up take it to 100%, each room an equal share,
+  // reported step by step: on a fast line with a slow GPU they are most of the load, and read by
+  // the bytes alone the readout stood at 85% for all of it. Everything else builds after the
+  // preloader clears, in path order, paced against the frame budget.
+  const gated = defs.filter((d) => opts.gate.includes(d.stop));
+  const later = defs.filter((d) => !gated.includes(d));
+  // A room is settled once its build has been attempted, whether it stood up or failed. A failed
+  // room runs on the greybox for the rest of the session, so it is as ready as it will ever be and
+  // the dock must land on it rather than showing the tube again on every jump.
+  const settled = new Set<string>();
+  const progress = new Map<string, [number, number]>();
+  const report = () => {
+    let l = 0, t = 0; for (const [a, b] of progress.values()) { l += a; t += b; }
+    if (t > 0) opts.onLoadProgress?.(Math.round(l * 0.85), t);
+  };
+  const gatedGroups = Array.from(new Set(gated.flatMap((d) => d.groups)));
+  // Started now, ahead of the greybox and the post stack, so their warm-up runs under the download.
+  const loading = Promise.all(gatedGroups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
+  for (const d of gated) void d.preload?.().catch(() => { /* the build reports it */ });
   const built = new Map<string, Stage>(); const pending = new Map<string, Promise<void>>();
   // Scroll: where the walk is asked to be, and where the camera is on its way there.
   let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, raf = 0;
@@ -162,11 +182,8 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     setFrame(lens);
   }
   const onResize = () => resize();
-  // The post stack's own programs link on their first use. Drawn once now, over the greybox, at the
-  // frame's real size, they link while the download has the main thread idle anyway. Drawn at the
-  // canvas's default size they linked twice: the ambient occlusion pass keys on its resolution.
+  // Sized before anything links: the ambient occlusion pass keys its programs on its resolution.
   resize(true);
-  if (post) post.render(0); else renderer.render(scene, camera);
 
   // ---- Warming a room before it is drawn -----------------------------------------------------
   // Left to its first frame, a room's textures went up, its triangles went up, and its programs
@@ -246,6 +263,35 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     warming++;
     try { await warmRoot(root, onGroup); } finally { warming--; governor.reset(); }
   }
+  /** Every program a group draws with: its own, its glass's back faces, each pass's, the shadow
+   *  pass's. The group is left in the probe; the caller puts it back. */
+  async function compileGroup(g: THREE.Object3D) {
+    await compileIn(g, true);
+    // Glass that is double sided draws its back faces first, in a program of their own.
+    const glass: THREE.MeshPhysicalMaterial[] = [];
+    g.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined; if (m && m.transmission > 0 && m.side === THREE.DoubleSide && !m.transparent && !glass.includes(m)) glass.push(m); });
+    if (glass.length) {
+      for (const m of glass) { m.side = THREE.BackSide; m.needsUpdate = true; }
+      await compileIn(g, true);
+      for (const m of glass) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
+    }
+    const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+    for (const pass of passes) {
+      g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material) { swapped.push([m, m.material]); m.material = pass; } });
+      await compileIn(g, true);
+      for (const [m, mat] of swapped) m.material = mat;
+      swapped.length = 0;
+    }
+    if (shadows) {
+      g.traverse((o) => {
+        const m = o as THREE.Mesh; if (!m.isMesh || !m.material || !m.castShadow) return;
+        swapped.push([m, m.material]);
+        m.material = Array.isArray(m.material) ? m.material.map(depthFor) : depthFor(m.material);
+      });
+      await compileIn(g, false);
+      for (const [m, mat] of swapped) m.material = mat;
+    }
+  }
   async function warmRoot(root: THREE.Object3D, onGroup?: (done: number, total: number) => void) {
     // three keeps one program per material and refetches it whenever a material is drawn instanced
     // after plain, or plain after instanced, on every draw of each: nineteen materials across the
@@ -297,31 +343,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     let batch = 0, fresh = 0, known = programs();
     for (const [i, g] of groups.entries()) {
       if (disposed) return;
-      await compileIn(g, true);
-      // Glass that is double sided draws its back faces first, in a program of their own.
-      const glass: THREE.MeshPhysicalMaterial[] = [];
-      g.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined; if (m && m.transmission > 0 && m.side === THREE.DoubleSide && !m.transparent && !glass.includes(m)) glass.push(m); });
-      if (glass.length) {
-        for (const m of glass) { m.side = THREE.BackSide; m.needsUpdate = true; }
-        await compileIn(g, true);
-        for (const m of glass) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
-      }
-      const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
-      for (const pass of passes) {
-        g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.material) { swapped.push([m, m.material]); m.material = pass; } });
-        await compileIn(g, true);
-        for (const [m, mat] of swapped) m.material = mat;
-        swapped.length = 0;
-      }
-      if (shadows) {
-        g.traverse((o) => {
-          const m = o as THREE.Mesh; if (!m.isMesh || !m.material || !m.castShadow) return;
-          swapped.push([m, m.material]);
-          m.material = Array.isArray(m.material) ? m.material.map(depthFor) : depthFor(m.material);
-        });
-        await compileIn(g, false);
-        for (const [m, mat] of swapped) m.material = mat;
-      }
+      await compileGroup(g);
       root.add(g);
       g.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
       batch += triangles(g); fresh += programs() - known; known = programs();
@@ -338,25 +360,26 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     for (const o of culled) o.frustumCulled = true;
     root.visible = true;
   }
+  // The stack's own programs and the greybox's link now, under the download, through the same warm
+  // up as the rooms. One draw over the greybox then finds every program ready. Drawn cold, the
+  // first frame linked them all at once and held the thread for a third of a second.
+  if (post) {
+    // Two compiles, not one a material: each waits a poll. The screen pass keys on the canvas.
+    const flat = new THREE.Camera();
+    for (const toScreen of [false, true]) {
+      const group = new THREE.Group();
+      for (const s of post.screens()) if (s.toScreen === toScreen) group.add(new THREE.Mesh(s.geometry, s.material));
+      if (!group.children.length) continue;
+      probe.add(group); renderer.setRenderTarget(toScreen ? null : scratch);
+      try { if (parallel) await renderer.compileAsync(probe, flat); else renderer.compile(probe, flat); } catch { /* its first draw links it */ }
+      renderer.setRenderTarget(null); probe.remove(group);
+    }
+  }
+  if (!disposed) { await compileGroup(grey.root); scene.add(grey.root); }
+  if (!disposed) { await compileGroup(thresholds); scene.add(thresholds); }
+  if (!disposed) { if (post) post.render(0); else renderer.render(scene, camera); }
 
-  // The preloader gates on the booth, the bay, and the room the page opens in. Their bytes fill the
-  // readout to 85%. Their builds and the shader warm-up take it to 100%, each room an equal share,
-  // reported step by step: on a fast line with a slow GPU they are most of the load, and read by
-  // the bytes alone the readout stood at 85% for all of it. Everything else builds after the
-  // preloader clears, in path order, paced against the frame budget.
-  const gated = defs.filter((d) => opts.gate.includes(d.stop));
-  const later = defs.filter((d) => !gated.includes(d));
-  // A room is settled once its build has been attempted, whether it stood up or failed. A failed
-  // room runs on the greybox for the rest of the session, so it is as ready as it will ever be and
-  // the dock must land on it rather than showing the tube again on every jump.
-  const settled = new Set<string>();
-  const progress = new Map<string, [number, number]>();
-  const report = () => {
-    let l = 0, t = 0; for (const [a, b] of progress.values()) { l += a; t += b; }
-    if (t > 0) opts.onLoadProgress?.(Math.round(l * 0.85), t);
-  };
-  const gatedGroups = Array.from(new Set(gated.flatMap((d) => d.groups)));
-  await Promise.all(gatedGroups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
+  await loading;
   if (disposed) throw new Error('disposed during load');
   for (const [k, d] of gated.entries()) {
     try {

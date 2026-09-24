@@ -10,6 +10,10 @@ export interface TierInput {
   memoryGB?: number;
   /** The browser refused a context with `failIfMajorPerformanceCaveat`: it would have been software. */
   caveat?: boolean;
+  /** The probe's context, when it was made on the walk's own canvas with the renderer's attributes:
+   *  antialiased on a coarse pointer, where the low tier needs the driver's MSAA. The renderer
+   *  takes it over rather than making a second one, which cost the first second 60 to 90 ms. */
+  context?: WebGL2RenderingContext | null;
 }
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render|warp/i;
@@ -38,22 +42,26 @@ export function chooseTier(i: TierInput): Tier {
   return 'medium';
 }
 
-export function readTierInput(): TierInput {
-  let webgl = false, renderer = '', caveat = false;
+export function readTierInput(canvas?: HTMLCanvasElement): TierInput {
+  let webgl = false, renderer = '', caveat = false, context: WebGL2RenderingContext | null = null;
+  const coarse = matchMedia('(pointer: coarse)').matches;
   try {
-    const c = document.createElement('canvas');
-    let gl = (c.getContext('webgl2', { failIfMajorPerformanceCaveat: true }) || c.getContext('webgl', { failIfMajorPerformanceCaveat: true })) as WebGLRenderingContext | null;
+    const c = canvas ?? document.createElement('canvas');
+    // The renderer's own attributes (scene.ts), so the context can be its.
+    const attrs: WebGLContextAttributes = { alpha: true, depth: true, stencil: false, antialias: coarse, premultipliedAlpha: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' };
+    let gl = (c.getContext('webgl2', { ...attrs, failIfMajorPerformanceCaveat: true }) || c.getContext('webgl', { ...attrs, failIfMajorPerformanceCaveat: true })) as WebGLRenderingContext | null;
     if (!gl) {
       // Software WebGL exists but the browser is warning us off it. Read the renderer anyway so the
       // document can say what it was, then classify it as a caveat.
       caveat = true;
-      gl = (c.getContext('webgl2') || c.getContext('webgl')) as WebGLRenderingContext | null;
+      gl = (c.getContext('webgl2', attrs) || c.getContext('webgl', attrs)) as WebGLRenderingContext | null;
     }
     if (gl) {
       webgl = true;
       const dbg = gl.getExtension('WEBGL_debug_renderer_info');
       renderer = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER) ?? '');
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      if (canvas && gl instanceof WebGL2RenderingContext) context = gl;
+      else gl.getExtension('WEBGL_lose_context')?.loseContext();
     }
   } catch { webgl = false; }
   let pref: 'on' | 'off' | null = null;
@@ -63,12 +71,13 @@ export function readTierInput(): TierInput {
     webgl,
     renderer,
     threads: navigator.hardwareConcurrency || 2,
-    coarse: matchMedia('(pointer: coarse)').matches,
+    coarse,
     reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
     saveData: !!nav.connection?.saveData,
     pref,
     memoryGB: nav.deviceMemory,
     caveat,
+    context,
   };
 }
 

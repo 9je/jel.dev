@@ -5,11 +5,12 @@ import { buildShell } from './shell';
 import { buildOffice } from './office';
 import { buildDressing } from './dressing';
 import { buildLighting } from './lighting';
+import { STAGE_META } from '../registry';
 
 // Paced against the frame budget: this stage builds in the background while the walk is already
 // live, so it gives the render loop its time back between the heavy steps rather than blocking a
 // frame for the whole floor.
-async function build(ctx: StageContext): Promise<Stage> {
+export async function build(ctx: StageContext): Promise<Stage> {
   const { scene, anchors, tier } = ctx;
   const root = new THREE.Group(); root.name = 'fabrication'; scene.add(root);
   const shell = await buildShell(ctx, root);
@@ -43,4 +44,4 @@ async function build(ctx: StageContext): Promise<Stage> {
   };
 }
 
-export const FABRICATION_DEF: StageDef = { id: 'fabrication', stop: 'fabrication', groups: ['fabrication', 'fabrication-extra', 'fabrication-dressing'], near: ['booth', 'fabrication', 'recreation'], replaces: 'hangar', build };
+export const FABRICATION_DEF: StageDef = { ...STAGE_META.fabrication, build };

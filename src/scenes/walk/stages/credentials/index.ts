@@ -4,8 +4,9 @@ import { disposeObject } from '../../materials';
 import { buildShell } from './shell';
 import { buildDressing } from './dressing';
 import { lights } from './lighting';
+import { STAGE_META } from '../registry';
 
-async function build(ctx: StageContext): Promise<Stage> {
+export async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'credentials'; scene.add(root);
   const shell = await buildShell(ctx, root);
@@ -50,4 +51,4 @@ async function build(ctx: StageContext): Promise<Stage> {
   };
 }
 
-export const CREDENTIALS_DEF: StageDef = { id: 'credentials', stop: 'credentials', groups: ['labs', 'credentials'], near: ['operations', 'credentials', 'containment'], replaces: 'hall', build };
+export const CREDENTIALS_DEF: StageDef = { ...STAGE_META.credentials, build };

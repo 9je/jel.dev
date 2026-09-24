@@ -6,8 +6,9 @@ import { buildDressing } from './dressing';
 import { lights } from './lighting';
 import { dust, haze, type ParticleSystem } from '../../labs/particles';
 import { SEALED, TABLE } from './layout';
+import { STAGE_META } from '../registry';
 
-async function build(ctx: StageContext): Promise<Stage> {
+export async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'containment'; scene.add(root);
   const shell = await buildShell(ctx, root);
@@ -94,4 +95,4 @@ async function build(ctx: StageContext): Promise<Stage> {
   };
 }
 
-export const CONTAINMENT_DEF: StageDef = { id: 'containment', stop: 'containment', groups: ['labs', 'containment'], near: ['credentials', 'containment', 'file'], replaces: 'bay', build };
+export const CONTAINMENT_DEF: StageDef = { ...STAGE_META.containment, build };

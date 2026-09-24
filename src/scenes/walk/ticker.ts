@@ -22,7 +22,7 @@ export interface LedTicker {
  */
 export function createLedTicker(lines: string[], opts: { width: number; height: number }): LedTicker {
   const c = document.createElement('canvas');
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
   const font = `700 ${Math.round(opts.height * 0.62)}px "Saira Variable", Saira, system-ui, sans-serif`;
   const dot = 4;
   let loopWidth = 0;

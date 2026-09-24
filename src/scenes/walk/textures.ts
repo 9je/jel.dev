@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 
 function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
-  const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')!];
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  // Drawn on the CPU: these canvases exist to be uploaded as textures, and a GPU backed canvas costs
+  // a raster context to make (50 ms for the page's first) and a readback on every upload.
+  return [c, c.getContext('2d', { willReadFrequently: true })!];
 }
 
 export function hazardTexture(): THREE.CanvasTexture {
