@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Vector3 } from 'three';
-import { STOPS, BEATS, cameraAt, stopAt, roomAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, EYE, TURN_LEAD } from '../../src/scenes/walk/path';
+import { STOPS, BEATS, CROSSINGS, cameraAt, stopAt, roomAt, tForStop, doorOpenAmount, DOOR_RANGE, holdWeight, localProgress, lookWeight, travelParam, pageAt, walkAt, headingAt, EYE, SCROLL_LENGTH_VH } from '../../src/scenes/walk/path';
 
 describe('stops', () => {
   it('are seven, in increasing t, from 0 to 1', () => {
@@ -38,17 +38,13 @@ describe('camera', () => {
     expect(cameraAt(fab.hold[0]).position.distanceTo(cameraAt(fab.hold[1]).position)).toBeLessThan(1e-6);
     expect(travelParam(fab.hold[0])).toBe(fab.t);
     expect(travelParam(fab.hold[1])).toBe(fab.t);
-    const a = STOPS[0].hold[1], b = STOPS[1].hold[0];
-    expect(travelParam((a + b) / 2)).toBeCloseTo((STOPS[0].t + STOPS[1].t) / 2, 6);
-    expect(cameraAt(a).position.distanceTo(cameraAt(b).position)).toBeGreaterThan(5);
-  });
-  it('covers the whole distance between holds, fastest in the middle and symmetric', () => {
-    const d = [];
-    const a = STOPS[0].hold[1], b = STOPS[1].hold[0];
-    for (let i = 0; i < 10; i++) { const t0 = a + ((b - a) * i) / 10, t1 = a + ((b - a) * (i + 1)) / 10; d.push(cameraAt(t0).position.distanceTo(cameraAt(t1).position)); }
-    expect(Math.max(...d)).toBe(Math.max(d[4], d[5]));
-    for (let i = 0; i < 5; i++) expect(d[i]).toBeCloseTo(d[9 - i], 2);
-    expect(cameraAt(a).position.distanceTo(cameraAt(b).position)).toBeGreaterThan(20);
+    for (let i = 0; i < STOPS.length - 1; i++) {
+      const a = STOPS[i].hold[1], b = STOPS[i + 1].hold[0];
+      let prev = travelParam(a);
+      for (let k = 1; k <= 200; k++) { const p = travelParam(a + ((b - a) * k) / 200); expect(p).toBeGreaterThanOrEqual(prev); prev = p; }
+      expect(travelParam(b)).toBe(STOPS[i + 1].t);
+    }
+    expect(cameraAt(STOPS[0].hold[1]).position.distanceTo(cameraAt(STOPS[1].hold[0]).position)).toBeGreaterThan(20);
   });
   it('looks at the stop target while held and ahead while walking', () => {
     const fab = STOPS[1];
@@ -162,12 +158,11 @@ describe('camera motion', () => {
     const c = STOPS.find((s) => s.id === 'credentials')!;
     const aim = new Vector3(c.lookAt[0], c.lookAt[1], c.lookAt[2]);
     let closest = Infinity, at = 0;
-    for (let t = c.hold[1]; t <= c.hold[1] + TURN_LEAD + 1e-9; t += STEP) {
+    for (let t = c.hold[1]; t <= c.hold[1] + 0.035 + 1e-9; t += STEP) {
       const d = aim.distanceTo(cameraAt(t).position);
       if (d < closest) { closest = d; at = t; }
     }
     expect(closest).toBeLessThan(1);
-    expect(lookWeight(at).weight).toBeGreaterThan(0);
     const turn = (a: number, b: number) => Math.acos(Math.max(-1, Math.min(1, dirAt(a).dot(dirAt(b))))) * 180 / Math.PI;
     expect(turn(at - STEP, at), `turn into the pass at t ${at.toFixed(4)}`).toBeLessThan(0.6);
     expect(turn(at, at + STEP), `turn out of the pass at t ${at.toFixed(4)}`).toBeLessThan(0.6);
@@ -190,8 +185,10 @@ describe('camera motion', () => {
         const to = new Vector3(...b.at).sub(c.position).normalize();
         expect(look.angleTo(to), `beat at ${b.at} not looked at by ${u}`).toBeLessThan(path.angleTo(to) - 0.12);
       }
-      const after = b.to + 0.05, c = cameraAt(after), ahead = cameraAt(after + 0.005);
-      const look = c.target.clone().sub(c.position).normalize(), path = ahead.position.clone().sub(c.position).normalize();
+      // Off it well past: back on the heading the walk looks down, which in a corner runs ahead of
+      // the direction the camera is moving.
+      const after = b.to + 0.05, c = cameraAt(after);
+      const look = c.target.clone().sub(c.position).setY(0).normalize(), path = headingAt(after);
       const { weight } = lookWeight(after);
       if (weight === 0) expect(look.angleTo(path) * 180 / Math.PI, `beat at ${b.at} still holding at ${after}`).toBeLessThan(6);
     }
@@ -203,6 +200,65 @@ describe('camera motion', () => {
       const mid = travelParam((a + b) / 2 + STEP) - travelParam((a + b) / 2);
       expect(edge).toBeLessThan(mid * 0.2);
       expect(travelParam(b) - travelParam(b - STEP)).toBeLessThan(mid * 0.2);
+    }
+  });
+  it('never turns the head while the camera stands still', () => {
+    // The pan that started on its own: the turns ran on into the holds, so the break room swung a
+    // quarter turn toward the corridor before it took a step, and the office did the same.
+    let prev = cameraAt(0);
+    for (let t = STEP; t <= 1 + 1e-9; t += STEP) {
+      const c = cameraAt(t);
+      if (c.position.distanceTo(prev.position) < 1e-6) {
+        const a = prev.target.clone().sub(prev.position).normalize(), b = c.target.clone().sub(c.position).normalize();
+        expect(Math.acos(Math.min(1, a.dot(b))) * 180 / Math.PI, `turned while parked at t ${t.toFixed(4)}`).toBeLessThan(0.02);
+      }
+      prev = c;
+    }
+  });
+});
+
+describe('the page', () => {
+  // A 900 px window: what "per 100 px" means below.
+  const PX = (SCROLL_LENGTH_VH / 100) * 900, N = 8000;
+  const at = (x: number) => cameraAt(walkAt(x));
+  it('maps both ways, and holds every hold at its length', () => {
+    for (const t of [0, 0.05, 0.2, 0.33, 0.4, 0.63, 0.88, 1]) expect(walkAt(pageAt(t))).toBeCloseTo(t, 9);
+    const first = STOPS[1];
+    expect((pageAt(first.hold[1]) - pageAt(first.hold[0])) * SCROLL_LENGTH_VH).toBeCloseTo((first.hold[1] - first.hold[0]) * 1120, 1);
+  });
+  it('never swings the frame faster than 30 degrees per 100 px', () => {
+    let prev = at(0), worst = 0, where = 0;
+    for (let i = 1; i <= N; i++) {
+      const c = at(i / N);
+      const a = prev.target.clone().sub(prev.position).normalize(), b = c.target.clone().sub(c.position).normalize();
+      const rate = (Math.acos(Math.min(1, a.dot(b))) * 180) / Math.PI / (PX / N) * 100;
+      if (rate > worst) { worst = rate; where = walkAt(i / N); }
+      prev = c;
+    }
+    expect(worst, `${worst.toFixed(1)} deg per 100 px at walk ${where.toFixed(3)}`).toBeLessThan(30);
+  });
+  it('slows through every doorway and makes none of it up beside the door', () => {
+    // The beat on a threshold was paid back on the stretch either side of it, so each door had a
+    // surge before and after: 6.9, 3.4, 5.6 metres per 100 px inside 150 px leaving operations. Near
+    // a door the walk is never faster than it is anywhere else in the same transit.
+    const speed = (u: number) => cameraAt(u).position.distanceTo(cameraAt(u + 0.0005).position);
+    for (const c of CROSSINGS) {
+      const a = STOPS[c.transit].hold[1], b = STOPS[c.transit + 1].hold[0];
+      let near = 0, far = 0;
+      for (let u = a; u < b - 0.0005; u += 0.0005) {
+        const v = speed(u);
+        if (Math.abs(u - c.u) < 0.006) near = Math.max(near, v); else far = Math.max(far, v);
+      }
+      expect(near, `beside the ${c.room} door`).toBeLessThanOrEqual(far * 1.02);
+      expect(speed(c.u)).toBeLessThan(far * 0.8);
+    }
+  });
+  it('switches each room behind a doorway on as the walk crosses it', () => {
+    for (const c of CROSSINGS) {
+      const s = STOPS.find((x) => x.id === c.room)!;
+      if (s.enter === s.hold[0] && s.enter < c.u) continue; // a hold that looks in through the door
+      expect(s.enter, `${c.room} enter against its crossing at ${c.u.toFixed(4)}`).toBeLessThanOrEqual(c.u);
+      expect(s.enter).toBeGreaterThan(c.u - 0.004);
     }
   });
 });

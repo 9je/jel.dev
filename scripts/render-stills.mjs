@@ -10,6 +10,9 @@ import { mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
+// The stops are in the walk's own scroll, and the page lays the transits out by distance, so each
+// is turned into its share of the page before the scroll is set.
+import { pageAt } from '../src/scenes/walk/path.ts';
 
 const STOPS = [
   ['booth', 0.05],
@@ -41,7 +44,7 @@ async function pass(viewport, suffix) {
   await page.waitForFunction(() => document.querySelector('[data-preloader]')?.getAttribute('data-state') === 'hidden', null, { timeout: 120_000 });
   await page.addStyleTag({ content: HIDE_CHROME });
   for (const [id, t] of STOPS) {
-    await page.evaluate((t) => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, t * max); }, t);
+    await page.evaluate((t) => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, t * max); }, pageAt(t));
     // Lenis eases the scroll and the camera damps behind it. 2.6 s is long enough for both to settle.
     await page.waitForTimeout(2600);
     const raw = join(tmp, `${id}${suffix}.png`);

@@ -1,9 +1,12 @@
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
-import { roomAt, tForStop, type StopId } from './path';
+import { pageAt, roomAt, tForStop, walkAt, type StopId } from './path';
 
 export interface ScrollController {
   progress(): number;
+  /** Steps the smoothing. The scene calls it at the head of each frame, so the scroll and the frame
+   *  drawn from it are the same frame. */
+  tick(now: number): void;
   jumpTo(id: StopId, immediate?: boolean): void;
   onProgress(cb: (t: number) => void): () => void;
   onStop(cb: (id: StopId) => void): () => void;
@@ -11,13 +14,14 @@ export interface ScrollController {
 }
 
 /**
- * Lenis drives the scroll on its own frame loop and reports every change, smoothed or native. This
- * used to run through gsap's ticker and a ScrollTrigger spanning the page, which was 41 KB of the
- * first visit to read one number that Lenis already has. The scene eases toward the target, so which
- * frame callback runs first makes no visible difference.
+ * Lenis smooths the scroll and reports every change, smoothed or native. This used to run through
+ * gsap's ticker and a ScrollTrigger spanning the page, which was 41 KB of the first visit to read one
+ * number that Lenis already has. gsap's ticker also ran ahead of the scene in every frame, and Lenis
+ * on a loop of its own ran after it, so each frame drew the scroll of the frame before. Now the scene
+ * steps it (`tick`), first thing in its frame.
  */
 export function createScroll(): ScrollController {
-  const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, wheelMultiplier: 0.9, autoRaf: true });
+  const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, wheelMultiplier: 0.9 });
 
   let t = 0;
   let current: StopId | null = null;
@@ -25,10 +29,11 @@ export function createScroll(): ScrollController {
   const stopCbs = new Set<(id: StopId) => void>();
   const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
 
-  // Progress is read off the page itself, as the trigger did: the scroll position over the full
-  // scrollable length. A resize changes that length, so it updates too.
+  // Progress is read off the page itself: the scroll position over the full scrollable length, as the
+  // walk's own scroll (`walkAt`), which gives each transit page in proportion to the walk it covers.
+  // A resize changes that length, so it updates too.
   const update = () => {
-    const next = Math.min(1, Math.max(0, window.scrollY / maxScroll()));
+    const next = walkAt(Math.min(1, Math.max(0, window.scrollY / maxScroll())));
     if (next === t) return;
     t = next;
     for (const cb of progressCbs) cb(t);
@@ -49,8 +54,9 @@ export function createScroll(): ScrollController {
 
   return {
     progress: () => t,
+    tick(now) { lenis.raf(now); },
     jumpTo(id, immediate = false) {
-      const target = tForStop(id) * maxScroll();
+      const target = pageAt(tForStop(id)) * maxScroll();
       if (immediate) lenis.scrollTo(target, { immediate: true, force: true });
       else lenis.scrollTo(target, { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true });
     },

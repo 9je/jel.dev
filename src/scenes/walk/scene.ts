@@ -27,6 +27,9 @@ export interface WalkHandle {
    *  `width` as a share of the frame's width, holds for `holdMs`, and pulls back to the booth over
    *  `ms`. A scroll during it cuts it short. */
   intro(width: number, holdMs: number, ms: number): void;
+  /** Runs at the head of every frame, before the camera is placed: the scroll steps here, so the
+   *  frame draws the scroll of its own frame rather than the one before. */
+  beforeFrame(cb: ((now: number) => void) | null): void;
   camera: THREE.PerspectiveCamera; store: AssetStore; hotspots(): Hotspot[]; pick(nx: number, ny: number): Hotspot | null; hover(h: Hotspot | null): void; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void;
 }
 
@@ -503,9 +506,11 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     return out;
   };
 
-  function frame() {
+  let before: ((now: number) => void) | null = null;
+  function frame(now = performance.now()) {
     if (disposed) return;
     raf = requestAnimationFrame(frame);
+    before?.(now);
     // Checked every frame as well as on the events: a viewport can change without firing either of
     // them, and the buffer would then be drawn at the old size and scaled into the new box. The
     // call is two reads and a comparison unless the frame actually changed.
@@ -582,6 +587,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   return {
     setProgress(t) { target = t; stream(t); },
     intro(width, holdMs, ms) { opening = { width, start: performance.now() + holdMs, ms, cut: false }; },
+    beforeFrame(cb) { before = cb; },
     anchors, camera, store,
     ensureAnchor(h) {
       if (anchors.has(h.id) || disposed) return;

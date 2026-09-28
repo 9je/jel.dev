@@ -437,6 +437,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
     const pin = () => { if (!handle) return; pinCard?.(); pinRaf = requestAnimationFrame(pin); };
     pin();
     scroll = createScroll();
+    const sc = scroll; h.beforeFrame((now) => sc.tick(now));
     scroll.onProgress((t) => {
       handle?.setProgress(t);
       // The cue has done its job the moment the walk moves, and it never comes back.
