@@ -63,7 +63,7 @@ export const CABINET_Z = Z0 + 0.45;
  * -28.1, where the camera parks, so the hold looks straight down the middle rather than at one end.
  */
 export const CABINETS: [string, string, number, string, number, string][] = [
-  ['torn-bet', 'torn.bet', -26.9, '#3D7BE0', 0, 'CASINO'],
+  ['faction-tools', 'faction.tools', -26.9, '#3D7BE0', 0, 'FACTION OPS'],
   ['kayou-bot', 'MLPEKAYOU', -28.1, '#D7383A', 0, 'DISCORD BOT'],
   ['character-bot', 'character bot', -29.3, '#3FD47A', 0, 'DISCORD BOT'],
 ];

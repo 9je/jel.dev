@@ -73,7 +73,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
     await add(cabinet);
     hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
     // Off the cabinet's own x, so a card still lands on its machine when the row is re-spaced.
-    if (key === 'torn-bet') anchors.set('torn-bet', new THREE.Vector3(x, 2.15, Z0 + 1.0));
+    if (key === 'faction-tools') anchors.set('faction-tools', new THREE.Vector3(x, 2.15, Z0 + 1.0));
   }
   // The sign over the row, on the wall above the marquees. A lit box at the head of an aisle is how
   // a building this size tells you what a corner of a room is for, and it is what makes the row the
