@@ -21,6 +21,27 @@ const dracoFromPublic = {
   },
 };
 
+/**
+ * postprocessing inlines SMAA's two lookup textures as base64 PNG data URLs, and the area texture
+ * alone is 50 KB of the first visit's gzipped JavaScript: base64 does not compress. The effect loads
+ * them through an Image either way, so pointing it at the same PNGs in `public/smaa/` is the same
+ * asynchronous load, fetched as a binary file in parallel instead of parsed as script.
+ */
+const smaaFromPublic = {
+  name: 'jel:smaa-from-public',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.includes('postprocessing/build/index.js')) return null;
+    const out = code
+      .replace(/(var searchImageDataURL_default = )"data:image\/png;base64,[^"]+"/, '$1"/smaa/search.png"')
+      .replace(/(var areaImageDataURL_default = )"data:image\/png;base64,[^"]+"/, '$1"/smaa/area.png"');
+    if (!out.includes('"/smaa/area.png"') || !out.includes('"/smaa/search.png"')) {
+      throw new Error('jel:smaa-from-public found no SMAA data URLs to rewrite in postprocessing');
+    }
+    return { code: out, map: null };
+  },
+};
+
 export default defineConfig({
   site: 'https://jel.dev',
   output: 'static',
@@ -42,6 +63,6 @@ export default defineConfig({
         },
       },
     },
-    plugins: [dracoFromPublic],
+    plugins: [dracoFromPublic, smaaFromPublic],
   },
 });

@@ -377,8 +377,8 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
     const fresh = els.canvas.cloneNode() as HTMLCanvasElement; els.canvas.replaceWith(fresh); els.canvas = fresh;
     context = undefined;
   }
-  // Capture the requested stop before the scroll controller exists: ScrollTrigger's first
-  // onUpdate can fire off a stale scroll position (left over from the browser's own
+  // Capture the requested stop before the scroll controller exists: the controller's first
+  // update can fire off a stale scroll position (left over from the browser's own
   // scroll-to-fragment while the page was still in boot layout) and rewrite location.hash via
   // history.replaceState before we get a chance to read it, corrupting which stop we open on.
   const raw = location.hash.replace('#', '');
