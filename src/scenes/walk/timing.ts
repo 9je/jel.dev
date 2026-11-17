@@ -21,12 +21,31 @@ export function startTiming(root: HTMLElement): void {
   const frames: [number, number][] = [];
   let hiddenAt = 0;
 
+  /** What the network did, read off the browser's own timings: the page, the scripts, the assets. */
+  const network = () => {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const res = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+    const part = (name: string, f: (e: PerformanceResourceTiming) => boolean) => {
+      const hit = res.filter(f);
+      if (!hit.length) return `${name} none`;
+      const kb = Math.round(hit.reduce((a, e) => a + (e.transferSize || e.encodedBodySize || 0), 0) / 1024);
+      return `${name} ${hit.length} files ${kb} KB, first asked ${Math.round(Math.min(...hit.map((e) => e.startTime)))}, last landed ${Math.round(Math.max(...hit.map((e) => e.responseEnd)))}`;
+    };
+    return [
+      `page   first byte ${nav ? Math.round(nav.responseStart) : '?'}  landed ${nav ? Math.round(nav.responseEnd) : '?'}  dom ready ${nav ? Math.round(nav.domContentLoadedEventEnd) : '?'}  ${nav?.type ?? ''}`,
+      part('script', (e) => e.name.includes('/_astro/') && e.name.endsWith('.js')),
+      part('assets', (e) => e.name.includes('/assets/')),
+    ];
+  };
+
   const print = (tail: string) => {
     const dpr = window.devicePixelRatio;
     const lines = [
       `jel.dev timing  ${new Date().toISOString()}`,
       `tier ${root.dataset.tier ?? '?'}  mode ${root.dataset.mode ?? '?'}  ${window.innerWidth}x${window.innerHeight} @${dpr}`,
       `gpu ${root.dataset.renderer ?? '?'}`,
+      `browser ${navigator.userAgent.replace(/^Mozilla\/5\.0 \([^)]*\) /, '').slice(0, 90)}`,
+      ...network(),
       `load   ${marks.map(([t, n]) => `${n} ${t}`).join('  ')}`,
       `long tasks over 100 ms during load: ${long.filter(([s, d]) => d > 100 && (!hiddenAt || s < hiddenAt)).map(([s, d]) => `${d}@${s}`).join(' ') || 'none'}`,
       tail,
@@ -37,14 +56,17 @@ export function startTiming(root: HTMLElement): void {
   const poll = setInterval(() => {
     const state = pre?.dataset.state ?? '';
     const pct = Number(pre?.textContent?.match(/(\d+)\s*%/)?.[1] ?? NaN);
-    for (const at of [50, 85, 90, 95, 99, 100]) if (pct >= at) mark(`${at}%`);
+    if (pct >= 0) mark('first-readout');
+    for (const at of [10, 25, 50, 85, 90, 95, 99, 100]) if (pct >= at) mark(`${at}%`);
     if (state === 'slow') mark('slow-warning');
     if (state === 'done') mark('done');
-    if (state !== 'hidden') return;
+    // Shown from the first moment, over the preloader, so a load that stalls can be read while it
+    // is stalled.
+    if (!box.isConnected && document.body) document.body.appendChild(box);
+    if (state !== 'hidden') { print('loading'); return; }
     mark('hidden');
     clearInterval(poll);
     hiddenAt = performance.now();
-    document.body.appendChild(box);
     print('frames: measuring the next 20 s, scroll as you normally would');
     let last = performance.now();
     const tick = (now: number) => {

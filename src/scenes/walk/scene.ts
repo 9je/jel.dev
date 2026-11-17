@@ -275,9 +275,50 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     warming++;
     try { await warmRoot(root, onGroup); } finally { warming--; governor.reset(); }
   }
+  /**
+   * For a browser with no parallel shader compile, which is Firefox: there a compile links every
+   * new program before it returns, and a room dressed in a dozen new materials held the thread for
+   * four hundred milliseconds in one piece while the walk was on screen. This links the group's
+   * programs one to a frame instead, through a stand in for each material: a bare mesh on the same
+   * geometry and the same material, carrying whatever of its object the program is keyed on
+   * (instancing, instance colour, whether it takes shadow). The group's own compile after it then
+   * finds every one of them linked and costs nothing.
+   */
+  async function linkOneAtATime(g: THREE.Object3D) {
+    const seen = new Set<string>();
+    const stand: THREE.Mesh[] = [];
+    g.traverse((o) => {
+      const m = o as THREE.Mesh; if (!m.isMesh || !m.material || !m.geometry) return;
+      const inst = (m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh) : null;
+      for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
+        const key = `${mat.uuid}:${inst ? (inst.instanceColor ? 'ic' : 'i') : 'p'}:${m.receiveShadow ? 's' : ''}:${Object.keys(m.geometry.attributes).sort().join(',')}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const rep = inst ? new THREE.InstancedMesh(m.geometry, mat, 1) : new THREE.Mesh(m.geometry, mat);
+        if (inst?.instanceColor) (rep as THREE.InstancedMesh).instanceColor = inst.instanceColor;
+        rep.receiveShadow = m.receiveShadow; rep.castShadow = m.castShadow; rep.frustumCulled = false;
+        stand.push(rep);
+      }
+    });
+    for (const rep of stand) {
+      if (disposed) return;
+      const before = programs();
+      probe.add(rep);
+      renderer.setRenderTarget(scratch);
+      try { renderer.compile(probe, camera, scene); } catch { /* its first draw links it */ }
+      renderer.setRenderTarget(null);
+      probe.remove(rep);
+      // Only a compile that linked something has cost anything. After one, the thread is handed
+      // back so a frame that is due can be drawn. A timer and not a frame callback: on a renderer
+      // that draws a frame a second, waiting for a frame after every program would take a room a
+      // minute to build.
+      if (programs() > before) await new Promise((r) => setTimeout(r, 0));
+    }
+  }
   /** Every program a group draws with: its own, its glass's back faces, each pass's, the shadow
    *  pass's. The group is left in the probe; the caller puts it back. */
-  async function compileGroup(g: THREE.Object3D) {
+  async function compileGroup(g: THREE.Object3D, spread = false) {
+    if (spread) await linkOneAtATime(g);
     await compileIn(g, true);
     // Glass that is double sided draws its back faces first, in a program of their own.
     const glass: THREE.MeshPhysicalMaterial[] = [];
@@ -339,34 +380,53 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     // it, at which point one upload in the burst blocks for the whole backlog: a room's model
     // textures cost the thread 110 ms in one call. So the burst is bounded in bytes, and each one
     // waits for the queue to clear before the next.
+    // Under the preloader the burst is three times the size: every wait for the queue is at least
+    // one timer, a room has eighty of them at 4 MB, and a longer block on the thread costs nothing
+    // while there is no walk on screen to hold up.
+    const burst = onGroup ? 12_000_000 : 4_000_000;
     let queued = 0;
     for (const t of textures) {
       if (disposed) return;
       renderer.initTexture(t);
       const img = t.image as { width?: number; height?: number } | undefined;
       queued += (img?.width ?? 256) * (img?.height ?? 256) * 4;
-      if (queued > 4_000_000) { await drained(); queued = 0; }
+      if (queued > burst) { await drained(); queued = 0; }
     }
     // Into the real scene, hidden from the frame loop, its groups held back until each is compiled.
     const groups = [...root.children];
     for (const g of groups) root.remove(g);
     scene.add(root); root.visible = false;
     const culled: THREE.Object3D[] = [];
+    // Under the preloader the groups compile several at a time. Each compile waits on a timer for
+    // the driver to say its programs are linked, three or four waits a group, and a room is a
+    // hundred groups, most of them drawing with programs an earlier group already linked: one at a
+    // time that was two seconds of every load spent waiting on timers, the same two seconds on a
+    // fast machine as on a slow one. In the background, with the walk running, they still go one
+    // at a time, so no single step holds a frame for a batch's worth of work.
+    const per = onGroup ? 10 : 1;
     let batch = 0, fresh = 0, known = programs();
-    for (const [i, g] of groups.entries()) {
+    for (let i = 0; i < groups.length;) {
       if (disposed) return;
-      await compileGroup(g);
-      root.add(g);
-      g.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
-      batch += triangles(g); fresh += programs() - known; known = programs();
-      if (batch >= 60_000 || fresh >= 4 || i === groups.length - 1) {
+      const lot = new THREE.Group(), members: THREE.Object3D[] = [];
+      let tris = 0;
+      while (i < groups.length && (members.length === 0 || (members.length < per && tris + triangles(groups[i]!) < 60_000))) {
+        const g = groups[i++]!; tris += triangles(g); members.push(g); lot.add(g);
+      }
+      await compileGroup(lot, !parallel && !onGroup);
+      for (const g of members) {
+        root.add(g);
+        g.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
+      }
+      lot.removeFromParent();
+      batch += tris; fresh += programs() - known; known = programs();
+      if (batch >= 60_000 || fresh >= 4 || i === groups.length) {
         root.visible = true;
         renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
         root.visible = false;
         batch = 0; fresh = 0;
         await new Promise(requestAnimationFrame);
       }
-      onGroup?.(i + 1, groups.length);
+      onGroup?.(i, groups.length);
     }
     for (const g of groups) if (g.parent !== root) root.add(g);
     for (const o of culled) o.frustumCulled = true;
