@@ -15,7 +15,11 @@ export function reelWindow(i: number, cols: number, rows: number): { x: number; 
   return { x: (i % cols) / cols, y: 1 - (Math.floor(i / cols) + 1) / rows };
 }
 
-export function reel(url: string, cols: number, rows: number, seconds: number, opts: { pixel?: boolean } = {}): Reel {
+/** Fetches the image. The default is three's loader. A test hands in its own. */
+type Load = (url: string, done: (img: unknown) => void) => void;
+const fetchImage: Load = (url, done) => { new THREE.ImageLoader().load(url, done, undefined, () => { /* the screen stays dark */ }); };
+
+export function reel(url: string, cols: number, rows: number, seconds: number, opts: { pixel?: boolean } = {}, load: Load = fetchImage): Reel {
   const [c, ctx] = canvas(2, 2);
   ctx.fillStyle = '#04070a'; ctx.fillRect(0, 0, 2, 2);
   const texture = new THREE.Texture();
@@ -30,7 +34,15 @@ export function reel(url: string, cols: number, rows: number, seconds: number, o
   let disposed = false, clock = 0, frame = -1;
   const show = (i: number) => { if (i === frame) return; frame = i; const w = reelWindow(i, cols, rows); texture.offset.set(w.x, w.y); };
   show(0);
-  new THREE.ImageLoader().load(url, (img) => { if (disposed) return; texture.image = img; texture.needsUpdate = true; }, undefined, () => { /* the screen stays dark */ });
+  load(url, (img) => {
+    if (disposed) return;
+    // The room's warm-up may already have given the placeholder its storage on the GPU, and that
+    // storage is two pixels square for good: an image swapped in place is refused without a word
+    // and the screen stays black. Letting go of it first makes the renderer start over at the
+    // image's own size.
+    texture.dispose();
+    texture.image = img; texture.needsUpdate = true;
+  });
   return {
     texture,
     update(dt) { clock += dt; show(Math.floor(clock / seconds) % (cols * rows)); },

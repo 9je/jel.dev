@@ -4,7 +4,7 @@ import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
 import { cameraAt, holdWeight, roomAt, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
 import { buildThresholds } from './thresholds';
 import { DESK_VFOV, lensFor } from './framing';
-import { Focus } from './focus';
+import { Focus, leanTarget } from './focus';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
@@ -506,7 +506,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // path's pose each frame. Neither runs for a reader who asked for less motion: the room still
   // drops, the camera stays where the walk put it.
   const focus = new Focus();
-  const focusAt = new THREE.Vector3(), lookNow = new THREE.Vector3();
+  const focusAt = new THREE.Vector3();
   const focusOut = { dim: 0, x: 0.5, y: 0.5 };
   // Only the room the camera is standing in. The streamer keeps a stop's neighbours visible, and a
   // ray has no idea a wall is in the way: without this the cert plates in the credentials hall were
@@ -625,27 +625,21 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       return pickHotspot(raycaster, hotspots());
     },
     hover(h) { hoverFx.set(h); },
-    focus(id, stop, covered = 0) {
+    focus(id, _stop, covered = 0) {
       if (disposed) return;
       if (!id) { focus.setTarget(null); hoverFx.hold(null); return; }
-      // The exhibit itself where the room has one, measured off the prop. A project with nothing
-      // standing for it leans toward what its stop already looks at, which is barely a lean.
+      // The exhibit itself where the room has one, measured off the prop.
       const spot = hotspots().find((h) => h.id === id) ?? null;
       const box = spot ? new THREE.Box3().setFromObject(spot.object) : null;
-      let at = box && !box.isEmpty() ? box.getCenter(new THREE.Vector3()) : null;
-      // An exhibit at the far end of its room, or behind the camera, is not leaned toward: the lean
-      // is a few degrees onto a thing already in the frame, never a swing across the room.
-      if (at) {
-        const to = focusAt.subVectors(at, cam.position);
-        if (to.length() > 9 || to.angleTo(lookNow.subVectors(cam.target, cam.position)) > 0.85) { at = null; }
-      }
-      const held = at ? spot : null;
-      at ??= new THREE.Vector3(...(STOPS.find((s) => s.id === stop) ?? stopAt(current)).lookAt);
-      // Hold it in the middle of what the panel leaves clear: half the covered share, off centre.
+      // Leaned to only when it is near and in front, off the path's own pose and not the one a
+      // project already open has leaned it to. Otherwise the room drops and the camera stays put.
+      const aim = leanTarget(box && !box.isEmpty() ? box.getCenter(new THREE.Vector3()) : null, cameraAt(current));
+      // Hold an exhibit in the middle of what the panel leaves clear: half the covered share, off
+      // centre. With nothing to hold there is nothing to move aside for.
       const hHalf = Math.tan(THREE.MathUtils.degToRad(baseFov / 2)) * camera.aspect;
-      focus.offset = Math.atan(Math.min(0.45, covered) * hHalf);
-      focus.setTarget(at);
-      hoverFx.hold(held);
+      focus.offset = aim.exhibit ? Math.atan(Math.min(0.45, covered) * hHalf) : 0;
+      focus.setTarget(aim.at);
+      hoverFx.hold(aim.exhibit ? spot : null);
     },
     pointer(nx, ny) { if (!still) focus.setPointer(nx, ny); },
     focusState() {

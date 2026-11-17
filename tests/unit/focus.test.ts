@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Vector3 } from 'three';
-import { Focus, DRIFT_MAX, DRIFT_OPEN, LEAN_IN, LEAN_OUT, DOLLY_MAX } from '../../src/scenes/walk/focus';
+import { Focus, leanTarget, DRIFT_MAX, DRIFT_OPEN, LEAN_IN, LEAN_OUT, DOLLY_MAX } from '../../src/scenes/walk/focus';
 
 const FRAME = 1 / 60;
 const run = (f: Focus, seconds: number, parked = 1) => { for (let t = 0; t < seconds; t += FRAME) f.update(FRAME, parked); };
@@ -95,5 +95,40 @@ describe('the lean toward an exhibit', () => {
   it('reports where the exhibit is, for the light that stays on it', () => {
     const f = new Focus(); f.setTarget(exhibit); run(f, 2);
     expect(f.aim.distanceTo(exhibit)).toBeLessThan(0.01);
+  });
+});
+
+describe('what the lean is aimed at', () => {
+  const pose = () => ({ position: new Vector3(-40, 1.7, -31), target: new Vector3(-41, 1.7, -31) });
+  it('the exhibit, when it is near and in front', () => {
+    const r = leanTarget(new Vector3(-45, 2, -28), pose());
+    expect(r.exhibit).toBe(true);
+    expect(r.at.toArray()).toEqual([-45, 2, -28]);
+  });
+  it('the way the camera already looks, when the exhibit is too far off to lean to', () => {
+    // Dead ahead and sixteen metres away: the break room's end wall set from the middle of the room.
+    const r = leanTarget(new Vector3(-56.4, 2, -28), pose());
+    expect(r.exhibit).toBe(false);
+    const look = pose().target.sub(pose().position).normalize(), to = r.at.clone().sub(pose().position).normalize();
+    expect(look.angleTo(to)).toBeLessThan(1e-6);
+  });
+  it('the way the camera already looks, when the exhibit is behind it', () => {
+    const r = leanTarget(new Vector3(-36, 1.5, -31), pose());
+    expect(r.exhibit).toBe(false);
+    expect(r.at.x).toBeLessThan(-40);
+  });
+  it('the way the camera already looks, when there is no exhibit at all', () => {
+    const r = leanTarget(null, pose());
+    expect(r.exhibit).toBe(false);
+    expect(r.at.x).toBeLessThan(-40);
+  });
+  it('and aimed there, the lean never turns the camera', () => {
+    // The fault this pins: with no exhibit to lean to, the camera was aimed at its stop's own
+    // subject from wherever it stood, which from the far end of a room is behind it.
+    const r = leanTarget(new Vector3(-56.4, 2, -28), pose());
+    const f = new Focus(); f.setTarget(r.at); run(f, 2);
+    const c = pose(); f.apply(c);
+    const before = pose().target.sub(pose().position).normalize(), after = c.target.clone().sub(c.position).normalize();
+    expect(before.angleTo(after)).toBeLessThan(0.01);
   });
 });

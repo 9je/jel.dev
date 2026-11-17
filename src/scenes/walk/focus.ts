@@ -24,6 +24,26 @@ const smooth = (x: number) => x * x * (3 - 2 * x);
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 const clamp = (v: number) => Math.min(1, Math.max(-1, v));
 
+/** The furthest exhibit the camera leans to, in metres, and the most it turns to one, in radians. */
+export const LEAN_REACH = 9, LEAN_TURN = 0.85;
+
+/**
+ * What the lean is aimed at. The exhibit, when it is close and in front: the lean is a few degrees
+ * onto a thing already in the frame, never a swing across a room. Otherwise a point straight down
+ * the way the camera already looks, so the room is dropped and the camera is left where it is.
+ *
+ * It used to fall back to the stop's own subject, which is the same thing only on the stop's hold.
+ * Picked from the far end of a room it was behind the camera, and the lean turned to face it.
+ */
+export function leanTarget(exhibit: Vector3 | null, pose: { position: Vector3; target: Vector3 }, reach = LEAN_REACH, turn = LEAN_TURN): { at: Vector3; exhibit: boolean } {
+  const look = new Vector3().subVectors(pose.target, pose.position);
+  if (exhibit) {
+    const to = new Vector3().subVectors(exhibit, pose.position);
+    if (to.length() <= reach && to.angleTo(look) <= turn) return { at: exhibit.clone(), exhibit: true };
+  }
+  return { at: look.normalize().multiplyScalar(4).add(pose.position), exhibit: false };
+}
+
 export class Focus {
   /** 0 with nothing open, 1 leaned all the way in. Linear in time; `dim` is the eased reading. */
   level = 0;

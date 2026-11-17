@@ -152,6 +152,8 @@ let cardSource: HTMLElement | null = null;
 // The project the panel is showing, and the walk's scroll when it opened: walking on closes it.
 let project: { id: string; at: number } | null = null;
 let hashSync: (() => void) | null = null;
+// The project a walk is on its way to open, so the same request arriving twice starts one walk.
+let heading: string | null = null;
 let resizeHold: (() => void) | null = null;
 
 /** The outline a panel wears for a moment, so the reader can see which row the exhibit was. */
@@ -197,6 +199,8 @@ function closeCard(els: WalkElements) {
   const held = card.contains(document.activeElement);
   if (project) {
     project = null;
+    for (const el of els.root.querySelectorAll<HTMLElement>('.stop-inner')) el.inert = false;
+    els.dock.inert = false;
     disarmMedia(card);
     delete card.dataset.kind;
     handle?.focus(null);
@@ -249,7 +253,12 @@ function showProject(id: string, els: WalkElements, opts: { push?: boolean; trig
   void card.offsetWidth;
   card.setAttribute('data-enter', '');
   armMedia(body, { autoplay: !reducedMotion() });
-  if (!swap) cardSource = opts.trigger ?? els.root.querySelector<HTMLElement>(`details[data-project="${id}"], details[data-flagship="${id}"]`);
+  // The row it stands for, so closing hands the keyboard back to this project's row and not to the
+  // one a walk through the panel's Next began at.
+  cardSource = opts.trigger ?? els.root.querySelector<HTMLElement>(`details[data-project="${id}"], details[data-flagship="${id}"]`);
+  // What the panel hides is also out of the tab order while it is hidden.
+  for (const el of els.root.querySelectorAll<HTMLElement>('.stop-inner')) el.inert = true;
+  els.dock.inert = true;
   project = { id, at: scroll?.progress() ?? 0 };
   if (location.hash !== `#${id}`) {
     if (opts.push && !swap) history.pushState(null, '', `#${id}`); else history.replaceState(null, '', `#${id}`);
@@ -282,18 +291,22 @@ async function walkTo(stop: StopId): Promise<void> {
 async function goProject(id: string, els: WalkElements, opts: { push?: boolean; trigger?: HTMLElement | null } = {}) {
   const gen = generation;
   const stop = panelTemplate(els, id)?.dataset.stop as StopId | undefined;
-  if (!stop) return;
+  // The back button reports itself twice, as a history change and as a hash change.
+  if (!stop || heading === id) return;
   const s = scroll;
   // An exhibit that is not at its stop's hold names where it is seen from, and the walk goes there.
   const view = handle?.hotspots().find((h) => h.id === id)?.view;
   const away = view !== undefined ? Math.abs((s?.progress() ?? view) - view) > 0.004 : !!s && stopAt(s.progress()).id !== stop;
   if (s && away) {
+    heading = id;
     if (view !== undefined) s.walkTo(view); else await walkTo(stop);
     // The jump eases on after the room reports. Wait until the walk is where it was sent, since a
     // panel opened over a walk still moving is closed by it. Capped, for a jump that was cut short.
     const to = view ?? tForStop(stop);
-    for (let n = 0; n < 60 && Math.abs(s.progress() - to) > 0.002; n++) await new Promise((r) => setTimeout(r, 80));
-    if (gen !== generation) return;
+    for (let n = 0; n < 100 && Math.abs(s.progress() - to) > 0.002; n++) await new Promise((r) => setTimeout(r, 80));
+    if (heading === id) heading = null;
+    // A reader who took the wheel on the way is somewhere else now, and wanted to be.
+    if (gen !== generation || Math.abs(s.progress() - to) > 0.004) return;
   }
   showProject(id, els, opts);
 }
@@ -695,7 +708,7 @@ function teardown() {
   if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
   if (resizeHold) { window.removeEventListener('resize', resizeHold); resizeHold = null; }
   if (hashSync) { window.removeEventListener('hashchange', hashSync); window.removeEventListener('popstate', hashSync); hashSync = null; }
-  project = null;
+  project = null; heading = null;
 }
 
 /**
