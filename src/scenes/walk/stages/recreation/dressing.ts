@@ -200,11 +200,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The clock on the west end wall, south of the doorway, so the far end of the room has something
   // to read rather than being the place the light runs out.
   await add(once(prop('wall_clock'), HALL_FACE + 0.07, 2.2, -34.0, Math.PI / 2));
-  // And a set on the same wall the other side of the doorway, tuned to the trading desk's board. It
-  // hangs square to its wall and faces the room, which is also the way the walk comes, so the
-  // figure is dead ahead for the length of the room. It is dressing: the desk itself stands in the
-  // arcade row, where the camera stops.
-  await add(place(statusBoard(tv(deskBoard(DESK.peak, DESK.on)), 1.75), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2));
+  // And a set on the same wall the other side of the doorway, showing the Labs mark like the two
+  // on the north wall. It carried the trading desk's board for a day, which was one drawn screen
+  // too many: the desk in the arcade row is the only place that figure is shown.
+  await add(place(statusBoard(tv(labsIdent()), 1.75), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2));
 
   await add(papers([[-33.9, 0, -33.4, 0.3], [-30.6, 0, -28.4, 1.6], [-46.8, 0, -33.9, 2.1], [-51.2, 0, -33.6, 0.9], [-44.2, 0, -28.3, 1.2]]));
 

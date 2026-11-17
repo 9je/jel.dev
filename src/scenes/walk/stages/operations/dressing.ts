@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, instances, merged, once, place, type Spot } from '../../merge';
 import { papers, wallScreen } from '../../labs/props';
-import { canteenTable, scannedSet, taskChair } from '../../labs/furniture';
+import { taskChair } from '../../labs/furniture';
 import { cage, cageGate, cableBundle, serverRack, trunkPipe, wallPanel } from '../../labs/plant';
 import { labSteel } from '../../labs/materials';
 import { stanchion, tapeStrip } from '../../labs/signage';
-import { canvas, own, rng, screenFace } from '../../labs/textures';
+import { canvas, own, rng } from '../../labs/textures';
 import { radialTexture } from '../../textures';
 import { X0, W, XC, ZC, Z0, Z1, RACK_Z, TRUNK, CAGE_Z, RACK_XS, GATE_X, FIRE_NORTH, TAPE_Y, TAPE_RUNS, STANCHIONS, CARTONS } from './layout';
 
@@ -141,49 +141,6 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   bay.add(once(prop('laptop'), X0 + 1.1, 0.76, -30.6, 1.3));
   await add(bay);
   hotspots.push({ id: 'msp-automation', kind: 'project', label: 'Platform development', object: bay, stop: 'operations' });
-
-  // ---- The stations ----------------------------------------------------------------------------
-  // The hall had one thing to pick, at its far end, sixteen metres from where the walk stops. The
-  // work in this wing cannot be shown, so what stands here is what a hall like this has out on its
-  // floor anyway: a console trolley a job is running on, a board somebody wheeled in to watch a
-  // rollout land, and a bench with the tool that was being worked on. One for each of the other
-  // three projects, down the south side of the wide aisle between the cages, 2.9 m off the walked
-  // line and clear of the room's own copy on the other side of the frame, each
-  // square to the hall and facing the door the walk comes in by, the way a thing on wheels is left.
-  // Every screen says only what the project's own copy says.
-  const station = (id: string, label: string, x: number, z: number, build: (g: THREE.Group) => void) => {
-    const g = new THREE.Group(); g.name = id;
-    build(g);
-    g.position.set(x, 0, z); g.rotation.y = Math.PI / 2;
-    hotspots.push({ id, kind: 'project', label, object: g, stop: 'operations' });
-    return g;
-  };
-  const console_ = (lines: string[], accent: string) => {
-    const set = scannedSet(store.model('crt_tv'), 'crt_tv', screenFace(lines, accent, 512, 384));
-    set.scale.setScalar(1.5);
-    return set;
-  };
-  await add(station('automated-onboarding', 'Automated user onboarding', -61.8, -33.9, (g) => {
-    g.add(canteenTable(1.1, 0.6, 0.9));
-    const set = console_(['ONBOARDING', 'request      ok', 'account      ok', 'licence      ok', 'groups       ok', 'device       ok', 'report       sent', 'hands on keys  0'], '#7CE0A0');
-    set.position.set(0, 0.9, 0); g.add(set);
-  }));
-  await add(station('product-rollouts', 'Product rollouts at scale', -67.8, -33.9, (g) => {
-    // A board on a wheeled stand: two uprights on a base, the screen between them at eye height.
-    const stand = merged([
-      new THREE.BoxGeometry(0.05, 1.9, 0.05).translate(-0.86, 0.95, 0), new THREE.BoxGeometry(0.05, 1.9, 0.05).translate(0.86, 0.95, 0),
-      new THREE.BoxGeometry(0.06, 0.05, 0.6).translate(-0.86, 0.03, 0), new THREE.BoxGeometry(0.06, 0.05, 0.6).translate(0.86, 0.03, 0),
-      new THREE.BoxGeometry(1.72, 0.04, 0.04).translate(0, 0.5, 0),
-    ], labSteel(0x4b565f));
-    g.add(stand);
-    const board = wallScreen(1.6, 0.9, ['ROLLOUT', 'SIEM   5,000+ endpoints', 'ITDR   thousands of identities', 'state  landed, watched'], '#CFE6EE');
-    board.position.set(0, 1.45, 0.04); g.add(board);
-  }));
-  await add(station('internal-tooling', 'Internal tooling', -64.7, -33.9, (g) => {
-    g.add(canteenTable(1.1, 0.6, 0.9));
-    const set = console_(['AGENT', '> ask the team docs', 'answers from our own', 'knowledge', 'EXTENSION', 'the right action', 'one click away'], '#CFE6EE');
-    set.position.set(0, 0.9, 0); g.add(set);
-  }));
 
   // The LABS TERRAGROUP stencil from the reference, painted large on the west wall over the desk
   // and to the right of the credentials door, where the hold looks straight at it. The status

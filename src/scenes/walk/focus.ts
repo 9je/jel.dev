@@ -25,7 +25,7 @@ const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) *
 const clamp = (v: number) => Math.min(1, Math.max(-1, v));
 
 /** The furthest exhibit the camera leans to, in metres, and the most it turns to one, in radians. */
-export const LEAN_REACH = 10.5, LEAN_TURN = 0.85;
+export const LEAN_REACH = 9, LEAN_TURN = 0.85;
 
 /**
  * What the lean is aimed at. The exhibit, when it is close and in front: the lean is a few degrees
