@@ -18,7 +18,7 @@ test('lite path renders every stop in order with a dock', async ({ page }) => {
   // control is not: the page reads as it did before the walk had a compact column.
   expect(await wall.locator('summary').evaluate((el) => getComputedStyle(el).display)).toBe('none');
   // Every project, the flagship included, is open on the stacked page.
-  await expect(page.locator('section[data-stop="fabrication"] details[data-flagship]')).toHaveAttribute('open', '');
+  await expect(page.locator('section[data-stop="fabrication"] details[data-flagship]').first()).toHaveAttribute('open', '');
   await expect(page.locator('section[data-stop="operations"] details[data-project]')).toHaveCount(3);
   // Each stop paints its own still behind its copy, and the file it names is really there.
   for (const id of STOPS) {
@@ -41,13 +41,34 @@ test('the full path never requests a still', async ({ page }) => {
 test('the lite path sets a flagship with no picture as one column, with no empty panel', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto('/?effects=off');
-  const bay = page.locator('section[data-stop="fabrication"] [data-flagship]');
+  const bay = page.locator('section[data-stop="fabrication"] [data-flagship]').first();
   // The hex panel that stood in for a missing picture was an empty box beside every flagship.
   await expect(bay.locator('.bay-visual')).toHaveCount(0);
   const text = await bay.locator('.bay-text').evaluate((el) => el.getBoundingClientRect().width);
   // At the reading measure, not stretched across the card.
   expect(text).toBeLessThan(760);
   expect(text).toBeGreaterThan(300);
+});
+
+test('a wing shows every flagship as a bay, newest work first, with only the first one open', async ({ page }) => {
+  for (const url of ['/?effects=off', null]) {
+    // The second pass is the page with no script at all: the markup alone has to say the same.
+    const p = url ? page : await (await page.context().browser()!.newContext({ javaScriptEnabled: false })).newPage();
+    await p.goto(url ?? 'http://localhost:4321/');
+    const bays = p.locator('section[data-stop="fabrication"] details[data-flagship]');
+    expect(await bays.evaluateAll((els) => els.map((el) => el.getAttribute('data-flagship')))).toEqual(['phob-screen', 'hollow-knight-melee', 'ezkey']);
+    expect(await bays.evaluateAll((els) => els.map((el) => el.hasAttribute('open')))).toEqual([true, false, false]);
+    // The flagships come before the plain rows.
+    expect(await p.locator('section[data-stop="fabrication"] [data-project-list] > details').first().getAttribute('data-flagship')).toBe('phob-screen');
+  }
+});
+
+test('a sealed project that is not a flagship still keeps its details behind bars', async ({ page }) => {
+  await page.goto('/?effects=off');
+  const row = page.locator('details[data-project="bug-bounty-2"]');
+  await row.locator('summary').click();
+  await expect(row.locator('[data-redacted] .redact')).toHaveCount(2);
+  await expect(row.locator('[data-unlocks]')).toHaveText('Opens when that program allows it.');
 });
 
 test('dock anchors reach their sections on the lite path', async ({ page }) => {
@@ -75,7 +96,10 @@ test('no JavaScript still shows every stop', async ({ browser }) => {
 });
 
 test('full path mounts the scene and the dock flies to a stop', async ({ page }) => {
-  await page.goto('/?quality=low');
+  // A fragment the walk does not know is ignored: it opens at the booth and nothing throws.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?quality=low#nope');
   await expect(page.locator('[data-walk]')).toHaveAttribute('data-mode', 'full', { timeout: 30_000 });
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 60_000 });
   await expect(page.locator('section[data-stop="booth"]')).toHaveAttribute('data-active', '');
@@ -86,6 +110,7 @@ test('full path mounts the scene and the dock flies to a stop', async ({ page })
   await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
   await expect(page.locator('section[data-stop="booth"]')).not.toHaveAttribute('data-active', '');
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  expect(errors).toEqual([]);
 });
 
 test('the readout keeps moving through the room builds, never parked at 85%', async ({ page }) => {
@@ -151,12 +176,12 @@ async function sweep(page: import('@playwright/test').Page, kind: 'click' | 'tap
   }, { how: kind, want });
 }
 
-test('every exhibit in the bay answers a click with the same card', async ({ page }) => {
+test('every exhibit in the bay answers a click with the same panel', async ({ page }) => {
   await page.goto('/?quality=low#fabrication');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
   // Jordan's complaint: two of the three products unfolded a row in the list and the third threw up
-  // a pinned panel. All three now open the one card.
+  // a pinned panel. Every one of them opens the one project panel.
   const all = await sweep(page, 'click');
   expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey']);
 
@@ -164,20 +189,108 @@ test('every exhibit in the bay answers a click with the same card', async ({ pag
   const shot = (await sweep(page, 'click', 'conch')).card!;
   expect(shot.anchor).toBe('conch');
   expect(shot.text).toContain('conch.gg');
-  // On the frame, both ways: a card hanging off the edge is a card nobody can read.
+  await expect(card).toHaveAttribute('data-kind', 'project');
+  // On the frame, both ways: a panel hanging off the edge is a panel nobody can read.
   expect(shot.left).toBeGreaterThanOrEqual(0);
   expect(shot.right).toBeLessThanOrEqual(shot.vw);
   expect(shot.top).toBeGreaterThanOrEqual(0);
   expect(shot.bottom).toBeLessThanOrEqual(shot.vh);
   await expect(card).toBeVisible();
+  // The project has its own address while it is open.
+  await expect(page).toHaveURL(/#conch$/);
 
   // Escape puts it away, and so does a click on the room with nothing behind it.
   await page.keyboard.press('Escape');
   await expect(card).toBeHidden();
+  await expect(page).toHaveURL(/#fabrication$/);
   await sweep(page, 'click', 'conch');
   await expect(card).toBeVisible();
   await page.mouse.click(2, 2);
   await expect(card).toBeHidden();
+});
+
+test('a project opens from its row, loads its pictures only then, and walks on to the next', async ({ page }) => {
+  const media: string[] = [];
+  page.on('request', (r) => { if (new URL(r.url()).pathname.startsWith('/projects/')) media.push(new URL(r.url()).pathname); });
+  await page.goto('/?quality=low#fabrication');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  const section = page.locator('section[data-stop="fabrication"]');
+  await expect(section).toHaveAttribute('data-active', '', { timeout: 30_000 });
+  const card = page.locator('[data-exhibit-card]');
+  // Nothing of any project's media is part of the visit until a project is opened.
+  expect(media).toEqual([]);
+
+  await section.locator('details[data-flagship="phob-screen"] summary').click();
+  await expect(card).toBeVisible();
+  await expect(card).toHaveAttribute('data-kind', 'project');
+  await expect(card.locator('[data-panel-title]')).toHaveText('phob-screen');
+  // The room drops around the exhibit while the project is open.
+  const dim = () => page.locator('[data-walk-dim]').evaluate((el) => Number(el.style.getPropertyValue('--fd') || 0));
+  // That it starts is what can be read here: the ease runs on the scene's frames, and this harness
+  // draws about one a second, so the full drop is pinned in the unit tests on the clock instead.
+  await expect.poll(dim, { timeout: 60_000 }).toBeGreaterThan(0);
+  // The row is a door to the panel now, it does not unfold in the column as well.
+  await expect(section.locator('details[data-flagship="phob-screen"]')).not.toHaveAttribute('open', '');
+  await expect.poll(() => media.filter((m) => m.startsWith('/projects/phob-screen/')).length).toBe(4);
+  expect(media.every((m) => m.startsWith('/projects/phob-screen/'))).toBe(true);
+  // One picture shows at a time, and a tab swaps it.
+  await expect(card.locator('.panel-shot[data-current]')).toHaveCount(1);
+  await card.locator('[data-shot-tab="2"]').click();
+  await expect(card.locator('.panel-shot[data-current]')).toHaveAttribute('data-shot', '2');
+  await expect(page).toHaveURL(/#phob-screen$/);
+
+  // The foot walks to the next project: the same one panel, refilled, never a second.
+  await card.locator('.panel-nav a[rel="next"]').click();
+  await expect(card.locator('[data-panel-title]')).toHaveText('Hollow Knight: Melee');
+  await expect(page.locator('[data-exhibit-card]:not([hidden])')).toHaveCount(1);
+  await expect(page).toHaveURL(/#hollow-knight-melee$/);
+  await expect(card.locator('video')).toHaveAttribute('src', '/projects/hollow-knight-melee/loop.mp4');
+
+  // A project with no pictures shows no empty plate where one would go.
+  await section.locator('details[data-project="monitor"] summary').click();
+  await expect(card.locator('[data-panel-title]')).toHaveText('Monitor');
+  await expect(card.locator('.panel-hero')).toHaveCount(0);
+
+  // Narrower than the breakpoint with the panel open, it is the same one surface, across the frame.
+  await page.setViewportSize({ width: 800, height: 900 });
+  await expect(page.locator('[data-exhibit-card]:not([hidden])')).toHaveCount(1);
+  const box = await card.evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, width: r.width }; });
+  expect(box).toEqual({ left: 0, width: 800 });
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  // The back button puts it away, and the walk is where it was.
+  await page.goBack();
+  await expect(card).toBeHidden();
+  await expect(section).toHaveAttribute('data-active', '');
+
+  // And the room comes all the way back up.
+  await expect.poll(dim, { timeout: 120_000 }).toBe(0);
+
+  // Opened again, a dock link closes it and the walk goes where the link says.
+  await section.locator('details[data-project="monitor"] summary').click();
+  await expect(card).toBeVisible();
+  await page.locator('a[data-stop-link="booth"]').dispatchEvent('click');
+  await expect(card).toBeHidden();
+  await expect(page.locator('section[data-stop="booth"]')).toHaveAttribute('data-active', '', { timeout: 60_000 });
+});
+
+test('a project link opens at its room with the project open, and holds its loop still for reduced motion', async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce', baseURL: 'http://localhost:4321' });
+  const page = await context.newPage();
+  await page.goto('/?quality=low#hollow-knight-melee');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
+  const card = page.locator('[data-exhibit-card]');
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await expect(card.locator('[data-panel-title]')).toHaveText('Hollow Knight: Melee');
+  await expect(page).toHaveURL(/#hollow-knight-melee$/);
+  const video = card.locator('video');
+  await expect(video).toHaveAttribute('poster', '/projects/hollow-knight-melee/loop-poster.webp');
+  expect(await video.evaluate((v: HTMLVideoElement) => ({ paused: v.paused, autoplay: v.autoplay, controls: v.controls }))).toEqual({ paused: true, autoplay: false, controls: true });
+  // Walking on puts the project away.
+  await page.evaluate(() => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, 0.6 * max); });
+  await expect(card).toBeHidden({ timeout: 60_000 });
+  await context.close();
 });
 
 test('the copy column on the walk is one line for each project in the room', async ({ page }) => {
@@ -186,16 +299,14 @@ test('the copy column on the walk is one line for each project in the room', asy
   const section = page.locator('section[data-stop="fabrication"]');
   await expect(section).toHaveAttribute('data-active', '', { timeout: 30_000 });
   // The flagship is the first row of the same list, closed, wearing its status plate.
-  const bay = section.locator('[data-flagship]');
+  const bay = section.locator('[data-flagship]').first();
   await expect(bay).not.toHaveAttribute('open', '');
   expect(await bay.evaluate((el) => el.parentElement?.hasAttribute('data-project-list'))).toBe(true);
   await expect(bay.locator('.bay-head .plate')).toBeVisible();
   await expect(bay.locator('.bay-body')).toBeHidden();
-  // A project row is one line until it is opened: the summary line and the body wait behind it.
+  // A project row is one line and stays one: the summary line and the body are the panel's to show.
   const row = section.locator('details[data-project]').first();
   await expect(row.locator('.row-line')).toBeHidden();
-  await row.locator('summary').click();
-  await expect(row.locator('.row-line')).toBeVisible();
   // Narrow, and low enough to leave the room's middle band clear.
   const frame = page.viewportSize()!;
   const box = (await section.locator('.stop-inner').boundingBox())!;
@@ -228,7 +339,7 @@ test('the certification wall is one row on the walk, with its badges a click beh
 test('the flagship bay sits in the copy column and is never pinned', async ({ page }) => {
   await page.goto('/?quality=low#fabrication');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 90_000 });
-  const bay = page.locator('section[data-stop="fabrication"] [data-flagship]');
+  const bay = page.locator('section[data-stop="fabrication"] [data-flagship]').first();
   expect(await bay.evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
   await expect(page.locator('[data-exhibit-card]')).toBeHidden();
 });
@@ -302,16 +413,19 @@ test.describe('wide coarse pointer', () => {
   // single chromium project, everything else about the device (viewport, touch) stays.
   const { defaultBrowserType: _defaultBrowserType, ...ipad } = devices['iPad Pro 11 landscape'];
   test.use({ ...ipad });
-  test('a tap opens the sheet, never a card, past the 900px breakpoint', async ({ page }) => {
+  test('a tap opens the project as a sheet across the frame, past the 900px breakpoint', async ({ page }) => {
     await page.goto('/?quality=low#fabrication');
     await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
     await expect(page.locator('section[data-stop="fabrication"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
-    // A coarse pointer keeps the sheet flow: tapping an exhibit opens the sheet with that project's
-    // row unfolded, and the card, which would cover the room on a touch screen, never appears.
+    // Under a thumb the panel is a sheet over the whole room, never a card pinned beside a plinth,
+    // and every exhibit opens it.
     const all = await sweep(page, 'tap');
-    expect(Object.keys(all.hit)).toEqual(['sheet']);
+    expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey']);
+    const shot = (await sweep(page, 'tap', 'conch')).card!;
+    expect([shot.left, shot.top, shot.right, shot.bottom]).toEqual([0, 0, shot.vw, shot.vh]);
+    await page.locator('[data-exhibit-close]').tap();
     await expect(page.locator('[data-exhibit-card]')).toBeHidden();
-    expect(await page.locator('section[data-stop="fabrication"] [data-flagship]').evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
+    expect(await page.locator('section[data-stop="fabrication"] [data-flagship]').first().evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
   });
 });
 

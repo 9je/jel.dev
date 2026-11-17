@@ -1,0 +1,51 @@
+---
+import type { Media } from '../content/schema';
+/**
+ * A project's pictures and loops. Nothing here carries a real address: every one ships as
+ * `data-src`, and the script hands it over when the reader opens the project, so a project's media
+ * is never part of the first visit. `panel` is the walk's project panel, one item showing at a time
+ * with a tab for each. `inline` is the stacked page, every item in a column, and it carries a
+ * second copy in a noscript for a reader with no script to hand anything over.
+ */
+interface Props { media: Media[]; mode: 'panel' | 'inline' }
+const { media, mode } = Astro.props;
+const tab = (m: Media, i: number) => m.caption ?? `${i + 1}`;
+---
+{media.length > 0 && mode === 'panel' && (
+  <div class="panel-hero" data-panel-hero>
+    {media.map((m, i) => (
+      <figure class="panel-shot" data-shot={i} data-current={i === 0 ? '' : undefined} data-pixel={m.pixel || undefined} style={`--ar:${m.width} / ${m.height}; --arn:${(m.width / m.height).toFixed(4)}`}>
+        {m.kind === 'video'
+          ? <video data-src={m.src} data-poster={m.poster} width={m.width} height={m.height} aria-label={m.alt} muted loop playsinline preload="none"></video>
+          : <img data-src={m.src} alt={m.alt} width={m.width} height={m.height} decoding="async" />}
+      </figure>
+    ))}
+    {media.length > 1 && (
+      <div class="panel-tabs" role="group" aria-label="Pictures">
+        {media.map((m, i) => <button type="button" class="panel-tab" data-shot-tab={i} aria-pressed={i === 0 ? 'true' : 'false'}>{tab(m, i)}</button>)}
+      </div>
+    )}
+  </div>
+)}
+{media.length > 0 && mode === 'inline' && (
+  <div class="row-media" data-inline-media>
+    {media.map((m) => (
+      <figure data-pixel={m.pixel || undefined}>
+        {m.kind === 'video'
+          ? <video data-src={m.src} data-poster={m.poster} width={m.width} height={m.height} aria-label={m.alt} muted loop playsinline preload="none"></video>
+          : <img data-src={m.src} alt={m.alt} width={m.width} height={m.height} decoding="async" />}
+        {m.caption && <figcaption>{m.caption}</figcaption>}
+      </figure>
+    ))}
+    <noscript>
+      {media.map((m) => (
+        <figure>
+          {m.kind === 'video'
+            ? <video src={m.src} poster={m.poster} width={m.width} height={m.height} aria-label={m.alt} controls muted loop playsinline preload="none"></video>
+            : <img src={m.src} alt={m.alt} width={m.width} height={m.height} loading="lazy" decoding="async" />}
+          {m.caption && <figcaption>{m.caption}</figcaption>}
+        </figure>
+      ))}
+    </noscript>
+  </div>
+)}

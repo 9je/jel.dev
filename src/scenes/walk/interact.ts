@@ -9,6 +9,8 @@ import type { Hotspot } from './stages/types';
 /** The cool wash a prop with no emissive of its own gets while the pointer is on it. */
 const TINT = 0x2e4a5e;
 const TINT_INTENSITY = 0.35;
+/** How much brighter a lit prop stands while its project is open. Steady: it is being read beside. */
+const HELD = 1.6;
 
 /** The nearest hotspot whose object (or any descendant of it) the ray crosses, else null. */
 export function pickHotspot(raycaster: Raycaster, hotspots: Hotspot[]): Hotspot | null {
@@ -28,9 +30,9 @@ export function ndc(x: number, y: number, w: number, h: number): [number, number
   return [(x / w) * 2 - 1, 1 - (y / h) * 2];
 }
 
-export interface Hover { set(h: Hotspot | null): void; update(dt: number): void; dispose(): void }
+export interface Hover { set(h: Hotspot | null): void; /** Keeps an exhibit lit, steadily, whatever the pointer does: the one whose project is open. */ hold(h: Hotspot | null): void; update(dt: number): void; dispose(): void }
 
-interface Base { intensity: number; emissive: number; pulse: boolean }
+interface Base { intensity: number; emissive: number; pulse: boolean; held: boolean }
 
 const materialsOf = (o: Object3D): Material[] => {
   const out: Material[] = [];
@@ -56,11 +58,13 @@ export function createHover(): Hover {
     touched.clear();
   }
 
-  return {
-    set(h) {
-      restore();
-      clock = 0;
-      if (!h) return;
+  let hovered: Hotspot | null = null, held: Hotspot | null = null;
+
+  /** Puts every touched material back, then lights the held exhibit and the hovered one. */
+  function light() {
+    restore();
+    for (const [h, isHeld] of [[held, true], [hovered, false]] as const) {
+      if (!h || (!isHeld && h === held)) continue;
       for (const mat of materialsOf(h.object)) {
         // The flag rather than instanceof: a duplicated three in a test or a bundle would defeat the
         // prototype check, and MeshPhysicalMaterial has to count as well.
@@ -69,17 +73,23 @@ export function createHover(): Hover {
         if (touched.has(std)) continue;
         const emissive = std.emissive.getHex();
         const pulse = emissive !== 0x000000;
-        touched.set(std, { intensity: std.emissiveIntensity, emissive, pulse });
+        touched.set(std, { intensity: std.emissiveIntensity, emissive, pulse, held: isHeld });
         // A prop that is already lit gets brighter and breathes. A dark one gets the cool wash, flat,
         // so a grey pedestal reads as picked without pretending to be a screen.
         if (!pulse) { std.emissive.setHex(TINT); std.emissiveIntensity = TINT_INTENSITY; }
+        else if (isHeld) std.emissiveIntensity = std.emissiveIntensity * HELD;
       }
-    },
+    }
+  }
+
+  return {
+    set(h) { hovered = h; clock = 0; light(); },
+    hold(h) { held = h; light(); },
     update(dt) {
       if (touched.size === 0) return;
       clock += dt;
       const k = 1.45 + 0.25 * Math.sin(clock * 6);
-      for (const [mat, base] of touched) if (base.pulse) mat.emissiveIntensity = base.intensity * k;
+      for (const [mat, base] of touched) if (base.pulse && !base.held) mat.emissiveIntensity = base.intensity * k;
     },
     dispose() { restore(); },
   };

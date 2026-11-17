@@ -3,6 +3,7 @@ import type { WalkHandle } from './scene';
 import type { ScrollController } from './scroll';
 import { STOPS, stopAt, tForStop, type StopId } from './path';
 import type { Hotspot } from './stages/types';
+import { armMedia, disarmMedia, parseHash } from './panel';
 import { onStreak, startStreakFeed } from './streak-feed';
 import { retickStreak } from '../../content/ticker';
 
@@ -54,8 +55,18 @@ function wireEffectsToggle(els: WalkElements, tier: Tier) {
   });
 }
 
+const STOP_IDS = STOPS.map((s) => s.id as string);
+/** Every project the page carries a panel for, read off the templates the build wrote. */
+const projectIds = (els: WalkElements) => new Set([...els.root.querySelectorAll<HTMLElement>('template[data-project-panel]')].map((t) => t.dataset.projectPanel!));
+const panelTemplate = (els: WalkElements, id: string) => (/^[a-z0-9-]+$/.test(id) ? els.root.querySelector<HTMLTemplateElement>(`template[data-project-panel="${id}"]`) : null);
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function markCurrentFromHash(els: WalkElements) {
-  const id = location.hash.replace('#', '') || 'booth';
+  const named = parseHash(location.hash, STOP_IDS, projectIds(els));
+  // A project's link on the stacked page lands on its row, unfolded.
+  const row = named.project ? els.root.querySelector<HTMLDetailsElement>(`details[data-project="${named.project}"], details[data-flagship="${named.project}"]`) : null;
+  if (row) { row.open = true; row.scrollIntoView({ block: 'start' }); }
+  const id = named.stop ?? row?.closest<HTMLElement>('section[data-stop]')?.dataset.stop ?? 'booth';
   for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) {
     a.setAttribute('aria-current', a.dataset.stopLink === id ? 'true' : 'false');
   }
@@ -68,8 +79,13 @@ export function startLite(els: WalkElements) {
   // The stacked page has no toggle and no compact column: the styling both of those belong to is
   // scoped to the full walk. So every body, every flagship and the certification wall are open
   // here, including on a browser that got this far through a fallback after startFull closed them.
-  for (const d of els.root.querySelectorAll('details[data-stop-more], details[data-flagship], details[data-cert-wall]')) d.setAttribute('open', '');
+  // The first bay of each wing stands open and the rest are one line, as the markup ships them. Set
+  // here as well because the full walk closes every bay, and a fallback from it lands on this path.
+  for (const d of els.root.querySelectorAll('details[data-stop-more], details[data-cert-wall]')) d.setAttribute('open', '');
+  for (const list of els.root.querySelectorAll('[data-project-list]')) list.querySelector('details[data-flagship]')?.setAttribute('open', '');
   els.preloader.dataset.state = 'hidden';
+  // The stacked page shows a project's pictures in its row. They wait to be scrolled to.
+  for (const m of els.root.querySelectorAll('[data-inline-media]')) armMedia(m, { autoplay: false, lazy: true });
   markCurrentFromHash(els);
   hashchangeListener = () => markCurrentFromHash(els);
   window.addEventListener('hashchange', hashchangeListener);
@@ -133,6 +149,10 @@ const FOCUS_MS = 2500;
 let focusTimer: ReturnType<typeof setTimeout> | null = null;
 // The panel the open card was cloned from, so closing it can hand the keyboard back there.
 let cardSource: HTMLElement | null = null;
+// The project the panel is showing, and the walk's scroll when it opened: walking on closes it.
+let project: { id: string; at: number } | null = null;
+let hashSync: (() => void) | null = null;
+let resizeHold: (() => void) | null = null;
 
 /** The outline a panel wears for a moment, so the reader can see which row the exhibit was. */
 function mark(el: HTMLElement, els: WalkElements) {
@@ -175,6 +195,16 @@ function closeCard(els: WalkElements) {
   const card = els.card;
   if (!card || card.hidden) return;
   const held = card.contains(document.activeElement);
+  if (project) {
+    project = null;
+    disarmMedia(card);
+    delete card.dataset.kind;
+    handle?.focus(null);
+    // The address goes back to the stop's own, in place: the entry that opened the project stays
+    // behind it, so the back button never reopens what was just put away.
+    const stop = els.root.querySelector<HTMLElement>('section[data-stop][data-active]')?.dataset.stop;
+    if (stop && parseHash(location.hash, STOP_IDS, projectIds(els)).project) history.replaceState(null, '', `#${stop}`);
+  }
   card.hidden = true;
   card.removeAttribute('data-anchor');
   card.querySelector('[data-exhibit-body]')?.replaceChildren();
@@ -188,6 +218,83 @@ function closeCard(els: WalkElements) {
   if (!back) return;
   if (back.tabIndex < 0) back.setAttribute('tabindex', '-1');
   back.focus({ preventScroll: true });
+}
+
+/**
+ * Opens a project in the panel: its template cloned in, its media given their addresses, the room's
+ * camera leaned toward it. Every project answers this way, from its exhibit, from its row in the
+ * copy column, and from its own link. `push` leaves a history entry, so the back button closes it.
+ */
+function showProject(id: string, els: WalkElements, opts: { push?: boolean; trigger?: HTMLElement | null } = {}): boolean {
+  const card = els.card;
+  const tpl = panelTemplate(els, id);
+  const body = card?.querySelector<HTMLElement>('[data-exhibit-body]');
+  if (!card || !tpl || !body) return false;
+  const swap = !!project;
+  // A certification's card is the same element, pinned beside its plate. It is put away first.
+  if (!card.hidden && !swap) closeCard(els);
+  disarmMedia(body);
+  body.replaceChildren(tpl.content.cloneNode(true));
+  card.setAttribute('aria-label', body.querySelector('[data-panel-title]')?.textContent?.trim() || 'Project');
+  const section = els.root.querySelector<HTMLElement>(`section[data-stop="${tpl.dataset.stop}"]`);
+  const wing = section?.style.getPropertyValue('--wing-light');
+  if (wing) card.style.setProperty('--wing-light', wing);
+  card.removeAttribute('data-side'); card.removeAttribute('data-offscreen');
+  card.dataset.kind = 'project';
+  card.dataset.anchor = id;
+  // The entrance plays again for each project: the attribute is taken off and put back a frame on.
+  card.removeAttribute('data-enter');
+  card.hidden = false;
+  card.scrollTop = 0;
+  void card.offsetWidth;
+  card.setAttribute('data-enter', '');
+  armMedia(body, { autoplay: !reducedMotion() });
+  if (!swap) cardSource = opts.trigger ?? els.root.querySelector<HTMLElement>(`details[data-project="${id}"], details[data-flagship="${id}"]`);
+  project = { id, at: scroll?.progress() ?? 0 };
+  if (location.hash !== `#${id}`) {
+    if (opts.push && !swap) history.pushState(null, '', `#${id}`); else history.replaceState(null, '', `#${id}`);
+  }
+  // How much of the frame the panel stands over, from its near edge to the far side, so the camera
+  // can hold the exhibit in what is left. A sheet over the whole room leaves nothing to aim into.
+  const left = card.getBoundingClientRect().left;
+  handle?.focus(id, tpl.dataset.stop as StopId, left <= 1 ? 0 : 1 - left / window.innerWidth);
+  card.querySelector<HTMLElement>('[data-exhibit-close]')?.focus({ preventScroll: true });
+  return true;
+}
+
+/** Walks to a stop if the camera is somewhere else, and resolves once the jump has come to rest.
+ *  Capped, since a jump interrupted by a wheel would otherwise never report the stop. */
+async function walkTo(stop: StopId): Promise<void> {
+  const s = scroll;
+  if (!s || stopAt(s.progress()).id === stop) return;
+  await new Promise<void>((resolve) => {
+    let off: (() => void) | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const finish = () => { off?.(); off = null; if (timer) clearTimeout(timer); timer = null; resolve(); };
+    off = s.onStop((id) => { if (id === stop) finish(); });
+    timer = setTimeout(finish, 2000);
+    s.jumpTo(stop);
+  });
+}
+
+/** Opens a project wherever the camera is: walks to its room first, lets the jump settle so the
+ *  walk moving under an open panel does not close it, then opens it. */
+async function goProject(id: string, els: WalkElements, opts: { push?: boolean; trigger?: HTMLElement | null } = {}) {
+  const gen = generation;
+  const stop = panelTemplate(els, id)?.dataset.stop as StopId | undefined;
+  if (!stop) return;
+  const s = scroll;
+  if (s && stopAt(s.progress()).id !== stop) {
+    await walkTo(stop);
+    // The jump eases on to the hold after the room reports. Wait for it to come to rest.
+    for (let last = -1, still = 0, n = 0; still < 3 && n < 40; n++) {
+      await new Promise((r) => setTimeout(r, 80));
+      const t = s.progress();
+      still = Math.abs(t - last) < 1e-5 ? still + 1 : 0; last = t;
+    }
+    if (gen !== generation) return;
+  }
+  showProject(id, els, opts);
 }
 
 /**
@@ -227,18 +334,12 @@ function openCard(h: Hotspot, els: WalkElements, interact: Interact) {
  */
 async function activateHotspot(h: Hotspot, els: WalkElements, coarse: boolean, interact: Interact) {
   const gen = generation;
-  const s = scroll;
-  if (s && stopAt(s.progress()).id !== h.stop) {
-    await new Promise<void>((resolve) => {
-      let off: (() => void) | null = null;
-      let timer: ReturnType<typeof setTimeout> | null = null;
-      const finish = () => { off?.(); off = null; if (timer) clearTimeout(timer); timer = null; resolve(); };
-      off = s.onStop((id) => { if (id === h.stop) finish(); });
-      timer = setTimeout(finish, 2000);
-      s.jumpTo(h.stop);
-    });
-    if (gen !== generation) return;
-  }
+  // A project opens its panel, on a phone as much as anywhere: there the panel is a sheet.
+  if (panelTemplate(els, h.id)) { await goProject(h.id, els, { push: true }); return; }
+  await walkTo(h.stop);
+  if (gen !== generation) return;
+  // The panel may be showing a project. A certification's card takes its place.
+  if (project) closeCard(els);
   if (coarse) openTarget(h, els, interact); else openCard(h, els, interact);
 }
 
@@ -314,6 +415,10 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
 
   const onMove = (e: PointerEvent) => { at = { x: e.clientX, y: e.clientY }; if (!raf) raf = requestAnimationFrame(pickFrame); };
   const onLeave = () => { at = null; if (raf) { cancelAnimationFrame(raf); raf = 0; } setHover(null); hideLabel(); };
+  // The head follows the pointer a little while the walk is parked. Over the whole window, not the
+  // canvas alone, so it does not snap back when the pointer crosses the copy or the panel.
+  const onDrift = (e: PointerEvent) => { const [nx, ny] = interact.ndc(e.clientX, e.clientY, window.innerWidth, window.innerHeight); handle?.pointer(nx, ny); };
+  const onDriftOut = () => handle?.pointer(0, 0);
   const open = (x: number, y: number) => {
     // A move queued a pick for the next frame, and it would paint the hover label back over the
     // cursor after the click cleared it. The click is the newer answer, so the pick is dropped.
@@ -337,6 +442,34 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
   const onEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCard(els); };
   const onClose = () => closeCard(els);
   const closeBtn = els.card?.querySelector<HTMLElement>('[data-exhibit-close]') ?? null;
+  // A project's row in the copy column opens its panel, where it used to unfold in place. The click
+  // on a summary is also what Enter and Space send, so the keyboard gets the same.
+  const onRow = (e: MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const summary = (e.target as Element).closest?.('summary');
+    const row = summary?.parentElement;
+    const id = row instanceof HTMLDetailsElement ? row.dataset.project ?? row.dataset.flagship : undefined;
+    if (!id || !panelTemplate(els, id)) return;
+    e.preventDefault();
+    void goProject(id, els, { push: true, trigger: summary as HTMLElement });
+  };
+  // Inside the panel: a tab swaps the picture, and the foot walks to the next project in the room.
+  const onCard = (e: MouseEvent) => {
+    const el = e.target as Element;
+    const tab = el.closest<HTMLElement>('[data-shot-tab]');
+    if (tab) {
+      const hero = tab.closest('[data-panel-hero]');
+      for (const s of hero?.querySelectorAll<HTMLElement>('[data-shot]') ?? []) s.toggleAttribute('data-current', s.dataset.shot === tab.dataset.shotTab);
+      for (const t of hero?.querySelectorAll<HTMLElement>('[data-shot-tab]') ?? []) t.setAttribute('aria-pressed', t === tab ? 'true' : 'false');
+      return;
+    }
+    const go = el.closest<HTMLElement>('[data-panel-go]');
+    if (go && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); showProject(go.dataset.panelGo!, els); }
+  };
+  els.root.querySelector('.stops')?.addEventListener('click', onRow as EventListener);
+  els.card?.addEventListener('click', onCard);
+  closeBtn?.addEventListener('click', onClose);
+  document.addEventListener('keydown', onEscape);
 
   // A coarse pointer has no hover to give, so it gets the tap alone and the label never shows.
   if (coarse) {
@@ -346,8 +479,8 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     els.canvas.addEventListener('pointermove', onMove);
     els.canvas.addEventListener('pointerleave', onLeave);
     els.canvas.addEventListener('click', onClick);
-    document.addEventListener('keydown', onEscape);
-    closeBtn?.addEventListener('click', onClose);
+    window.addEventListener('pointermove', onDrift, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onDriftOut);
   }
 
   return () => {
@@ -356,8 +489,12 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     els.canvas.removeEventListener('pointermove', onMove);
     els.canvas.removeEventListener('pointerleave', onLeave);
     els.canvas.removeEventListener('click', onClick);
+    window.removeEventListener('pointermove', onDrift);
+    document.documentElement.removeEventListener('pointerleave', onDriftOut);
     document.removeEventListener('keydown', onEscape);
     closeBtn?.removeEventListener('click', onClose);
+    els.root.querySelector('.stops')?.removeEventListener('click', onRow as EventListener);
+    els.card?.removeEventListener('click', onCard);
     closeCard(els);
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     hovered = null;
@@ -381,8 +518,10 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
   // update can fire off a stale scroll position (left over from the browser's own
   // scroll-to-fragment while the page was still in boot layout) and rewrite location.hash via
   // history.replaceState before we get a chance to read it, corrupting which stop we open on.
-  const raw = location.hash.replace('#', '');
-  const initial: StopId = STOPS.some((s) => s.id === raw) ? (raw as StopId) : 'booth';
+  const named = parseHash(location.hash, STOP_IDS, projectIds(els));
+  // A project's own link opens at its room, and then opens the project.
+  const deep = named.project ?? null;
+  const initial = (named.stop ?? (deep ? panelTemplate(els, deep)?.dataset.stop : null) ?? 'booth') as StopId;
   // The markup ships every stop body open so the stacked page reads with no JavaScript. Only the
   // full walk closes them, and only on a phone, where an open body would be a fixed sheet over the
   // room. Doing it here rather than in init() means the lite path never loses its in-flow copy.
@@ -433,16 +572,46 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
     if (gen !== generation) { h.dispose(); return; }
     handle = h;
     // The camera moves every frame, so the panels pinned to world anchors have to follow it.
-    pinCard = () => { if (handle && els.card && !els.card.hidden) pinOverlays(els.card, handle.anchors, handle.camera); };
-    const pin = () => { if (!handle) return; pinCard?.(); pinRaf = requestAnimationFrame(pin); };
+    pinCard = () => { if (handle && els.card && !els.card.hidden && els.card.dataset.kind !== 'project') pinOverlays(els.card, handle.anchors, handle.camera); };
+    // The room's drop while a project is open: a shade over the canvas with a hole where the
+    // exhibit is, placed each frame from where the scene says the exhibit sits.
+    const dim = els.root.querySelector<HTMLElement>('[data-walk-dim]');
+    let dimmed = 0;
+    const shade = () => {
+      if (!dim || !handle) return;
+      const f = handle.focusState();
+      if (f.dim === 0 && dimmed === 0) return;
+      dimmed = f.dim;
+      dim.style.setProperty('--fd', f.dim.toFixed(3));
+      dim.style.setProperty('--fx', `${(f.x * 100).toFixed(2)}%`);
+      dim.style.setProperty('--fy', `${(f.y * 100).toFixed(2)}%`);
+    };
+    const pin = () => { if (!handle) return; pinCard?.(); shade(); pinRaf = requestAnimationFrame(pin); };
     pin();
+    // A resize moves the walk under an open project, since the page is as long as the frame is tall.
+    // That is not the reader walking on, so the project's mark is taken again from wherever the
+    // walk lands. Registered ahead of the scroll's own resize listener, which is what reports it.
+    resizeHold = () => { if (project) project.at = NaN; };
+    window.addEventListener('resize', resizeHold);
     scroll = createScroll();
     const sc = scroll; h.beforeFrame((now) => sc.tick(now));
     scroll.onProgress((t) => {
       handle?.setProgress(t);
       // The cue has done its job the moment the walk moves, and it never comes back.
       if (t > 0.01) els.root.dataset.scrolled = '';
+      // Walking on puts an open project away, the way it always did the card.
+      if (project && Number.isNaN(project.at)) project.at = t;
+      if (project && Math.abs(t - project.at) > 0.006) closeCard(els);
     });
+    // The address is the state: a project's link opens it, and anything else puts it away. This is
+    // what the back button, a pasted link and a link inside the copy all come through.
+    hashSync = () => {
+      const p = parseHash(location.hash, STOP_IDS, projectIds(els)).project;
+      if (p && p !== project?.id) void goProject(p, els);
+      else if (!p && project) closeCard(els);
+    };
+    window.addEventListener('hashchange', hashSync);
+    window.addEventListener('popstate', hashSync);
     // The card belongs to the exhibit the camera is standing in front of. Walking away closes it.
     scroll.onStop((id) => { activate(els, id); closeCard(els); });
     for (const a of els.dock.querySelectorAll<HTMLAnchorElement>('a[data-stop-link]')) {
@@ -450,6 +619,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
         const id = a.dataset.stopLink as StopId;
+        closeCard(els);
         if (handle && !handle.ready(id)) {
           // The room is still building in the background. Show the tube, land when it exists, or
           // after 20s regardless so a download that never settles doesn't strand the dock at 90%.
@@ -497,6 +667,8 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
     els.preloader.setAttribute('aria-busy', 'false');
     // The run catches for 420 ms, then the frame fades to the room over 480. Hide once that has played.
     hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 950);
+    // Once the room is on screen, not over the preloader's last frames.
+    if (deep) setTimeout(() => { if (gen === generation) showProject(deep, els); }, 1000);
   } catch (err) {
     console.warn('walk failed to start, using the lite path', err);
     teardown();
@@ -518,6 +690,9 @@ function teardown() {
   pinCard = null;
   if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
   if (hashchangeListener) { window.removeEventListener('hashchange', hashchangeListener); hashchangeListener = null; }
+  if (resizeHold) { window.removeEventListener('resize', resizeHold); resizeHold = null; }
+  if (hashSync) { window.removeEventListener('hashchange', hashSync); window.removeEventListener('popstate', hashSync); hashSync = null; }
+  project = null;
 }
 
 /**

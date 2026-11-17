@@ -53,6 +53,27 @@ describe('hotspots', () => {
   });
 });
 
+describe('the exhibit whose project is open', () => {
+  it('stays lit, steadily, while the pointer comes and goes', () => {
+    const a = box(1), b = box(3);
+    const ma = a.material as MeshStandardMaterial, mb = b.material as MeshStandardMaterial;
+    ma.emissiveIntensity = 0.5; mb.emissiveIntensity = 0.5;
+    const hover = createHover();
+    hover.hold(hs('a', a));
+    expect(ma.emissiveIntensity).toBeCloseTo(0.8);
+    hover.set(hs('b', b)); hover.update(0.1);
+    hover.set(null); hover.update(0.4);
+    expect(ma.emissiveIntensity).toBeCloseTo(0.8);
+    expect(mb.emissiveIntensity).toBe(0.5);
+    // The pointer on the held exhibit itself changes nothing either.
+    hover.set(hs('a', a)); hover.update(0.3);
+    expect(ma.emissiveIntensity).toBeCloseTo(0.8);
+    hover.set(null);
+    hover.hold(null);
+    expect(ma.emissiveIntensity).toBe(0.5);
+  });
+});
+
 /** A stand-in for the page's stop sections, so targetFor's DOM walk can be read without a browser.
  *  Only `querySelector` is exercised, and only with the four selectors the function builds. */
 const page = (html: Record<string, string | null>): ParentNode => ({

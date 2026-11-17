@@ -1,0 +1,54 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { render } from 'astro:content';
+import StatusPlate from './StatusPlate.astro';
+import Sealed from './Sealed.astro';
+import ProjectMedia from './ProjectMedia.astro';
+/**
+ * What the walk's project panel shows for one project, rendered once at build time into a template
+ * beside the project's row. Opening a project clones it into the one panel the walk has, so there is
+ * one source for the copy and nothing is assembled in the browser.
+ */
+export interface PanelNav { index: number; count: number; room: string; prev?: { id: string; title: string }; next?: { id: string; title: string } }
+interface Props { entry: CollectionEntry<'projects'>; nav: PanelNav }
+const { entry, nav } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+const sealed = d.status === 'pending-release';
+---
+<template data-project-panel={entry.id} data-stop={d.wing}>
+  <article class="panel" data-sealed={sealed || undefined}>
+    <p class="panel-where">{nav.room}, {nav.index} of {nav.count}</p>
+    <h2 class="panel-title display" data-panel-title>{d.title}</h2>
+    <p class="panel-meta"><StatusPlate status={d.status} />{d.role && <span class="panel-role">{d.role}</span>}</p>
+    {sealed ? (
+      <div class="panel-body">
+        <Sealed />
+        <Content />
+        {d.unlocks && <p class="panel-note" data-unlocks>{d.unlocks}</p>}
+      </div>
+    ) : (
+      <>
+        <p class="panel-summary">{d.summary}</p>
+        <ProjectMedia media={d.media} mode="panel" />
+        {d.facts.length > 0 && (
+          <dl class="panel-facts">{d.facts.map((f) => <div><dd>{f.value}</dd><dt>{f.label}</dt></div>)}</dl>
+        )}
+        <div class="panel-body">
+          <Content />
+          {d.contentWarning && <p class="panel-note" data-content-warning>{d.contentWarning}</p>}
+          {d.stack.length > 0 && <p class="panel-note">Built with {d.stack.join(', ')}.</p>}
+        </div>
+        {d.links.length > 0 && (
+          <ul class="panel-links">{d.links.map((l) => <li><a href={l.href} rel="noopener">{l.label}</a></li>)}</ul>
+        )}
+      </>
+    )}
+    {(nav.prev || nav.next) && (
+      <nav class="panel-nav" aria-label="More in this room">
+        {nav.prev ? <a href={`#${nav.prev.id}`} data-panel-go={nav.prev.id} rel="prev"><span>Previous</span>{nav.prev.title}</a> : <span></span>}
+        {nav.next ? <a href={`#${nav.next.id}`} data-panel-go={nav.next.id} rel="next"><span>Next</span>{nav.next.title}</a> : <span></span>}
+      </nav>
+    )}
+  </article>
+</template>

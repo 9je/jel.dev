@@ -3,15 +3,18 @@ import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import { render } from 'astro:content';
 import StatusPlate from './StatusPlate.astro';
-interface Props { entry: CollectionEntry<'projects'>; hideStatus?: boolean }
-const { entry, hideStatus } = Astro.props;
+import Sealed from './Sealed.astro';
+import ProjectMedia from './ProjectMedia.astro';
+import ProjectPanel, { type PanelNav } from './ProjectPanel.astro';
+interface Props { entry: CollectionEntry<'projects'>; hideStatus?: boolean; open?: boolean; nav: PanelNav }
+const { entry, hideStatus, open = true, nav } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 const sealed = d.status === 'pending-release';
 ---
 {/* A disclosure, like every other project in the list: open it is the wing's flagship card, and
     closed it is one line of the walk's copy column, where the exhibit's card carries the copy. */}
-<details class="bay" data-flagship={entry.id} data-sealed={sealed || undefined} open>
+<details class="bay" data-flagship={entry.id} data-sealed={sealed || undefined} open={open}>
   <summary class="bay-head">
     <h3 class="bay-title">{d.title}</h3>
     {!hideStatus && <StatusPlate status={d.status} />}
@@ -24,16 +27,15 @@ const sealed = d.status === 'pending-release';
   <div class="bay-text">
     {sealed ? (
       <div class="bay-body">
-        <p data-redacted>
-          <span class="redact">Program and vendor withheld until publication.</span>
-          <span class="redact">Impact class withheld until publication.</span>
-        </p>
+        <Sealed />
         <Content />
         {d.unlocks && <p class="bay-unlocks" data-unlocks>{d.unlocks}</p>}
       </div>
     ) : (
       <div class="bay-body">
         <p class="bay-summary">{d.summary}</p>
+        <ProjectMedia media={d.media} mode="inline" />
+        {d.facts.length > 0 && <dl class="row-facts">{d.facts.map((f) => <div><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl>}
         <Content />
         {d.contentWarning && <p class="bay-warning" data-content-warning>{d.contentWarning}</p>}
         {d.stack.length > 0 && <p class="bay-stack">Built with {d.stack.join(', ')}.</p>}
@@ -44,6 +46,7 @@ const sealed = d.status === 'pending-release';
     )}
   </div>
 </details>
+<ProjectPanel entry={entry} nav={nav} />
 
 <style>
   /* The flagship on the stacked page: no box, the same rule in the wing's colour the walk's copy
@@ -77,13 +80,5 @@ const sealed = d.status === 'pending-release';
   .bay-summary { font-size: 1.1rem; }
   .bay-warning, .bay-stack, .bay-unlocks { color: var(--text-dim); font-size: 0.95rem; }
   .bay-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
-  .redact {
-    display: block;
-    width: fit-content;
-    margin-bottom: 0.4rem;
-    color: transparent;
-    background: #05080b;
-    user-select: none;
-  }
   @media (max-width: 899px) { .bay:has(.bay-visual) { grid-template-columns: 1fr; } }
 </style>

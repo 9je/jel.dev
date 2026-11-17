@@ -12,6 +12,7 @@ const { title, description, tickerLines } = Astro.props;
   <div class="walk" data-walk data-mode="boot" style={`--scroll-length:${SCROLL_LENGTH_VH}vh`}>
     <Preloader />
     <canvas class="walk-canvas" data-walk-canvas aria-hidden="true"></canvas>
+    <div class="walk-dim" data-walk-dim aria-hidden="true"></div>
     <main class="stops" id="top"><slot /></main>
     <div class="hotspot-label" data-hotspot-label hidden aria-hidden="true"></div>
     {/* One card for the whole walk. Clicking any exhibit fills it with that exhibit's copy and

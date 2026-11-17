@@ -2,10 +2,14 @@
 import type { CollectionEntry } from 'astro:content';
 import { render } from 'astro:content';
 import StatusPlate from './StatusPlate.astro';
-interface Props { entry: CollectionEntry<'projects'>; hideStatus?: boolean }
-const { entry, hideStatus } = Astro.props;
+import Sealed from './Sealed.astro';
+import ProjectMedia from './ProjectMedia.astro';
+import ProjectPanel, { type PanelNav } from './ProjectPanel.astro';
+interface Props { entry: CollectionEntry<'projects'>; hideStatus?: boolean; nav: PanelNav }
+const { entry, hideStatus, nav } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
+const sealed = d.status === 'pending-release';
 ---
 <details class="row" data-project={entry.id}>
   <summary class="row-summary">
@@ -14,7 +18,11 @@ const d = entry.data;
     <span class="row-line">{d.summary}</span>
   </summary>
   <div class="row-body">
+    {sealed && <Sealed />}
+    {!sealed && <ProjectMedia media={d.media} mode="inline" />}
+    {!sealed && d.facts.length > 0 && <dl class="row-facts">{d.facts.map((f) => <div><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl>}
     <Content />
+    {sealed && d.unlocks && <p class="row-stack" data-unlocks>{d.unlocks}</p>}
     {d.contentWarning && <p class="row-warning" data-content-warning>{d.contentWarning}</p>}
     {d.stack.length > 0 && <p class="row-stack">Built with {d.stack.join(', ')}.</p>}
     {d.links.length > 0 && (
@@ -22,6 +30,7 @@ const d = entry.data;
     )}
   </div>
 </details>
+<ProjectPanel entry={entry} nav={nav} />
 
 <style>
   .row { border-top: 1px solid var(--surface-edge); }

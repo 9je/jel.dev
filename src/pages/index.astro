@@ -24,31 +24,40 @@ const stop = (id: (typeof STOPS)[number]['id']) => STOPS.find((s) => s.id === id
 const sharedStatus = (list: { data: { status: Status } }[]) =>
   list.length > 1 && list.every((e) => e.data.status === list[0]!.data.status) ? list[0]!.data.status : null;
 const a = site.about;
+/** Where a project stands in its room, and its neighbours, for the panel's head and its foot. */
+const navFor = (room: string, list: { id: string; data: { title: string } }[]) => (id: string) => {
+  const i = list.findIndex((e) => e.id === id);
+  const link = (e?: { id: string; data: { title: string } }) => e && { id: e.id, title: e.data.title };
+  return { index: i + 1, count: list.length, room, prev: link(list[i - 1]), next: link(list[i + 1]) };
+};
 
 const wingStops = (['fabrication', 'recreation', 'operations'] as Wing[]).map((w) => {
   const list = byWing(w);
-  const flagship = list.find((p) => p.data.flagship);
-  const rest = list.filter((p) => p !== flagship);
-  return { w, flagship, rest };
+  // Every flagship is a bay, in order, ahead of the plain rows. Only the first stands open: three
+  // open bays is three screens of one room before the reader reaches the list.
+  const flagships = list.filter((p) => p.data.flagship);
+  const rest = list.filter((p) => !p.data.flagship);
+  return { w, flagships, rest, nav: navFor(site.stops[w].title, [...flagships, ...rest]) };
 });
 
 const containmentList = byWing('containment');
-const containmentFlagship = containmentList.find((p) => p.data.flagship);
-const containmentRest = containmentList.filter((p) => p !== containmentFlagship);
+const containmentFlagships = containmentList.filter((p) => p.data.flagship);
+const containmentRest = containmentList.filter((p) => !p.data.flagship);
+const containmentNav = navFor(site.stops.containment.title, [...containmentFlagships, ...containmentRest]);
 ---
 <Walk title="Jordan Eldridge Labs" description={site.description} tickerLines={tickerLines}>
   <StopSection id="booth" level={1} title={site.stops.booth.title} lead={site.stops.booth.lead} light={stop('booth').light}>
     <p class="intro">{site.intro}</p>
   </StopSection>
 
-  {wingStops.map(({ w, flagship, rest }) => {
-    const shared = sharedStatus([...(flagship ? [flagship] : []), ...rest]);
+  {wingStops.map(({ w, flagships, rest, nav }) => {
+    const shared = sharedStatus([...flagships, ...rest]);
     return (
     <StopSection id={w} title={site.stops[w].title} lead={site.stops[w].lead} wing={w} light={stop(w).light}>
       <div data-project-list>
         {shared && <p class="list-note">Everything in this wing is {STATUS_LABEL[shared].toLowerCase()}.</p>}
-        {flagship && <FlagshipBay entry={flagship} hideStatus={!!shared} />}
-        {rest.map((e) => <ProjectPlate entry={e} hideStatus={!!shared} />)}
+        {flagships.map((e, i) => <FlagshipBay entry={e} hideStatus={!!shared} open={i === 0} nav={nav(e.id)} />)}
+        {rest.map((e) => <ProjectPlate entry={e} hideStatus={!!shared} nav={nav(e.id)} />)}
       </div>
     </StopSection>
     );
@@ -60,8 +69,8 @@ const containmentRest = containmentList.filter((p) => p !== containmentFlagship)
 
   <StopSection id="containment" title={site.stops.containment.title} lead={site.stops.containment.lead} wing="containment" light={stop('containment').light}>
     <div data-project-list>
-      {containmentFlagship && <FlagshipBay entry={containmentFlagship} />}
-      {containmentRest.map((e) => <ProjectPlate entry={e} />)}
+      {containmentFlagships.map((e, i) => <FlagshipBay entry={e} open={i === 0} nav={containmentNav(e.id)} />)}
+      {containmentRest.map((e) => <ProjectPlate entry={e} nav={containmentNav(e.id)} />)}
     </div>
   </StopSection>
 

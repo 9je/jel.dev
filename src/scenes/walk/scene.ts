@@ -4,6 +4,7 @@ import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
 import { cameraAt, holdWeight, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
 import { buildThresholds } from './thresholds';
 import { DESK_VFOV, lensFor } from './framing';
+import { Focus } from './focus';
 import { FrameGovernor, type Tier } from './quality';
 import { AssetStore } from './assets';
 import { createPost, type Post } from './post';
@@ -30,6 +31,14 @@ export interface WalkHandle {
   /** Runs at the head of every frame, before the camera is placed: the scroll steps here, so the
    *  frame draws the scroll of its own frame rather than the one before. */
   beforeFrame(cb: ((now: number) => void) | null): void;
+  /** Leans the camera toward an exhibit and drops the room around it, or lets go with null. A
+   *  project with no exhibit of its own leans toward its stop's. */
+  focus(id: string | null, stop?: StopId, covered?: number): void;
+  /** The pointer, in the -1..1 square, for the head's drift on a hold. */
+  pointer(nx: number, ny: number): void;
+  /** How far the room is dropped for an open project, 0..1, and where its exhibit sits in the
+   *  frame as fractions of its width and height. */
+  focusState(): { dim: number; x: number; y: number };
   camera: THREE.PerspectiveCamera; store: AssetStore; hotspots(): Hotspot[]; pick(nx: number, ny: number): Hotspot | null; hover(h: Hotspot | null): void; ready(id: StopId): boolean; whenReady(id: StopId): Promise<void>; dispose(): void;
 }
 
@@ -161,7 +170,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // Without a composer the renderer has to do the mapping itself, or the frame renders raw.
   const applyToneMapping = () => { renderer.toneMapping = post ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping; };
   applyToneMapping();
-  let sizedW = 0, sizedH = 0, baseFov = DESK_VFOV, dipped = false;
+  let sizedW = 0, sizedH = 0, baseFov = DESK_VFOV;
   /** How much of the frame's bottom the phone sheet covers: the dock bar under it and the collapsed
    *  sheet's handle, title and lead. Only a coarse pointer gets the sheet (walk.css). */
   const coarse = matchMedia('(pointer: coarse)');
@@ -493,6 +502,12 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const hoverFx = createHover();
+  // The lean toward an open project's exhibit and the head's drift after the pointer, laid over the
+  // path's pose each frame. Neither runs for a reader who asked for less motion: the room still
+  // drops, the camera stays where the walk put it.
+  const focus = new Focus();
+  const focusAt = new THREE.Vector3();
+  const focusOut = { dim: 0, x: 0.5, y: 0.5 };
   // Only the room the camera is standing in. The streamer keeps a stop's neighbours visible, and a
   // ray has no idea a wall is in the way: without this the cert plates in the credentials hall were
   // pickable from the break room, forty metres off and through two rooms of geometry.
@@ -525,7 +540,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     const dt = Math.min(clock.getDelta(), 0.05);
     if (warming === 0) sample(Math.max(0.001, dt - paced / 1000));
     current = damp(current, target, 8, dt);
-    cameraAt(current, cam); camera.position.copy(cam.position); camera.lookAt(cam.target);
+    cameraAt(current, cam);
+    focus.update(dt, opening ? 0 : holdWeight(current));
+    if (!still) focus.apply(cam);
+    camera.position.copy(cam.position); camera.lookAt(cam.target);
     breathe(dt);
     if (opening) openingPose();
     rig.update(current, dt);
@@ -534,7 +552,9 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     // lens closes a few degrees in the vestibule and widens again with the room.
     const dip = thresholdDip(current);
     renderer.toneMappingExposure = rig.grade.exposure * (1 - 0.2 * dip); scene.environmentIntensity = rig.grade.env;
-    if (dip > 0.002 || dipped) { camera.fov = baseFov * (1 - 0.07 * dip); camera.updateProjectionMatrix(); dipped = dip > 0.002; }
+    // The lens closes a little on an open project as well. One write, only when it has changed.
+    const lens = baseFov * (1 - 0.07 * dip) * (still ? 1 : focus.fov);
+    if (Math.abs(lens - camera.fov) > 1e-4) { camera.fov = lens; camera.updateProjectionMatrix(); }
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
     hoverFx.update(dt);
     if (post) post.render(dt); else renderer.render(scene, camera);
@@ -602,6 +622,26 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       return pickHotspot(raycaster, hotspots());
     },
     hover(h) { hoverFx.set(h); },
+    focus(id, stop, covered = 0) {
+      if (disposed) return;
+      if (!id) { focus.setTarget(null); hoverFx.hold(null); return; }
+      // The exhibit itself where the room has one, measured off the prop. A project with nothing
+      // standing for it leans toward what its stop already looks at, which is barely a lean.
+      const spot = hotspots().find((h) => h.id === id) ?? null;
+      const box = spot ? new THREE.Box3().setFromObject(spot.object) : null;
+      const at = box && !box.isEmpty() ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3(...(STOPS.find((s) => s.id === stop) ?? stopAt(current)).lookAt);
+      // Hold it in the middle of what the panel leaves clear: half the covered share, off centre.
+      const hHalf = Math.tan(THREE.MathUtils.degToRad(baseFov / 2)) * camera.aspect;
+      focus.offset = Math.atan(Math.min(0.45, covered) * hHalf);
+      focus.setTarget(at);
+      hoverFx.hold(spot);
+    },
+    pointer(nx, ny) { if (!still) focus.setPointer(nx, ny); },
+    focusState() {
+      focusOut.dim = focus.dim;
+      if (focus.dim > 0) { focusAt.copy(focus.aim).project(camera); focusOut.x = (focusAt.x + 1) / 2; focusOut.y = (1 - focusAt.y) / 2; }
+      return focusOut;
+    },
     ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id) || settled.has(d.id); },
     whenReady: (id) => readiness.get(id)?.promise ?? Promise.resolve(),
     dispose() {
