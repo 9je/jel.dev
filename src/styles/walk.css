@@ -376,9 +376,9 @@
 /* The project panel. The same one element as the card, but for a project it is not hung beside the
    exhibit: it is the room's paperwork for that exhibit, a tall sheet of smoked glass standing at the
    far side of the frame from the copy column, with the room and the lit exhibit in view beside it.
-   On a screen wider than the building reads at, it stands inboard instead of out at the far edge. */
+   On a 32:9 screen it stands inboard instead of out at the far edge, a metre from the eye. */
 .exhibit-card[data-kind='project'] {
-  --inset: max(0px, calc((100vw - 2400px) / 2));
+  --inset: max(0px, calc((100vw - 3600px) / 2));
   left: auto; right: var(--inset); top: 0; bottom: 28px;
   transform: none;
   width: min(42vw, 640px); min-width: min(24rem, 100vw); max-width: none; max-height: none;
