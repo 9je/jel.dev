@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js';
-import { cameraAt, holdWeight, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
+import { cameraAt, holdWeight, roomAt, setFrame, stopAt, thresholdDip, STOPS, type StopId } from './path';
 import { buildThresholds } from './thresholds';
 import { DESK_VFOV, lensFor } from './framing';
 import { Focus } from './focus';
@@ -512,11 +512,14 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // ray has no idea a wall is in the way: without this the cert plates in the credentials hall were
   // pickable from the break room, forty metres off and through two rooms of geometry.
   const hotspots = () => {
-    const here = stopAt(current).id;
+    // The nearest stop's exhibits, and those of the room the camera is standing in. They differ in
+    // the second half of a room, past the midpoint to the next stop: the break room's end wall set
+    // is passed there, and it could not be picked from the one stretch of the walk that faces it.
+    const here = stopAt(current).id, room = roomAt(current).id;
     const out: Hotspot[] = [];
     for (const s of built.values()) {
       if (!s.root.visible || !s.hotspots) continue;
-      for (const h of s.hotspots) if (h.stop === here) out.push(h);
+      for (const h of s.hotspots) if (h.stop === here || h.stop === room) out.push(h);
     }
     return out;
   };

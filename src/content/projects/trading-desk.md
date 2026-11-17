@@ -19,12 +19,14 @@ media:
     src: /projects/trading-desk/01.webp
     alt: The desk's scoreboard headline. Claude is up 215.43 percent since Nov 2. SPY is down 4.07 percent.
     caption: Scoreboard
+    invert: true
     width: 1600
-    height: 509
+    height: 392
   - kind: image
     src: /projects/trading-desk/02.webp
     alt: The list of closed trades, each with its setup, its entry and exit times, why it was sold, and its return. Dollar amounts are hidden.
     caption: Closed trades
+    invert: true
     width: 1328
     height: 1280
 exhibit:

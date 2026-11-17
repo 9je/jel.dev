@@ -284,14 +284,15 @@ async function goProject(id: string, els: WalkElements, opts: { push?: boolean; 
   const stop = panelTemplate(els, id)?.dataset.stop as StopId | undefined;
   if (!stop) return;
   const s = scroll;
-  if (s && stopAt(s.progress()).id !== stop) {
-    await walkTo(stop);
-    // The jump eases on to the hold after the room reports. Wait for it to come to rest.
-    for (let last = -1, still = 0, n = 0; still < 3 && n < 40; n++) {
-      await new Promise((r) => setTimeout(r, 80));
-      const t = s.progress();
-      still = Math.abs(t - last) < 1e-5 ? still + 1 : 0; last = t;
-    }
+  // An exhibit that is not at its stop's hold names where it is seen from, and the walk goes there.
+  const view = handle?.hotspots().find((h) => h.id === id)?.view;
+  const away = view !== undefined ? Math.abs((s?.progress() ?? view) - view) > 0.004 : !!s && stopAt(s.progress()).id !== stop;
+  if (s && away) {
+    if (view !== undefined) s.walkTo(view); else await walkTo(stop);
+    // The jump eases on after the room reports. Wait until the walk is where it was sent, since a
+    // panel opened over a walk still moving is closed by it. Capped, for a jump that was cut short.
+    const to = view ?? tForStop(stop);
+    for (let n = 0; n < 60 && Math.abs(s.progress() - to) > 0.002; n++) await new Promise((r) => setTimeout(r, 80));
     if (gen !== generation) return;
   }
   showProject(id, els, opts);
@@ -670,7 +671,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
     // The run catches for 420 ms, then the frame fades to the room over 480. Hide once that has played.
     hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 950);
     // Once the room is on screen, not over the preloader's last frames.
-    if (deep) setTimeout(() => { if (gen === generation) showProject(deep, els); }, 1000);
+    if (deep) setTimeout(() => { if (gen === generation) void goProject(deep, els); }, 1000);
   } catch (err) {
     console.warn('walk failed to start, using the lite path', err);
     teardown();

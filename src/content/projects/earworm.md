@@ -7,6 +7,13 @@ stack: [SvelteKit, TypeScript, Python, SQLite]
 links:
   - label: earworm.games
     href: https://earworm.games
+media:
+  - kind: image
+    src: /projects/earworm/room.webp
+    alt: "The earworm.games exhibit in the dispatch office: a cassette five times life size on a lit plinth, under its nameplate."
+    caption: In the room
+    width: 720
+    height: 540
 order: 30
 ---
 A clip plays for a tenth of a second and you guess the song. Every wrong guess unlocks a longer slice, up to sixteen seconds.

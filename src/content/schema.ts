@@ -20,6 +20,8 @@ export const mediaSchema = z.object({
   poster: projectPath.optional(),
   /** A screen shown larger than it was drawn, a 240 pixel LCD for one: scaled with hard edges. */
   pixel: z.boolean().default(false),
+  /** A screenshot of a light page, shown inverted so it sits on the dark panel. */
+  invert: z.boolean().default(false),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
 }).refine((m) => m.kind !== 'video' || !!m.poster, { message: 'a video needs a poster' });

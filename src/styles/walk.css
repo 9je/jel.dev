@@ -10,7 +10,7 @@
    asking for one, and full hides the pseudo element outright below regardless. */
 .stop { position: relative; min-height: 100svh; display: grid; align-items: end; padding: clamp(2rem, 8vh, 6rem) clamp(1.25rem, 6vw, 6rem); isolation: isolate; }
 .stop::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--bg) center / cover no-repeat; opacity: 0.55; }
-.walk[data-mode='lite'] .stop::before { background-image: var(--still); }
+.walk[data-mode='lite'] .stop::before { background-image: var(--still); opacity: 0.34; }
 @media (orientation: portrait) {
   .walk[data-mode='lite'] .stop::before { background-image: var(--still-portrait); }
 }
@@ -379,7 +379,7 @@
    On a 32:9 screen it stands inboard instead of out at the far edge, a metre from the eye. */
 .exhibit-card[data-kind='project'] {
   --inset: max(0px, calc((100vw - 3600px) / 2));
-  left: auto; right: var(--inset); top: 0; bottom: 28px;
+  left: auto; right: var(--inset); top: 0; bottom: 0;
   transform: none;
   width: min(42vw, 640px); min-width: min(24rem, 100vw); max-width: none; max-height: none;
   padding: clamp(1.4rem, 4.5vh, 3.2rem) clamp(1.4rem, 2.6vw, 2.6rem) 2.5rem;
@@ -388,10 +388,12 @@
   animation: none;
   scrollbar-width: thin; scrollbar-color: rgb(217 232 238 / 0.25) transparent;
 }
-/* The copy column steps back for a project, but stays within reach: the list in it is the quickest
-   way to the next project, and it comes back under the pointer. */
-.walk[data-mode='full']:has(.exhibit-card[data-kind='project']:not([hidden])) .stop[data-active] .stop-inner { opacity: 0.4; }
-.walk[data-mode='full']:has(.exhibit-card[data-kind='project']:not([hidden])) .stop[data-active] .stop-inner:is(:hover, :focus-within) { opacity: 1; }
+/* The copy column goes away altogether for a project. Left at part strength it lay across the lit
+   exhibit, which is the one thing the room is showing just then, and the panel's own foot walks to
+   the next project. Not on a phone, where the panel is a sheet over everything anyway. */
+@media (min-width: 901px) and (pointer: fine) {
+  .walk[data-mode='full']:has(.exhibit-card[data-kind='project']:not([hidden])) .stop[data-active] .stop-inner { opacity: 0; pointer-events: none; }
+}
 /* The dock stands where the panel does. It comes back when the panel goes. */
 .walk[data-mode='full']:has(.exhibit-card[data-kind='project']:not([hidden])) .dock { opacity: 0; pointer-events: none; transition-delay: 0s; transition-duration: 160ms; }
 .exhibit-card[data-kind='project'] .exhibit-close { position: sticky; top: 0; z-index: 1; float: right; margin: -0.4rem -0.4rem 0 1rem; padding: 0.35rem 0.5rem; background: rgb(6 10 14 / 0.7); }
@@ -410,6 +412,13 @@
    height allows, so the plate is always the picture's own shape and the marks sit on its corners. */
 .panel-shot { display: none; position: relative; margin: 0; aspect-ratio: var(--ar); justify-self: start; width: min(100%, calc(44vh * var(--arn, 1.78))); background: #04070a; }
 [data-pixel] img { image-rendering: pixelated; }
+/* A picture comes up out of its plate when it has arrived, never in one frame. */
+.panel-shot :is(img, video) { opacity: 0; transition: opacity 260ms ease; }
+.panel-shot :is(img, video)[data-loaded] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .panel-shot :is(img, video) { transition: none; } }
+/* A screenshot of a light page, turned to sit on a dark one: inverted, with its hues turned back
+   so a gain is still green and a loss still red. */
+[data-invert] img { filter: invert(0.93) hue-rotate(180deg) contrast(0.95); }
 .panel-shot[data-current] { display: block; }
 .panel-shot::before, .panel-shot::after { content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none; z-index: 1; }
 .panel-shot::before { left: -1px; top: -1px; border-left: 2px solid var(--wing-light); border-top: 2px solid var(--wing-light); }
@@ -425,7 +434,8 @@
 .panel-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 0.9rem 1.4rem; padding: 0.9rem 0; border-block: 1px solid rgb(217 232 238 / 0.14); }
 /* Four figures stand two by two, never three and an orphan. */
 .panel-facts:has(> div:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.panel-facts > div { display: grid; gap: 0.2rem; }
+.panel-facts > div { display: grid; grid-template-rows: 1fr auto; gap: 0.2rem; }
+.panel-facts dd { align-self: end; }
 .panel-facts dd { margin: 0; font-family: var(--font-display); font-size: clamp(0.95rem, 1.25vw, 1.2rem); line-height: 1.15; color: var(--panel-white); }
 .panel-facts dt { color: var(--text-dim); font-size: 0.82rem; font-weight: 600; font-stretch: 75%; }
 .panel-body { display: grid; gap: 0.75rem; max-width: 60ch; }
@@ -433,7 +443,7 @@
 .exhibit-card .panel-note { color: var(--text-dim); font-size: 0.92rem; }
 /* A redaction bar is black on paper. On the panel's own near black it is a bar of the hazard
    colour's shadow, so what is withheld can be seen to be withheld. */
-.exhibit-card .redact { background: color-mix(in srgb, var(--hazard) 22%, #0a0e12); height: 1.1rem; overflow: hidden; }
+.exhibit-card .redact { background: rgb(217 232 238 / 0.2); box-shadow: inset 3px 0 0 var(--hazard); height: 1.15rem; margin-bottom: 0.5rem; overflow: hidden; }
 .panel-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; }
 .panel-links a { color: var(--panel-white); font-weight: 600; text-decoration: underline; text-decoration-color: var(--wing-light); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 .panel-links a:hover { color: var(--wing-text); }
@@ -464,7 +474,9 @@
 /* Side by side where they fit: four screens of a 240 pixel panel stacked full width was four
    screens of scrolling before the project's first sentence. */
 .row-media { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1rem; margin: 0 0 1.25rem; max-width: 56rem; }
-.row-media figure { margin: 0; flex: 1 1 12rem; max-width: 30rem; }
+.row-media figure { margin: 0; flex: 0 1 12.5rem; }
+/* One picture on its own gets the room four would share. */
+.row-media figure:only-of-type { flex-basis: 30rem; }
 .row-media :is(img, video) { display: block; max-width: 100%; height: auto; background: #04070a; }
 .row-media figcaption { margin-top: 0.3rem; color: var(--text-dim); font-size: 0.85rem; font-stretch: 75%; font-weight: 600; }
 .row-facts { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin: 0 0 1.25rem; }

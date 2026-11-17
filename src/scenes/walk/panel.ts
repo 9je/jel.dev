@@ -27,7 +27,11 @@ export function armMedia(root: ParentNode, opts: { autoplay: boolean; lazy?: boo
       if (opts.autoplay) el.autoplay = true;
       else { el.controls = true; el.preload = 'none'; }
     } else if (opts.lazy) el.loading = 'lazy';
+    // Marked when it has something to show, so the plate can bring it up rather than cut to it.
+    const shown = () => el.setAttribute('data-loaded', '');
+    if (el instanceof HTMLVideoElement) shown(); else el.addEventListener('load', shown, { once: true });
     el.src = el.dataset.src!;
+    if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) shown();
     el.removeAttribute('data-src');
   }
 }

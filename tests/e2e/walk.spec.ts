@@ -232,6 +232,8 @@ test('a project opens from its row, loads its pictures only then, and walks on t
   // The row is a door to the panel now, it does not unfold in the column as well.
   await expect(section.locator('details[data-flagship="phob-screen"]')).not.toHaveAttribute('open', '');
   await expect.poll(() => media.filter((m) => m.startsWith('/projects/phob-screen/')).length).toBe(4);
+  // And each comes up in its plate once it has arrived.
+  await expect(card.locator('.panel-shot[data-current] img')).toHaveAttribute('data-loaded', '');
   expect(media.every((m) => m.startsWith('/projects/phob-screen/'))).toBe(true);
   // One picture shows at a time, and a tab swaps it.
   await expect(card.locator('.panel-shot[data-current]')).toHaveCount(1);
@@ -245,6 +247,11 @@ test('a project opens from its row, loads its pictures only then, and walks on t
   await expect(page.locator('[data-exhibit-card]:not([hidden])')).toHaveCount(1);
   await expect(page).toHaveURL(/#hollow-knight-melee$/);
   await expect(card.locator('video')).toHaveAttribute('src', '/projects/hollow-knight-melee/loop.mp4');
+
+  // While a project is open the copy column is out of the way altogether, off the lit exhibit.
+  expect(await section.locator('.stop-inner').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
 
   // A project with no pictures shows no empty plate where one would go.
   await section.locator('details[data-project="monitor"] summary').click();
@@ -291,6 +298,22 @@ test('a project link opens at its room with the project open, and holds its loop
   await page.evaluate(() => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, 0.6 * max); });
   await expect(card).toBeHidden({ timeout: 60_000 });
   await context.close();
+});
+
+test('the trading desk walks down the room to its own set before it opens', async ({ page }) => {
+  await page.goto('/?quality=low#trading-desk');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  const card = page.locator('[data-exhibit-card]');
+  await expect(card).toBeVisible({ timeout: 60_000 });
+  await expect(card.locator('[data-panel-title]')).toHaveText('AI trading desk');
+  // The set hangs on the end wall, 28 m from the room's hold. The walk has gone on past the hold,
+  // toward it, and the room's copy is still the break room's.
+  const at = await page.evaluate(() => window.scrollY / (document.documentElement.scrollHeight - window.innerHeight));
+  expect(at).toBeGreaterThan(0.49);
+  expect(at).toBeLessThan(0.53);
+  await expect(page.locator('section[data-stop="recreation"]')).toHaveAttribute('data-active', '');
+  // No dollar amount anywhere in what the panel says.
+  expect(await card.innerText()).not.toMatch(/\$\s?\d/);
 });
 
 test('the copy column on the walk is one line for each project in the room', async ({ page }) => {

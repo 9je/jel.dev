@@ -24,13 +24,15 @@ export const OFFICE = { x: -2.4, z: -11, w: 10, d: 8, h: 3.2, sill: 0.9, frontDo
  *  and positive is the camera's left at the hold, so the row reads left to right. The three
  *  flagships stand in the middle: the copy column covers the frame's left end and the dock its
  *  right, and the first build of five, in the copy's own order, put the two newest behind the
- *  stop's name. Five stand in the run of glass three did, on square plinths 1.35 m apart. */
+ *  stop's name. Five stand in the run of glass three did, on square plinths 1.35 m apart, and the
+ *  whole row is carried 0.35 m to the camera's right, which takes the display module out from
+ *  under the stop's name. */
 export const EXHIBITS: { id: string; label: string; subtitle: string; dz: number }[] = [
-  { id: 'conch', label: 'conch.gg', subtitle: 'GameCube hardware', dz: 2.7 },
-  { id: 'phob-screen', label: 'phob-screen', subtitle: 'Controller display', dz: 1.35 },
-  { id: 'hollow-knight-melee', label: 'HK: Melee', subtitle: 'Melee in Hallownest', dz: 0 },
-  { id: 'ezkey', label: 'ezkey.io', subtitle: 'Key store', dz: -1.35 },
-  { id: 'earworm', label: 'earworm.games', subtitle: 'Guess the song', dz: -2.7 },
+  { id: 'conch', label: 'conch.gg', subtitle: 'GameCube hardware', dz: 2.35 },
+  { id: 'phob-screen', label: 'phob-screen', subtitle: 'Controller display', dz: 1.0 },
+  { id: 'hollow-knight-melee', label: 'HK: Melee', subtitle: 'Melee in Hallownest', dz: -0.35 },
+  { id: 'ezkey', label: 'ezkey.io', subtitle: 'Key store', dz: -1.7 },
+  { id: 'earworm', label: 'earworm.games', subtitle: 'Guess the song', dz: -3.05 },
 ];
 /** A plinth's body: `w` along the glass, `d` toward the camera. Its cap is 5 cm proud all round. */
 export const PLINTH = { w: 1.0, d: 1.0 };

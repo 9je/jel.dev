@@ -29,6 +29,9 @@ export const W = X1 - X0, D = Z1 - Z0, XC = (X0 + X1) / 2, ZC = (Z0 + Z1) / 2;
  */
 export const BAY_DOOR = { x: -18.8, z: -32.5, w: 5, h: 2.8, depth: 2.4 };
 export const HALL_DOOR = { x: -57.2, z: -31, w: 4, h: 3.2, depth: 1.6 };
+/** Where the walk stands to look at the trading desk's set on the end wall: its own scroll, about
+ *  seven metres short of the wall, with the set a little to the left of the way ahead. */
+export const DESK_VIEW = 0.498;
 /** The room's west wall plane: the near mouth of the server hall's doorway. */
 export const HALL_FACE = HALL_DOOR.x + HALL_DOOR.depth / 2;
 /** The height of the opening into the server hall as the room sees it, under its head panel. */

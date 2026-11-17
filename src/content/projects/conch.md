@@ -9,6 +9,13 @@ links:
     href: https://conch.gg
   - label: gc-bridge source
     href: https://github.com/9je/gc-bridge
+media:
+  - kind: image
+    src: /projects/conch/room.webp
+    alt: "The conch.gg exhibit in the dispatch office: an indigo GameCube controller on a lit plinth, under its nameplate."
+    caption: In the room
+    width: 720
+    height: 540
 order: 20
 ---
 A small hardware business: custom built GameCube controllers for players who care as much as I do. The site sells them and hosts the tools I wrote along the way, including a browser-based input viewer.

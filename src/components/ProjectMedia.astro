@@ -14,7 +14,7 @@ const tab = (m: Media, i: number) => m.caption ?? `${i + 1}`;
 {media.length > 0 && mode === 'panel' && (
   <div class="panel-hero" data-panel-hero>
     {media.map((m, i) => (
-      <figure class="panel-shot" data-shot={i} data-current={i === 0 ? '' : undefined} data-pixel={m.pixel || undefined} style={`--ar:${m.width} / ${m.height}; --arn:${(m.width / m.height).toFixed(4)}`}>
+      <figure class="panel-shot" data-shot={i} data-current={i === 0 ? '' : undefined} data-pixel={m.pixel || undefined} data-invert={m.invert || undefined} style={`--ar:${m.width} / ${m.height}; --arn:${(m.width / m.height).toFixed(4)}`}>
         {m.kind === 'video'
           ? <video data-src={m.src} data-poster={m.poster} width={m.width} height={m.height} aria-label={m.alt} muted loop playsinline preload="none"></video>
           : <img data-src={m.src} alt={m.alt} width={m.width} height={m.height} decoding="async" />}
@@ -30,7 +30,7 @@ const tab = (m: Media, i: number) => m.caption ?? `${i + 1}`;
 {media.length > 0 && mode === 'inline' && (
   <div class="row-media" data-inline-media>
     {media.map((m) => (
-      <figure data-pixel={m.pixel || undefined}>
+      <figure data-pixel={m.pixel || undefined} data-invert={m.invert || undefined}>
         {m.kind === 'video'
           ? <video data-src={m.src} data-poster={m.poster} width={m.width} height={m.height} aria-label={m.alt} muted loop playsinline preload="none"></video>
           : <img data-src={m.src} alt={m.alt} width={m.width} height={m.height} decoding="async" />}

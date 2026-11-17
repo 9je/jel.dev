@@ -8,6 +8,8 @@ export interface ScrollController {
    *  drawn from it are the same frame. */
   tick(now: number): void;
   jumpTo(id: StopId, immediate?: boolean): void;
+  /** Walks to a point on the walk that is not a stop, in the walk's own scroll. */
+  walkTo(t: number): void;
   onProgress(cb: (t: number) => void): () => void;
   onStop(cb: (id: StopId) => void): () => void;
   dispose(): void;
@@ -60,6 +62,7 @@ export function createScroll(): ScrollController {
       if (immediate) lenis.scrollTo(target, { immediate: true, force: true });
       else lenis.scrollTo(target, { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true });
     },
+    walkTo(to) { lenis.scrollTo(pageAt(to) * maxScroll(), { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true }); },
     onProgress(cb) { progressCbs.add(cb); return () => progressCbs.delete(cb); },
     onStop(cb) { stopCbs.add(cb); return () => stopCbs.delete(cb); },
     dispose() { window.removeEventListener('resize', update); lenis.destroy(); },

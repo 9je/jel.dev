@@ -7,7 +7,7 @@ import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
 import { deskBoard, labsIdent } from '../../labs/textures';
 import { DESK } from '../../../../content/desk';
-import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL } from './layout';
+import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL, DESK_VIEW } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
 
@@ -186,9 +186,11 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // the rate the walk allows. On the end wall it hangs square to its wall and faces the room, which
   // is also the way the walk comes: the figure is dead ahead and a little right for the whole
   // length of the room, growing, and it is let go at the doorway. Nothing is turned to the camera.
-  const deskSet = place(statusBoard(deskBoard(DESK.ret, DESK.since)), HALL_FACE + 0.02, 2.05, -27.95, Math.PI / 2);
+  const deskSet = place(statusBoard(deskBoard(DESK.ret, DESK.since), 2), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2);
   await add(deskSet);
-  hotspots.push({ id: 'trading-desk', kind: 'project', label: 'AI trading desk', object: deskSet, stop: 'recreation' });
+  // From the room's hold the set is 28 m off and behind the camera's right shoulder, so opening the
+  // project from the list walks down the room to five metres from it first (`view`).
+  hotspots.push({ id: 'trading-desk', kind: 'project', label: 'AI trading desk', object: deskSet, stop: 'recreation', view: DESK_VIEW });
 
   await add(papers([[-33.9, 0, -33.4, 0.3], [-30.6, 0, -28.4, 1.6], [-46.8, 0, -33.9, 2.1], [-51.2, 0, -33.6, 0.9], [-44.2, 0, -28.3, 1.2]]));
 
@@ -200,8 +202,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
  *  has, whose screen sits in its own bezel, half again as big. It stands the way a set on a canteen
  *  wall does, facing the room, not turned to meet the walk: the room is meant to look lived in, not
  *  posed for the camera passing through it. */
-function statusBoard(face: THREE.Texture = labsIdent()): THREE.Group {
-  const S = 1.5;
+function statusBoard(face: THREE.Texture = labsIdent(), S = 1.5): THREE.Group {
   const set = crtSet(face);
   set.scale.setScalar(S);
   // The set is 0.6 m deep behind its face at this size, so the shelf runs the whole of that and the
