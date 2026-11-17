@@ -5,7 +5,8 @@ import { cableTray, papers } from '../../labs/props';
 import { arcadeCabinet, canteenChair, canteenTable, crtBracket, crtSet, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
-import { labsIdent } from '../../labs/textures';
+import { deskBoard, labsIdent } from '../../labs/textures';
+import { DESK } from '../../../../content/desk';
 import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
@@ -179,20 +180,29 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The clock on the west end wall, south of the doorway, so the far end of the room has something
   // to read rather than being the place the light runs out.
   await add(once(prop('wall_clock'), HALL_FACE + 0.07, 2.2, -34.0, Math.PI / 2));
+  // And a set on the same wall the other side of the doorway, tuned to the trading desk: that
+  // project's exhibit. A set on the north wall is passed at four metres and seen edge on, sixty
+  // degrees off its face at best, and a beat that turned the head to it swung the frame at twice
+  // the rate the walk allows. On the end wall it hangs square to its wall and faces the room, which
+  // is also the way the walk comes: the figure is dead ahead and a little right for the whole
+  // length of the room, growing, and it is let go at the doorway. Nothing is turned to the camera.
+  const deskSet = place(statusBoard(deskBoard(DESK.ret, DESK.since)), HALL_FACE + 0.02, 2.05, -27.95, Math.PI / 2);
+  await add(deskSet);
+  hotspots.push({ id: 'trading-desk', kind: 'project', label: 'AI trading desk', object: deskSet, stop: 'recreation' });
 
   await add(papers([[-33.9, 0, -33.4, 0.3], [-30.6, 0, -28.4, 1.6], [-46.8, 0, -33.9, 2.1], [-51.2, 0, -33.6, 0.9], [-44.2, 0, -28.3, 1.2]]));
 
   return { hotspots, header: litHeader };
 }
 
-/** The television on its wall bracket, square to the wall it hangs on, showing the Labs mark. It
- *  is dressing, not a project, so it carries no hotspot. It is the same set the containment floor
+/** The television on its wall bracket, square to the wall it hangs on, showing the Labs mark
+ *  unless it is handed something else to show. It is the same set the containment floor
  *  has, whose screen sits in its own bezel, half again as big. It stands the way a set on a canteen
  *  wall does, facing the room, not turned to meet the walk: the room is meant to look lived in, not
  *  posed for the camera passing through it. */
-function statusBoard(): THREE.Group {
+function statusBoard(face: THREE.Texture = labsIdent()): THREE.Group {
   const S = 1.5;
-  const set = crtSet(labsIdent());
+  const set = crtSet(face);
   set.scale.setScalar(S);
   // The set is 0.6 m deep behind its face at this size, so the shelf runs the whole of that and the
   // set stands with the back of its funnel just off the wall.

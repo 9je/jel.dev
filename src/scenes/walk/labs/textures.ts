@@ -245,12 +245,12 @@ export function breakerFace(seed = 1): THREE.CanvasTexture {
  * a soft redaction: under a 3.5 intensity warm point at half a metre, anything lighter reads as a
  * smudge on the paper instead of as something deliberately taken out.
  */
-export function redactedSheet(): THREE.CanvasTexture {
+export function redactedSheet(title = 'FIRST DISCLOSURE', stamp = 'PENDING RELEASE'): THREE.CanvasTexture {
   const w = 420, h = 594;
   const [c, ctx] = canvas(w, h);
   ctx.fillStyle = '#f1eee2'; ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = '#1b2129'; ctx.font = '700 26px Michroma, system-ui, sans-serif'; ctx.textBaseline = 'top';
-  ctx.fillText('FIRST DISCLOSURE', 40, 56);
+  ctx.fillText(title, 40, 56);
   ctx.fillStyle = '#5d646a'; ctx.fillRect(40, 96, w - 80, 2);
   // Eight lines of body: three left as typed grey, five struck out.
   const struck = new Set([1, 2, 4, 5, 7]);
@@ -267,8 +267,47 @@ export function redactedSheet(): THREE.CanvasTexture {
   ctx.strokeStyle = '#b8322c'; ctx.lineWidth = 5; ctx.strokeRect(-150, -34, 300, 68);
   ctx.fillStyle = '#b8322c'; ctx.font = '700 34px Michroma, system-ui, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('PENDING RELEASE', 0, 2);
+  ctx.fillText(stamp, 0, 2);
   ctx.restore();
+  return own(c);
+}
+
+/**
+ * The break room set tuned to the trading desk: the Labs mark small in the corner, the desk's
+ * return as the one thing on the screen that is meant to be read, and the date it has run since.
+ * The rows under it are a board's furniture, bars with no names and no figures on them. The set is
+ * passed at an angle and never faced, so the figure is drawn as large as the tube allows.
+ */
+export function deskBoard(ret: string, since: string): THREE.CanvasTexture {
+  const w = 640, h = 480;
+  const [c, ctx] = canvas(w, h);
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#0b2a55'); bg.addColorStop(1, '#06142c');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  // The mark and the channel's name along the top.
+  ctx.fillStyle = '#E6F2F7';
+  const mx = 58, my = 52, s = 44;
+  for (const dy of [-s * 0.42, s * 0.18]) {
+    ctx.beginPath(); ctx.moveTo(mx - s * 0.5, my + dy + s * 0.5); ctx.lineTo(mx, my + dy); ctx.lineTo(mx + s * 0.5, my + dy + s * 0.5);
+    ctx.lineTo(mx + s * 0.5, my + dy + s * 0.28); ctx.lineTo(mx, my + dy - s * 0.22); ctx.lineTo(mx - s * 0.5, my + dy + s * 0.28); ctx.closePath(); ctx.fill();
+  }
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.font = '600 30px Michroma, system-ui, sans-serif'; ctx.fillText('JEL DESK', 100, 56);
+  ctx.fillStyle = '#3ddc84'; ctx.beginPath(); ctx.arc(w - 60, 56, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(230,242,247,0.25)'; ctx.fillRect(36, 96, w - 72, 3);
+  // The figure.
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#3ddc84'; ctx.font = '600 150px Michroma, system-ui, sans-serif';
+  ctx.fillText(ret, w / 2, 218, w - 60);
+  ctx.fillStyle = '#E6F2F7'; ctx.font = '600 34px Michroma, system-ui, sans-serif';
+  ctx.fillText(`SINCE ${since.toUpperCase()}`, w / 2, 322);
+  // The board's furniture: bars, nothing to read.
+  for (let i = 0; i < 3; i++) {
+    const y = 372 + i * 30;
+    ctx.fillStyle = 'rgba(230,242,247,0.22)'; ctx.fillRect(48, y, 120, 12);
+    ctx.fillStyle = i === 1 ? 'rgba(232,90,79,0.7)' : 'rgba(61,220,132,0.7)'; ctx.fillRect(200, y, 120 + ((i * 97) % 210), 12);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
   return own(c);
 }
 

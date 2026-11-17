@@ -334,8 +334,10 @@ function openCard(h: Hotspot, els: WalkElements, interact: Interact) {
  */
 async function activateHotspot(h: Hotspot, els: WalkElements, coarse: boolean, interact: Interact) {
   const gen = generation;
-  // A project opens its panel, on a phone as much as anywhere: there the panel is a sheet.
-  if (panelTemplate(els, h.id)) { await goProject(h.id, els, { push: true }); return; }
+  // A project opens its panel, on a phone as much as anywhere: there the panel is a sheet. It
+  // opens where the camera stands. The reader picked a thing they can see, and walking them back
+  // to the room's hold first would take it out of the frame they picked it in.
+  if (panelTemplate(els, h.id)) { showProject(h.id, els, { push: true }); return; }
   await walkTo(h.stop);
   if (gen !== generation) return;
   // The panel may be showing a project. A certification's card takes its place.

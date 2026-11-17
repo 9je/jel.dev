@@ -9,13 +9,13 @@ import { screenFace } from '../../labs/textures';
 import { papers, glassRoom } from '../../labs/props';
 import { paperSheet } from '../../labs/textures';
 import { signBox } from '../../labs/signage';
-import { OFFICE, SODIUM } from './layout';
-import { controller, key, cassette } from './exhibits';
+import { EXHIBITS, OFFICE, PLINTH, SODIUM } from './layout';
+import { controller, key, cassette, lcdModule, crtStation } from './exhibits';
+import { reel, type Reel } from './reel';
 import { nameplateFace, numberTag, dispatchBoardFace, consoleKeys } from './boards';
 import { streakBoard } from './streak';
 
 /** What each product is, in three words, for the line under its name. */
-const SUBTITLES: Record<string, string> = { 'conch.gg': 'GameCube hardware', 'ezkey.io': 'Key store', 'earworm.games': 'Guess the song' };
 
 /**
  * A museum nameplate, standing at the back of a plinth: a brushed steel plate on two standoffs,
@@ -25,12 +25,12 @@ const SUBTITLES: Record<string, string> = { 'conch.gg': 'GameCube hardware', 'ez
  * exhibit the pointer picks: the steel takes the hover wash and the strip pulses.
  *
  * The plate stands 0.5 m off the cap, so a product half a metre in front of it hides the
- * standoffs and not the name. The earlier label was a pane of clear acrylic with the name glowing
+ * standoffs and not the name. The two tall products, the television and the display module, get a taller pair of standoffs. The earlier label was a pane of clear acrylic with the name glowing
  * through it, which from the hold read as a text box floating over the product.
  */
-function nameplate(label: string): THREE.Group {
+function nameplate(label: string, subtitle: string, LIFT = 0.5): THREE.Group {
   const g = new THREE.Group();
-  const W = 1.1, Hp = 0.3, LIFT = 0.5, RAKE = 0.16;
+  const W = 0.95, Hp = 0.3, RAKE = 0.16;
   // The standoffs: two rods with a foot each, up into the plate's lower third.
   const rods: THREE.BufferGeometry[] = [];
   for (const sx of [-1, 1]) {
@@ -43,7 +43,7 @@ function nameplate(label: string): THREE.Group {
   const tilt = new THREE.Group(); tilt.position.y = LIFT; tilt.rotation.x = -RAKE; g.add(tilt);
   const plate = new THREE.Mesh(new THREE.BoxGeometry(W, Hp, 0.012), labSteel(0x9aa5ad));
   plate.position.set(0, Hp / 2, 0); plate.name = 'plate'; tilt.add(plate);
-  const face = nameplateFace(label, SUBTITLES[label] ?? '', label.length);
+  const face = nameplateFace(label, subtitle, label.length);
   const ink = new THREE.Mesh(new THREE.PlaneGeometry(W, Hp), new THREE.MeshStandardMaterial({ map: face, color: 0xffffff, metalness: 0.2, roughness: 0.72 }));
   ink.position.set(0, Hp / 2, 0.0065); ink.name = 'ink'; tilt.add(ink);
   // The lit edge: a bar of acrylic along the top of the plate, lit from its ends.
@@ -91,7 +91,7 @@ function dispatchBoard(): THREE.Group {
 const shell = (color: number, roughness = 0.5, metalness = 0.3) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
 /**
- * A display plinth, 1.4 along the glass by 1.0 deep on a 1.045 m cap: a cast concrete body on a recessed steel kick,
+ * A display plinth, PLINTH.w along the glass by PLINTH.d deep on a 1.045 m cap: a cast concrete body on a recessed steel kick,
  * steel angles on its corners, a bevelled steel cap with the wing's orange lit in a line under its
  * lip, and a numbered plate on the front. Origin at the floor under the centre of the body. Seven
  * draw calls, all of them part of the exhibit the pointer picks, so the whole pedestal lifts with
@@ -100,7 +100,7 @@ const shell = (color: number, roughness = 0.5, metalness = 0.3) => new THREE.Mes
 function plinth(store: StageContext['store'], n: number): THREE.Group {
   const g = new THREE.Group();
   // Local x runs along the glass and local z toward the camera: the office turns it a quarter.
-  const W = 1.4, D = 1.0, TOP = 1.045, CAP = 0.05, KICK = 0.12;
+  const W = PLINTH.w, D = PLINTH.d, TOP = 1.045, CAP = 0.05, KICK = 0.12;
   const kick = new THREE.Mesh(new THREE.BoxGeometry(W - 0.1, KICK, D - 0.1), labSteel(0x1b2129)); kick.position.y = KICK / 2; g.add(kick);
   const concrete = surface(store.texture('concrete_wall'), W, TOP - KICK, 1.2); concrete.color.setHex(0xd6dde1); concrete.roughness = 0.8;
   const body = new THREE.Mesh(new THREE.BoxGeometry(W, TOP - CAP - KICK, D), concrete); body.position.y = KICK + (TOP - CAP - KICK) / 2; g.add(body);
@@ -140,7 +140,7 @@ function plinth(store: StageContext['store'], n: number): THREE.Group {
  * face on the walked line, a lit ceiling grid, a working counter under blinds on the front glass,
  * the three products on lit plinths along the west glass, and a desk with its stool on its side.
  */
-export function buildOffice(ctx: StageContext, root: THREE.Group): { light: PointPlacement; hotspots: Hotspot[] } {
+export function buildOffice(ctx: StageContext, root: THREE.Group): { light: PointPlacement; hotspots: Hotspot[]; update(dt: number): void; dispose(): void } {
   const { store, anchors } = ctx;
   const { x: OX, z: OZ, w: W, d: D, h: H, sill: S, frontDoorX, backDoorX, doorW } = OFFICE;
   const hx = W / 2, hz = D / 2;
@@ -250,14 +250,23 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   // own cards already keep out of, and nothing kept the room's props out of it. conch stays where it
   // was: the office is 8 m deep, so its plinth is already close to the south glass, and any further
   // left would put it under the copy column.
-  const exhibits: [string, string, number, () => THREE.Group][] = [
-    ['conch', 'conch.gg', 3.0, () => controller(store.model('gamecube_controller'))],
-    ['ezkey', 'ezkey.io', 0.4, key],
-    ['earworm', 'earworm.games', -2.2, cassette],
-  ];
+  //
+  // Five now, a metre and a half apart on narrower plinths (layout.ts EXHIBITS), which is the same
+  // run of glass the three took. The two new ones carry a lit screen each, showing real frames: the
+  // firmware's own screens on the module, the game itself on the set. Their reels run on clocks
+  // that share no factor with each other or with anything else that changes in the bay.
+  const reels: Reel[] = [reel('/screens/phob.webp', 2, 2, 2.3, { pixel: true }), reel('/screens/hk.webp', 2, 2, 3.1)];
+  const makers: Record<string, () => THREE.Group> = {
+    'phob-screen': () => lcdModule(reels[0]!.texture),
+    'hollow-knight-melee': () => crtStation(reels[1]!.texture),
+    ezkey: key,
+    conch: () => controller(store.model('gamecube_controller')),
+    earworm: cassette,
+  };
   const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;
-  exhibits.forEach(([key, label, dz, make], i) => {
+  EXHIBITS.forEach(({ id: key, label, subtitle, dz }, i) => {
+    const make = makers[key]!;
     // One group per exhibit, and it is what the pointer picks: plinth, product, plate and its light
     // strip all belong to the one product, so the whole thing lifts together under the cursor. The
     // plinths are built per exhibit rather than as one instanced batch for exactly that reason.
@@ -275,7 +284,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
     // The offset was there to keep the controller's cable clear of the plate's standoffs. The cable
     // is shorter now instead.
     exhibit.add(place(plinth(store, i + 1), ex, 0, dz, Math.PI / 2));
-    exhibit.add(place(nameplate(label), ex - 0.34, 1.045, dz, Math.PI / 2));
+    exhibit.add(place(nameplate(label, subtitle, key === 'hollow-knight-melee' || key === 'phob-screen' ? 0.72 : 0.5), ex - 0.34, 1.045, dz, Math.PI / 2));
     exhibit.add(place(make(), ex, 1.045, dz, Math.PI / 2));
     g.add(exhibit);
     hotspots.push({ id: key, kind: 'project', label, object: exhibit, stop: 'fabrication' });
@@ -287,5 +296,9 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   const desk = store.model('desk'); desk.position.set(hx - 1.3, 0, -1.2); desk.rotation.y = Math.PI / 2; g.add(desk);
   const stool = store.model('stool'); stool.position.set(hx - 2.2, 0.28, -0.4); stool.rotation.set(Math.PI / 2, 0, 0.5); g.add(stool);
 
-  return { light: { kind: 'point', position: [OX, H - 0.4, OZ], color: LABS.cold, intensity: 6, distance: 12, decay: 1.8 }, hotspots };
+  return {
+    light: { kind: 'point', position: [OX, H - 0.4, OZ], color: LABS.cold, intensity: 6, distance: 12, decay: 1.8 }, hotspots,
+    update(dt) { for (const r of reels) r.update(dt); },
+    dispose() { for (const r of reels) r.dispose(); },
+  };
 }

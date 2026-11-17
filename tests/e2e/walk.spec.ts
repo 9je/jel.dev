@@ -183,7 +183,7 @@ test('every exhibit in the bay answers a click with the same panel', async ({ pa
   // Jordan's complaint: two of the three products unfolded a row in the list and the third threw up
   // a pinned panel. Every one of them opens the one project panel.
   const all = await sweep(page, 'click');
-  expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey']);
+  expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey', 'hollow-knight-melee', 'phob-screen']);
 
   const card = page.locator('[data-exhibit-card]');
   const shot = (await sweep(page, 'click', 'conch')).card!;
@@ -420,7 +420,7 @@ test.describe('wide coarse pointer', () => {
     // Under a thumb the panel is a sheet over the whole room, never a card pinned beside a plinth,
     // and every exhibit opens it.
     const all = await sweep(page, 'tap');
-    expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey']);
+    expect(Object.keys(all.hit).sort()).toEqual(['conch', 'earworm', 'ezkey', 'hollow-knight-melee', 'phob-screen']);
     const shot = (await sweep(page, 'tap', 'conch')).card!;
     expect([shot.left, shot.top, shot.right, shot.bottom]).toEqual([0, 0, shot.vw, shot.vh]);
     await page.locator('[data-exhibit-close]').tap();

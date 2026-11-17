@@ -35,9 +35,9 @@ export async function build(ctx: StageContext): Promise<Stage> {
 
   return {
     id: 'fabrication', root, lights, hotspots: office.hotspots,
-    update(t, dt) { lighting.update(t, dt); },
+    update(t, dt) { lighting.update(t, dt); office.update(dt); },
     dispose() {
-      lighting.dispose();
+      lighting.dispose(); office.dispose();
       root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); });
       disposeObject(root); scene.remove(root);
     },

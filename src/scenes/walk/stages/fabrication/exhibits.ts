@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { merged } from '../../merge';
 import { LABS } from '../../labs/materials';
 import { canvas, own } from '../../labs/textures';
+import { crtSet } from '../../labs/furniture';
 
 /**
  * The three products on the dispatch office plinths. Each is built at exhibition scale, four to
@@ -253,3 +254,64 @@ function cassetteFace(): THREE.CanvasTexture {
   const t = own(c); t.anisotropy = 8; return t;
 }
 
+/**
+ * phob-screen: the display module, about twenty times life size. The real thing is a 1.3 inch panel
+ * set in the face of a controller, and at life size, or even on a controller built to this row's
+ * scale, it is a lit thumbnail from the hold. So the exhibit is the module itself: the panel on its
+ * carrier board, the flex folded under its foot, the header along the top edge. The screen is most
+ * of what stands on the cap, and it shows the firmware's own frames.
+ *
+ * Drawn face up on the y 0 plane with the header toward -z, the high edge once it is raked, and
+ * stood as upright as the cassette, for the same reason: everything it has to say is on one face.
+ * `screen` is a reel of frames the office steps. Six draw calls.
+ */
+export function lcdModule(screen: THREE.Texture): THREE.Group {
+  const W = 0.62, D = 0.68, T = 0.028, GLASS = 0.5, GZ = 0.055;
+  const g = new THREE.Group();
+  const pivot = T * Math.cos(CASSETTE_RAKE) + (D / 2) * Math.sin(CASSETTE_RAKE) + 0.002;
+  const tilt = new THREE.Group(); tilt.rotation.x = CASSETTE_RAKE; tilt.position.y = pivot; g.add(tilt);
+
+  // The carrier board, in the deep blue solder mask the breakout it is based on wears.
+  const board = new THREE.Mesh(new THREE.BoxGeometry(W, T, D), shell(0x12305e, 0.45, 0.25));
+  board.position.y = -T / 2; tilt.add(board);
+  // The panel: a black frame standing a little proud of the board, and the lit glass in it.
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(GLASS + 0.05, 0.018, GLASS + 0.07), shell(0x07090c, 0.35, 0.1));
+  frame.position.set(0, 0.009, GZ + 0.01); tilt.add(frame);
+  const lit = new THREE.Mesh(new THREE.PlaneGeometry(GLASS, GLASS).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({
+    color: 0x000000, emissive: 0xffffff, emissiveMap: screen, emissiveIntensity: 1.15, roughness: 0.25, metalness: 0,
+  }));
+  lit.position.set(0, 0.0185, GZ); lit.name = 'screen'; tilt.add(lit);
+  // The flex, folded out from under the panel's foot toward the low edge.
+  const flex = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.006, 0.05), shell(0xc8782a, 0.5, 0.1));
+  flex.position.set(0, 0.003, D / 2 - 0.028); tilt.add(flex);
+  // The header along the top edge: a black strip and seven gilt pins standing out of it.
+  const hz = -D / 2 + 0.045;
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.02, 0.04), shell(0x0b0d10, 0.6, 0.1));
+  strip.position.set(0, 0.01, hz); tilt.add(strip);
+  const pins: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 7; i++) pins.push(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 6).translate(-0.18 + i * 0.06, 0.035, hz));
+  // The gilt pads at the board's four corners, where it screws down.
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) pins.push(new THREE.CylinderGeometry(0.022, 0.022, 0.003, 14).translate(sx * (W / 2 - 0.04), 0.0015, sz * (D / 2 - 0.04)));
+  tilt.add(merged(pins, shell(0xd9b45a, 0.3, 0.9)));
+
+  // The easel stays behind the board: the module is the exhibit, edge to edge.
+  stand(g, tilt, pivot, { w: W - 0.1, back: T + 0.01, from: -D / 2 }, CASSETTE_RAKE);
+  return g;
+}
+
+/**
+ * Hollow Knight: Melee: the break room's portable set, nearly half as large again, with the game on it. What
+ * the project is cannot be built as an object, it is a game played on a screen, so the exhibit is
+ * the screen. It stands square on the cap the way a set does, not raked: a television leaned back
+ * on an easel is a thing nobody has ever seen. `screen` is a reel of frames the office steps.
+ */
+export function crtStation(screen: THREE.Texture): THREE.Group {
+  const g = new THREE.Group();
+  const set = crtSet(screen);
+  set.scale.setScalar(1.4);
+  // The set is deeper behind its face than in front of it. Carried forward, it sits on the cap's
+  // centre and its funnel clears the nameplate's standoffs.
+  set.position.z = 0.12;
+  g.add(set);
+  return g;
+}

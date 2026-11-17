@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as THREE from 'three';
-import type { cassette as Cassette, controller as Controller, key as Key } from '../../src/scenes/walk/stages/fabrication/exhibits';
+import type { cassette as Cassette, controller as Controller, key as Key, lcdModule as LcdModule, crtStation as CrtStation } from '../../src/scenes/walk/stages/fabrication/exhibits';
 
 // The cassette prints its own label, and vitest runs in node with no DOM. A stub canvas is enough:
 // nothing here reads a pixel back, only the shapes the products are built from are measured.
-let controller: typeof Controller, key: typeof Key, cassette: typeof Cassette;
+let controller: typeof Controller, key: typeof Key, cassette: typeof Cassette, lcdModule: typeof LcdModule, crtStation: typeof CrtStation;
 beforeAll(async () => {
   const context = () => new Proxy({} as Record<string | symbol, unknown>, {
     get: (t, k) => (k in t ? t[k] : () => ({ width: 100, addColorStop() {} })),
@@ -13,7 +13,7 @@ beforeAll(async () => {
   (globalThis as unknown as { document: unknown }).document = {
     createElement: () => { const ctx = context(); return { width: 0, height: 0, getContext: () => ctx }; },
   };
-  ({ controller, key, cassette } = await import('../../src/scenes/walk/stages/fabrication/exhibits'));
+  ({ controller, key, cassette, lcdModule, crtStation } = await import('../../src/scenes/walk/stages/fabrication/exhibits'));
 });
 
 // The office stands each product at the plinth top, face toward +z, on a cap 1.0 m across and
@@ -39,6 +39,37 @@ describe('fabrication exhibits', () => {
     expect(b.min.z).toBeGreaterThan(-0.5); expect(b.max.z).toBeLessThan(0.4);
     expect(b.min.x).toBeGreaterThan(-0.7); expect(b.max.x).toBeLessThan(0.7);
     expect(b.max.y).toBeLessThan(0.75);
+  });
+  // The two that carry a lit screen: the phob-screen module and the set Hollow Knight: Melee plays
+  // on. Held to the same cap as the rest, on the narrower plinth the five wide row stands on.
+  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture())]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
+    const b = box(make());
+    expect(Math.max(b.max.x - b.min.x, b.max.y - b.min.y)).toBeGreaterThan(0.5);
+    expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
+    expect(b.max.y).toBeLessThan(0.75);
+    expect(b.min.x).toBeGreaterThan(-0.55); expect(b.max.x).toBeLessThan(0.55);
+    expect(b.min.z).toBeGreaterThan(-0.5); expect(b.max.z).toBeLessThan(0.4);
+  });
+  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture())]] as const)('%s lights its own screen with the frames it is handed', (_name, make) => {
+    const tex = new THREE.Texture();
+    const g = _name === 'lcd module' ? lcdModule(tex) : crtStation(tex);
+    void make;
+    let screen: THREE.Mesh | null = null;
+    g.traverse((o) => { if (o.name === 'screen') screen = o as THREE.Mesh; });
+    expect(screen).not.toBeNull();
+    const mat = screen!.material as THREE.MeshStandardMaterial;
+    expect(mat.emissiveMap).toBe(tex);
+    expect(mat.emissiveIntensity).toBeGreaterThan(0.5);
+  });
+  it('makes the module screen the biggest thing on its board', () => {
+    const g = lcdModule(new THREE.Texture());
+    let screen: THREE.Mesh | null = null;
+    g.traverse((o) => { if (o.name === 'screen') screen = o as THREE.Mesh; });
+    g.updateMatrixWorld(true);
+    const sb = new THREE.Box3().setFromObject(screen!), all = box(g);
+    // A 1.3 inch panel at life size is a thumbnail from the hold. This one is most of the exhibit.
+    expect(sb.max.x - sb.min.x).toBeGreaterThan(0.45);
+    expect((sb.max.x - sb.min.x) / (all.max.x - all.min.x)).toBeGreaterThan(0.65);
   });
   it('leans every product toward the camera at the hold', () => {
     const face = (g: THREE.Group) => { const t = g.children.find((c) => c.rotation.x !== 0); return t?.rotation.x ?? 0; };
@@ -73,7 +104,7 @@ describe('fabrication exhibits', () => {
     expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
   });
   it('keeps each product to a handful of draw calls', () => {
-    for (const make of [() => controllerExhibit(), () => key(), () => cassette()]) {
+    for (const make of [() => controllerExhibit(), () => key(), () => cassette(), () => lcdModule(new THREE.Texture()), () => crtStation(new THREE.Texture())]) {
       let n = 0; make().traverse((o) => { if ((o as THREE.Mesh).isMesh) n++; });
       expect(n).toBeLessThanOrEqual(10);
     }

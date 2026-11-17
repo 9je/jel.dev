@@ -506,7 +506,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // path's pose each frame. Neither runs for a reader who asked for less motion: the room still
   // drops, the camera stays where the walk put it.
   const focus = new Focus();
-  const focusAt = new THREE.Vector3();
+  const focusAt = new THREE.Vector3(), lookNow = new THREE.Vector3();
   const focusOut = { dim: 0, x: 0.5, y: 0.5 };
   // Only the room the camera is standing in. The streamer keeps a stop's neighbours visible, and a
   // ray has no idea a wall is in the way: without this the cert plates in the credentials hall were
@@ -629,12 +629,20 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       // standing for it leans toward what its stop already looks at, which is barely a lean.
       const spot = hotspots().find((h) => h.id === id) ?? null;
       const box = spot ? new THREE.Box3().setFromObject(spot.object) : null;
-      const at = box && !box.isEmpty() ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3(...(STOPS.find((s) => s.id === stop) ?? stopAt(current)).lookAt);
+      let at = box && !box.isEmpty() ? box.getCenter(new THREE.Vector3()) : null;
+      // An exhibit at the far end of its room, or behind the camera, is not leaned toward: the lean
+      // is a few degrees onto a thing already in the frame, never a swing across the room.
+      if (at) {
+        const to = focusAt.subVectors(at, cam.position);
+        if (to.length() > 9 || to.angleTo(lookNow.subVectors(cam.target, cam.position)) > 0.85) { at = null; }
+      }
+      const held = at ? spot : null;
+      at ??= new THREE.Vector3(...(STOPS.find((s) => s.id === stop) ?? stopAt(current)).lookAt);
       // Hold it in the middle of what the panel leaves clear: half the covered share, off centre.
       const hHalf = Math.tan(THREE.MathUtils.degToRad(baseFov / 2)) * camera.aspect;
       focus.offset = Math.atan(Math.min(0.45, covered) * hHalf);
       focus.setTarget(at);
-      hoverFx.hold(spot);
+      hoverFx.hold(held);
     },
     pointer(nx, ny) { if (!still) focus.setPointer(nx, ny); },
     focusState() {

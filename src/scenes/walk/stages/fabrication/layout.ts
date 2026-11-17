@@ -20,6 +20,21 @@ export const COLUMNS: [number, number][] = [[-14, 8], [10, 8], [-14, -12], [10, 
  *  sit on the walked line at each face (path x is about -1.7 at z -7 and -3.3 at z -15, so the back door clears the walked line by 0.4 m on the left). */
 export const OFFICE = { x: -2.4, z: -11, w: 10, d: 8, h: 3.2, sill: 0.9, frontDoorX: -1.7, backDoorX: -2.6, doorW: 2.2 };
 
+/** The exhibit row along the office's west glass. `dz` is along the glass from the office centre,
+ *  and positive is the camera's left at the hold, so the row reads left to right. The three
+ *  flagships stand in the middle: the copy column covers the frame's left end and the dock its
+ *  right, and the first build of five, in the copy's own order, put the two newest behind the
+ *  stop's name. Five stand in the run of glass three did, on square plinths 1.35 m apart. */
+export const EXHIBITS: { id: string; label: string; subtitle: string; dz: number }[] = [
+  { id: 'conch', label: 'conch.gg', subtitle: 'GameCube hardware', dz: 2.7 },
+  { id: 'phob-screen', label: 'phob-screen', subtitle: 'Controller display', dz: 1.35 },
+  { id: 'hollow-knight-melee', label: 'HK: Melee', subtitle: 'Melee in Hallownest', dz: 0 },
+  { id: 'ezkey', label: 'ezkey.io', subtitle: 'Key store', dz: -1.35 },
+  { id: 'earworm', label: 'earworm.games', subtitle: 'Guess the song', dz: -2.7 },
+];
+/** A plinth's body: `w` along the glass, `d` toward the camera. Its cap is 5 cm proud all round. */
+export const PLINTH = { w: 1.0, d: 1.0 };
+
 /** The walked line through the hall, from just inside the door to the exit gap. Mirrors the spline's
  *  control points in path.ts so the painted aisle follows the camera. */
 export const AISLE: [number, number][] = [[0, 22], [0, 12], [-1, 0], [-3, -14], [-6.6, -22.6]];
