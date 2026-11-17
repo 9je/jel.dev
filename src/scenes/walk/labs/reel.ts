@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { canvas } from '../../labs/textures';
+import { canvas } from './textures';
 
 /**
  * A reel of real frames for a screen in the room: one small image holding a grid of them, shown one

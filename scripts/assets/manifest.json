@@ -289,6 +289,14 @@
     "medical_tape": {
       "id": "medical_tape",
       "group": "credentials"
+    },
+    "crt_tv": {
+      "id": "television_02",
+      "group": "fabrication-dressing"
+    },
+    "wood_tv": {
+      "id": "Television_01",
+      "group": "recreation"
     }
   },
   "sizes": {

@@ -4,7 +4,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { merged } from '../merge';
 import { LABS, labSteel } from './materials';
 import { stencilTexture } from '../textures';
-import { tapeStripe, canvas, own } from './textures';
+import { tapeStripe, canvas, own, rng } from './textures';
 import { batten } from './fixtures';
 
 /** Michroma's average advance as a fraction of the em, measured over the capitals in
@@ -75,37 +75,80 @@ export function signFace(text: string, opts: { w: number; h: number; code?: stri
   // to `emissiveMap` instead lifts the ink by the same amount as the ground, and under a ceiling
   // spot the whole face clips to white with the name a grey ghost on it, which is what Jordan saw
   // twice on the arcade sign.
-  const accent = opts.accent ?? '#2455A4', ink = glow ? '#000000' : (opts.ink ?? '#17334f');
-  // The acrylic: brighter where the tubes sit behind it, a little greyer toward the foot.
+  const accent = opts.accent ?? '#2455A4', ink = glow ? '#000000' : (opts.ink ?? '#16212b');
+  // Every mark of age below is drawn from the sign's own name, so the colour map and the light map
+  // of one sign wear in the same places and no two signs wear alike.
+  let seed = 7; for (const ch of text) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+  const rand = rng(seed);
+  // The acrylic. Not paper white: a diffuser that has hung in a plant for twenty years has gone
+  // the colour of old teeth, and it is lit by two tubes, so it is brightest in two bands along its
+  // length and falls away toward the ends, further at the end where a tube is on its way out.
   const ground = ctx.createLinearGradient(0, 0, 0, H);
-  ground.addColorStop(0, '#f2f7fa'); ground.addColorStop(0.45, '#fbfdfe'); ground.addColorStop(1, '#e6eef2');
+  ground.addColorStop(0, '#c9ccbb'); ground.addColorStop(0.3, '#e2e3d2'); ground.addColorStop(0.5, '#d2d4c3'); ground.addColorStop(0.72, '#e0e1d0'); ground.addColorStop(1, '#bfc2b1');
   ctx.fillStyle = ground; ctx.fillRect(0, 0, W, H);
-  // The band. Its height is the sign's own: a short wide sign gets a slim band, a squarer one more.
-  const band = Math.round(Math.min(H * 0.24, 72));
+  const weak = rand() < 0.5 ? 0 : 1;
+  const ends = ctx.createLinearGradient(0, 0, W, 0);
+  ends.addColorStop(0, `rgba(20,24,22,${weak === 0 ? 0.42 : 0.2})`); ends.addColorStop(0.16, 'rgba(20,24,22,0)');
+  ends.addColorStop(0.84, 'rgba(20,24,22,0)'); ends.addColorStop(1, `rgba(20,24,22,${weak === 1 ? 0.42 : 0.2})`);
+  ctx.fillStyle = ends; ctx.fillRect(0, 0, W, H);
+  // The band: paint, in the wing's colour, gone flat and a little dark, chipped along its foot.
+  const band = Math.round(Math.min(H * 0.2, 60));
   ctx.fillStyle = accent; ctx.fillRect(0, 0, W, band);
-  // The mark: a hexagon outline with a bar through it, in white, at the band's left.
-  const r = band * 0.3, mx = 34 + r, my = band / 2;
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, band * 0.08); ctx.beginPath();
+  ctx.fillStyle = 'rgba(12,16,20,0.34)'; ctx.fillRect(0, 0, W, band);
+  // The mark and the code, small, in the building's working face and not its display one.
+  const r = band * 0.28, mx = 30 + r, my = band / 2;
+  ctx.strokeStyle = '#dfe3d6'; ctx.lineWidth = Math.max(2, band * 0.08); ctx.beginPath();
   for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + Math.PI / 6; const x = mx + Math.cos(a) * r, y = my + Math.sin(a) * r; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
   ctx.closePath(); ctx.stroke();
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(mx - r * 0.55, my - band * 0.05, r * 1.1, band * 0.1);
-  // The code, right of the mark, small.
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.font = `600 ${Math.round(band * 0.42)}px Michroma, system-ui, sans-serif`;
-  ctx.fillText(opts.code ?? 'JEL LABS', mx + r + 26, my + 1);
-  // The name, tracked out and fitted to the face.
+  const condensed = (n: number, weight: number, track: number) => {
+    ctx.font = `${weight} ${n}px "Saira Variable", "Saira", Michroma, system-ui, sans-serif`;
+    (ctx as CanvasRenderingContext2D & { fontStretch?: string }).fontStretch = 'extra-condensed';
+    (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${Math.round(n * track)}px`;
+  };
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = '#dfe3d6';
+  condensed(Math.round(band * 0.5), 600, 0.12);
+  ctx.fillText(opts.code ?? 'JEL LABS', mx + r + 22, my + 1);
+  // The name: heavy, condensed, close set. Plant signage is cut from one industrial grotesque in
+  // one weight, and a wide display face tracked out across a light box was the thing that read as
+  // drawn for a screen.
   const body = H - band, cy = band + body / 2;
-  let px = Math.round(Math.min(body * 0.52, 190));
+  let px = Math.round(Math.min(body * 0.74, 240));
   ctx.textAlign = 'center';
-  const spacing = (n: number) => { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${n}px`; };
-  const font = (n: number) => { ctx.font = `600 ${n}px Michroma, system-ui, sans-serif`; spacing(Math.round(n * 0.08)); };
-  font(px);
-  const room = W * 0.86;
-  while (px > 24 && ctx.measureText(text).width > room) { px -= 4; font(px); }
-  ctx.fillStyle = ink; ctx.fillText(text, W / 2, cy + px * 0.06);
-  spacing(0);
-  // The foot line.
-  ctx.fillStyle = accent; ctx.fillRect(0, H - Math.max(3, Math.round(H * 0.025)), W, Math.max(3, Math.round(H * 0.025)));
+  condensed(px, 800, 0.035);
+  const room = W * 0.88;
+  while (px > 24 && ctx.measureText(text).width > room) { px -= 4; condensed(px, 800, 0.035); }
+  ctx.fillStyle = ink; ctx.fillText(text, W / 2, cy + px * 0.05);
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '0px';
+  // The vinyl has lifted in flecks and along one edge of a letter here and there: the acrylic
+  // shows through where it has.
+  ctx.fillStyle = '#d8dac9';
+  for (let k = 0; k < 90; k++) {
+    const x = W * (0.08 + rand() * 0.84), y = cy + (rand() - 0.5) * px * 0.8, w = 1 + rand() * 5, h = 1 + rand() * 3;
+    ctx.fillRect(x, y, w, h);
+  }
+  // Dirt. It lies along the foot of the box where it falls, it is in the corners where nothing
+  // wipes it, and something has run down the face from the top edge and dried.
+  const dirt = glow ? '8,10,9' : '34,36,28';
+  const foot = ctx.createLinearGradient(0, H * 0.72, 0, H);
+  foot.addColorStop(0, `rgba(${dirt},0)`); foot.addColorStop(1, `rgba(${dirt},0.5)`);
+  ctx.fillStyle = foot; ctx.fillRect(0, H * 0.72, W, H * 0.28);
+  for (const [cx0, cy0] of [[0, 0], [W, 0], [0, H], [W, H]] as [number, number][]) {
+    const corner = ctx.createRadialGradient(cx0, cy0, 0, cx0, cy0, H * 0.75);
+    corner.addColorStop(0, `rgba(${dirt},0.55)`); corner.addColorStop(1, `rgba(${dirt},0)`);
+    ctx.fillStyle = corner; ctx.fillRect(0, 0, W, H);
+  }
+  for (let k = 0; k < 3; k++) {
+    const x = W * (0.1 + rand() * 0.8), len = H * (0.35 + rand() * 0.5), wide = 6 + rand() * 16;
+    const run = ctx.createLinearGradient(0, 0, 0, len);
+    run.addColorStop(0, `rgba(${dirt},0.34)`); run.addColorStop(1, `rgba(${dirt},0)`);
+    ctx.fillStyle = run; ctx.fillRect(x, 0, wide, len);
+  }
+  // Whatever got inside the box and died there: specks along the foot, seen as shadows.
+  ctx.fillStyle = `rgba(${dirt},0.7)`;
+  for (let k = 0; k < 46; k++) { const x = rand() * W, y = H - 3 - rand() * rand() * H * 0.2; ctx.beginPath(); ctx.arc(x, y, 1 + rand() * 2.4, 0, Math.PI * 2); ctx.fill(); }
+  // Scratches across the face, fine and pale.
+  ctx.strokeStyle = 'rgba(240,242,232,0.22)'; ctx.lineWidth = 1;
+  for (let k = 0; k < 9; k++) { const x = rand() * W, y = rand() * H; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (rand() - 0.5) * 220, y + (rand() - 0.5) * 30); ctx.stroke(); }
   return own(c);
 }
 
@@ -138,7 +181,9 @@ export function signBox(text: string, opts: { w: number; h: number; accent?: num
     new THREE.BoxGeometry(w, lip, deep).translate(0, -(h / 2 + lip / 2), deep / 2 - 0.02),
     new THREE.BoxGeometry(lip, h + 2 * lip, deep).translate(w / 2 + lip / 2, 0, deep / 2 - 0.02),
     new THREE.BoxGeometry(lip, h + 2 * lip, deep).translate(-(w / 2 + lip / 2), 0, deep / 2 - 0.02),
-  ], new THREE.MeshStandardMaterial({ color: 0x9aa5ad, metalness: 0.7, roughness: 0.3 }));
+  // Painted steel gone dull, not bright trim: a polished frame round a stained face was half a
+  // new sign.
+  ], new THREE.MeshStandardMaterial({ color: 0x59636b, metalness: 0.45, roughness: 0.62 }));
   bezel.name = 'bezel'; g.add(bezel);
   const print = { w, h, code: opts.code, accent: accentHex };
   const map = signFace(text, print);
@@ -157,7 +202,7 @@ export function signBox(text: string, opts: { w: number; h: number; accent?: num
   }));
   face.name = 'face'; g.add(face);
   const strip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.03), new THREE.MeshStandardMaterial({
-    color: 0x101820, emissive: opts.accent ?? LABS.dado, emissiveIntensity: opts.on ? 2.2 : 0.25,
+    color: 0x101820, emissive: opts.accent ?? LABS.dado, emissiveIntensity: opts.on ? 1.1 : 0.2,
   }));
   strip.position.set(0, -h / 2 - lip - 0.03, 0.01); strip.name = 'strip'; g.add(strip);
   return g;

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { merged } from '../../merge';
 import { LABS } from '../../labs/materials';
 import { canvas, own } from '../../labs/textures';
-import { crtSet } from '../../labs/furniture';
+import { scannedSet } from '../../labs/furniture';
 
 /**
  * The three products on the dispatch office plinths. Each is built at exhibition scale, four to
@@ -300,18 +300,18 @@ export function lcdModule(screen: THREE.Texture): THREE.Group {
 }
 
 /**
- * Hollow Knight: Melee: the break room's portable set, nearly half as large again, with the game on it. What
- * the project is cannot be built as an object, it is a game played on a screen, so the exhibit is
- * the screen. It stands square on the cap the way a set does, not raked: a television leaned back
- * on an easel is a thing nobody has ever seen. `screen` is a reel of frames the office steps.
+ * Hollow Knight: Melee: a television with the game on it. What the project is cannot be built as
+ * an object, it is a game played on a screen, so the exhibit is the screen. The set is a scanned
+ * one (Poly Haven's Television 02), because the one built out of boxes that stood here first read
+ * as exactly that. It stands square on the cap the way a set does, not raked: a television leaned
+ * back on an easel is a thing nobody has ever seen. `screen` is a reel of frames the office steps.
  */
-export function crtStation(screen: THREE.Texture): THREE.Group {
+export function crtStation(screen: THREE.Texture, model: THREE.Object3D): THREE.Group {
   const g = new THREE.Group();
-  const set = crtSet(screen);
-  set.scale.setScalar(1.4);
-  // The set is deeper behind its face than in front of it. Carried forward, it sits on the cap's
-  // centre and its funnel clears the nameplate's standoffs.
-  set.position.z = 0.12;
+  const set = scannedSet(model, 'crt_tv', screen);
+  // A portable set is 40 cm across. At the row's scale it is 70.
+  set.scale.setScalar(1.75);
+  set.position.z = 0.06;
   g.add(set);
   return g;
 }

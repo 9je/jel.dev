@@ -299,25 +299,34 @@ test('a project link opens at its room with the project open, and holds its loop
   await context.close();
 });
 
-test('the trading desk walks down the room to its own set before it opens', async ({ page }) => {
+test('a report in containment walks up to its table before it opens', async ({ page }) => {
+  await page.goto('/?quality=low#bug-bounty-1');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  const card = page.locator('[data-exhibit-card]');
+  await expect(card).toBeVisible({ timeout: 60_000 });
+  await expect(card.locator('[data-panel-title]')).toHaveText('First disclosure');
+  // The table stands nine metres up the room from the hold. The walk has gone on past the hold,
+  // toward it, and the room's copy is still containment's.
+  const at = await page.evaluate(() => window.scrollY / (document.documentElement.scrollHeight - window.innerHeight));
+  expect(at).toBeGreaterThan(0.885);
+  expect(at).toBeLessThan(0.93);
+  await expect(page.locator('section[data-stop="containment"]')).toHaveAttribute('data-active', '');
+});
+
+test('the trading desk opens at its desk in the arcade row, with its peak and no current figure', async ({ page }) => {
   await page.goto('/?quality=low#trading-desk');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   const card = page.locator('[data-exhibit-card]');
   await expect(card).toBeVisible({ timeout: 60_000 });
   await expect(card.locator('[data-panel-title]')).toHaveText('AI trading desk');
-  // The set hangs on the end wall, 28 m from the room's hold. The walk has gone on past the hold,
-  // toward it, and the room's copy is still the break room's.
-  const at = await page.evaluate(() => window.scrollY / (document.documentElement.scrollHeight - window.innerHeight));
-  expect(at).toBeGreaterThan(0.49);
-  expect(at).toBeLessThan(0.53);
   await expect(page.locator('section[data-stop="recreation"]')).toHaveAttribute('data-active', '');
   // No dollar amount anywhere in what the panel says.
   expect(await card.innerText()).not.toMatch(/\$\s?\d/);
   // Nor a current return: the desk is live, and the panel quotes its peak.
   await expect(card.locator('.panel-facts')).toContainText('Peak return');
 
-  // Put away, the next project down the list walks back to the room's hold and opens. Its
-  // pictures show one at a time, and a tab swaps them.
+  // Put away, the next project down the list opens. Its pictures show one at a time, and a tab
+  // swaps them.
   await page.keyboard.press('Escape');
   await expect(card).toBeHidden();
   await page.locator('section[data-stop="recreation"] details[data-project="kayou-bot"] summary').click();

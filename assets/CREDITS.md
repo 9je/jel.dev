@@ -63,6 +63,8 @@ Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](
 | lighter | [vintage_lighter](https://polyhaven.com/a/vintage_lighter) | model |
 | stapler | [vintage_stapler](https://polyhaven.com/a/vintage_stapler) | model |
 | medical_tape | [medical_tape](https://polyhaven.com/a/medical_tape) | model |
+| crt_tv | [television_02](https://polyhaven.com/a/television_02) | model |
+| wood_tv | [Television_01](https://polyhaven.com/a/Television_01) | model |
 
 ## Other sources
 

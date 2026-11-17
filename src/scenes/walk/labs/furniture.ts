@@ -316,68 +316,144 @@ export interface ArcadeSpec {
   /** What the machine is, printed across the head of its attract screen. Two Discord bots stood in
    *  the row with nothing to say so, and from three metres a cabinet is a cabinet. */
   kind?: string;
+  /** A real picture for the glass, in place of the drawn attract screen: what the thing the
+   *  machine stands for actually looks like. */
+  screen?: THREE.Texture;
 }
 
-/** The cabinet silhouette as a side panel: full depth to the elbow, set back above it. A plain
- *  rectangle of side art floating behind the head of a cabinet is the tell that a room was built
- *  out of boxes, and a row of four of them is four tells. `mirror` builds the panel for the other
- *  side, with the art the way round a cabinet really carries it. */
-function sidePanel(mirror: boolean): THREE.BufferGeometry {
-  const s = mirror ? -1 : 1;
+/**
+ * The cabinet's side profile, front toward +x of the shape and height on y, in metres: a kick
+ * panel, the control deck's lip standing out over it, the deck sloping back to the foot of the
+ * glass, the glass leaning back to the head, the head's underside coming forward again, and the
+ * marquee box across the top. `inset` pulls the whole outline in, which is how the carcass sits a
+ * centimetre and a half inside its two side panels the way a real one does.
+ *
+ * The machine this replaces was two boxes with a flat silhouette stuck on each side, and standing
+ * beside scanned furniture it was the weakest thing in the room.
+ */
+const PROFILE: [number, number][] = [[-0.4, 0], [0.3, 0], [0.3, 0.64], [0.4, 0.86], [0.4, 0.93], [0.14, 1.02], [0.125, 1.06], [0.0, 1.58], [0.215, 1.63], [0.24, 1.67], [0.205, 1.87], [0.0, 1.9], [-0.4, 1.9]];
+function profile(inset = 0): THREE.Shape {
   const shape = new THREE.Shape();
-  shape.moveTo(-0.4 * s, 0); shape.lineTo(0.4 * s, 0); shape.lineTo(0.4 * s, 1.0);
-  shape.lineTo(0.15 * s, 1.0); shape.lineTo(0.15 * s, 1.9); shape.lineTo(-0.4 * s, 1.9); shape.closePath();
-  const geo = new THREE.ShapeGeometry(shape);
-  // ShapeGeometry uses the shape's own coordinates as uv, so the art would tile off the panel.
-  const uv = geo.attributes.uv as THREE.BufferAttribute;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * s + 0.4) / 0.8, uv.getY(i) / 1.9);
-  uv.needsUpdate = true;
-  // A quarter turn lays the silhouette into the cabinet's depth and points the face outward.
-  geo.rotateY(mirror ? Math.PI / 2 : -Math.PI / 2);
-  geo.translate(mirror ? 0.381 : -0.381, 0, 0);
+  PROFILE.forEach(([z, y], i) => {
+    const px = z > -0.4 ? z - inset : z + inset, py = y === 0 ? 0 : y - inset;
+    if (i === 0) shape.moveTo(px, py); else shape.lineTo(px, py);
+  });
+  shape.closePath();
+  return shape;
+}
+/** The profile, extruded `width` across the machine and centred on it, with the shape's x laid
+ *  along the cabinet's depth. `uvs` maps the art over the panel's own bounds. */
+function slab(width: number, at: number, inset: number, uvs: boolean): THREE.BufferGeometry {
+  const geo = new THREE.ExtrudeGeometry(profile(inset), { depth: width, bevelEnabled: false });
+  if (uvs) {
+    const uv = geo.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) + 0.4) / 0.8, uv.getY(i) / 1.9);
+    uv.needsUpdate = true;
+  }
+  // The shape is drawn depth by height and extruded along z. A quarter turn lays its depth along z
+  // and its extrusion across x.
+  geo.rotateY(-Math.PI / 2);
+  geo.translate(at + width / 2, 0, 0);
   return geo;
 }
 
-/** An arcade cabinet: 0.76 wide, 1.9 tall, 0.8 deep, marquee lit, attract screen holding a high
- *  score table nobody is going to beat. Origin at floor centre, facing +z. Seven draw calls. */
+/**
+ * An arcade cabinet: 0.76 wide, 1.9 tall, 0.8 deep. A carcass with a real side profile between two
+ * printed side panels that stand proud of it, a lit marquee box, the glass leaning back in its
+ * bezel, a control deck with two sticks and their buttons, and a coin door with its two lit slots.
+ * Origin at floor centre, facing +z. The screen mesh is named `screen` and the marquee `marquee`.
+ */
 export function arcadeCabinet(spec: ArcadeSpec): THREE.Group {
   const g = new THREE.Group();
-  g.add(merged([
-    new THREE.BoxGeometry(0.76, 1.0, 0.8).translate(0, 0.5, 0),
-    new THREE.BoxGeometry(0.76, 0.9, 0.55).translate(0, 1.45, -0.125),
-  ], carcass(DARK, 0.5)));
-  g.add(merged([sidePanel(false), sidePanel(true)], new THREE.MeshStandardMaterial({ map: arcadeSide(spec.accent), roughness: 0.55 })));
+  const W = 0.76, SIDE = 0.022;
+  g.add(new THREE.Mesh(slab(W - SIDE * 2, -(W - SIDE * 2) / 2, 0.015, false), carcass(0x1c232b, 0.62)));
+  g.add(merged([slab(SIDE, -W / 2, 0, true), slab(SIDE, W / 2 - SIDE, 0, true)], new THREE.MeshStandardMaterial({ map: arcadeSide(spec.accent), roughness: 0.55 })));
 
-  // Deck, joystick shafts and balls, coin door: one dark mesh. The deck tips back a quarter radian,
-  // so everything standing on it is placed off the tilted surface rather than off the floor.
-  const deck: THREE.BufferGeometry[] = [new THREE.BoxGeometry(0.76, 0.06, 0.34).rotateX(-0.25).translate(0, 0.98, 0.28)];
-  for (const x of [-0.19, 0.19]) {
-    deck.push(new THREE.CylinderGeometry(0.02, 0.02, 0.07, 8).translate(x, 1.031, 0.214));
-    deck.push(new THREE.SphereGeometry(0.028, 8, 6).translate(x, 1.073, 0.214));
-  }
-  deck.push(new THREE.BoxGeometry(0.3, 0.2, 0.02).translate(0, 0.4, 0.405));
-  g.add(merged(deck, carcass(0x0b1117, 0.55)));
-  const button = () => new THREE.CylinderGeometry(0.016, 0.016, 0.012, 8);
-  g.add(instances(button(), carcass(0xd7383a, 0.4), [[-0.08, 1.015, 0.291], [0.0, 1.015, 0.291], [0.08, 1.015, 0.291]]));
-  g.add(instances(button(), carcass(0x3d7be0, 0.4), [[-0.08, 1.032, 0.359], [0.0, 1.032, 0.359], [0.08, 1.032, 0.359]]));
+  // The glass and its bezel lean back with the head: from the foot of the glass to the head's
+  // underside is 0.535 m at 13.5 degrees off upright.
+  const lean = Math.atan2(0.125, 0.52), mid: [number, number] = [1.32, 0.0625 - 0.015];
+  const head = new THREE.Group(); head.position.set(0, mid[0], mid[1]); head.rotation.x = -lean; g.add(head);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(W - SIDE * 2 - 0.01, 0.53, 0.012), carcass(0x07090c, 0.5));
+  bezel.position.z = 0.004; head.add(bezel);
+  const face = spec.screen ?? attractScreen(spec.title, spec.accent, spec.seed, spec.kind);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.42), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.15, emissiveMap: face, map: face }));
+  screen.position.z = 0.0115; screen.name = 'screen'; head.add(screen);
 
-  // The glass sits in the head, flush with its face, behind a thin bezel. It stood 4 cm proud on a
-  // raked bezel of its own, which read as a tablet clipped to the front of the machine rather than
-  // a monitor built into it. The head box's front face is the plane z 0.15.
-  const face = attractScreen(spec.title, spec.accent, spec.seed, spec.kind);
-  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.5, 0.01), carcass(0x0b1117, 0.6));
-  bezel.position.set(0, 1.41, 0.155); g.add(bezel);
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.44), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.15, emissiveMap: face, map: face }));
-  screen.position.set(0, 1.41, 0.162); g.add(screen);
+  // The marquee: a backlit plate across the head, leaning out a little at its foot. Held near the
+  // composer's bloom threshold on the emissive pass and nearly black on the diffuse one, so the
+  // ceiling spot cannot add to it and wash the lettering out.
   const lamp = marqueeFace(spec.title, spec.accent);
-  // A backlit plate is its own light, not a white card under the room's. Held near the composer's
-  // 0.85 bloom threshold on the emissive pass, and nearly black on the diffuse one so the ceiling
-  // spot cannot add to it: above that threshold the plate blooms and ACES rolls the colour off
-  // toward white, taking the lettering with it. Yellow went first, having the most luminance.
-  // 0.64 by 0.18 on a 0.76 wide cabinet. It was 0.7 by 0.2, which read as a plate with a machine
-  // under it once the lettering was carrying properly: "readable, but getting kinda big i guess".
-  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.18), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, map: lamp, emissive: 0xffffff, emissiveMap: lamp, emissiveIntensity: 0.9 }));
-  marquee.position.set(0, 1.79, 0.153); marquee.name = 'marquee'; g.add(marquee);
+  const marquee = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.185), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, map: lamp, emissive: 0xffffff, emissiveMap: lamp, emissiveIntensity: 0.9 }));
+  marquee.position.set(0, 1.77, 0.2225 - 0.009); marquee.rotation.x = -Math.atan2(0.035, 0.2); marquee.name = 'marquee'; g.add(marquee);
+
+  // The deck slopes back from its lip to the foot of the glass, 19 degrees. Everything on it is
+  // placed in the deck's own frame: two sticks with their dust washers, six buttons a player, and
+  // the two start buttons between them.
+  const deck = new THREE.Group(); deck.position.set(0, 0.975 - 0.012, 0.27 - 0.015); deck.rotation.x = -Math.atan2(0.09, 0.26); g.add(deck);
+  const dark: THREE.BufferGeometry[] = [new THREE.BoxGeometry(W - SIDE * 2 - 0.01, 0.012, 0.27).translate(0, 0.006, 0)];
+  const balls: THREE.BufferGeometry[] = [];
+  const reds: [number, number, number][] = [], blues: [number, number, number][] = [], whites: [number, number, number][] = [];
+  for (const side of [-1, 1]) {
+    const sx = side * 0.2 - 0.07;
+    dark.push(new THREE.CylinderGeometry(0.03, 0.03, 0.004, 14).translate(sx, 0.014, 0.01));
+    dark.push(new THREE.CylinderGeometry(0.008, 0.008, 0.075, 8).translate(sx, 0.05, 0.01));
+    balls.push(new THREE.SphereGeometry(0.022, 12, 8).translate(sx, 0.095, 0.01));
+    for (let b = 0; b < 3; b++) {
+      (side < 0 ? reds : blues).push([sx + 0.075 + b * 0.045, 0.018, -0.03 - b * 0.012]);
+      (side < 0 ? reds : blues).push([sx + 0.075 + b * 0.045, 0.018, 0.03 - b * 0.012]);
+    }
+    whites.push([side * 0.03, 0.018, -0.09]);
+  }
+  deck.add(merged(dark, carcass(0x0b1117, 0.5)));
+  deck.add(merged(balls, carcass(0xc8322b, 0.35)));
+  const button = () => new THREE.CylinderGeometry(0.014, 0.016, 0.012, 10);
+  deck.add(instances(button(), carcass(0xd7383a, 0.38), reds));
+  deck.add(instances(button(), carcass(0x3d7be0, 0.38), blues));
+  deck.add(instances(button(), carcass(0xd9e8ee, 0.38), whites));
+
+  // The coin door on the kick panel: a steel door in a frame, and the two reject buttons lit the
+  // way they are on a machine that is switched on with nobody at it.
+  const door = merged([
+    new THREE.BoxGeometry(0.34, 0.3, 0.012).translate(0, 0.36, 0.291),
+    new THREE.BoxGeometry(0.3, 0.26, 0.012).translate(0, 0.36, 0.298),
+    new THREE.CylinderGeometry(0.012, 0.012, 0.016, 10).rotateX(Math.PI / 2).translate(0.11, 0.3, 0.306),
+  ], labSteel(0x4b565f));
+  g.add(door);
+  const slots = merged([
+    new THREE.BoxGeometry(0.05, 0.07, 0.008).translate(-0.06, 0.4, 0.306),
+    new THREE.BoxGeometry(0.05, 0.07, 0.008).translate(0.03, 0.4, 0.306),
+  ], new THREE.MeshStandardMaterial({ color: 0x1a0805, emissive: 0xe0813a, emissiveIntensity: 1.6 }));
+  g.add(slots);
+  return g;
+}
+
+/**
+ * Where the glass is on the two scanned sets, measured off a front view of each: the centre of the
+ * opening, the plane just proud of the tube's bulge, and the picture's size inside the bezel. Both
+ * are a real set's four by three.
+ */
+export const SETS = {
+  crt_tv: { x: 0, y: 0.249, z: 0.1235, w: 0.305, h: 0.23 },
+  wood_tv: { x: -0.065, y: 0.2595, z: 0.194, w: 0.385, h: 0.29 },
+} as const;
+
+/**
+ * A scanned television with a picture on it. The model is a real set, photographed, with a dead
+ * grey tube: the picture is a lit plane a few millimetres in front of the glass, inside the bezel,
+ * named `screen` like the built set's, so whatever steps or swaps a screen texture finds it the
+ * same way. Origin at the base centre, screen facing +z. Two draw calls.
+ *
+ * The set this replaces was built out of boxes, and next to scanned furniture it was the thing in
+ * the frame that had been drawn.
+ */
+export function scannedSet(model: THREE.Object3D, kind: keyof typeof SETS, face: THREE.Texture): THREE.Group {
+  const g = new THREE.Group();
+  const at = SETS[kind];
+  g.add(model);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(at.w, at.h), new THREE.MeshStandardMaterial({
+    map: face, emissive: 0xffffff, emissiveMap: face, emissiveIntensity: 1.0, roughness: 0.28, metalness: 0,
+  }));
+  screen.position.set(at.x, at.y, at.z); screen.name = 'screen'; g.add(screen);
   return g;
 }
 

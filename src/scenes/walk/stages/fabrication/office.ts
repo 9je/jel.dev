@@ -11,7 +11,7 @@ import { paperSheet } from '../../labs/textures';
 import { signBox } from '../../labs/signage';
 import { EXHIBITS, OFFICE, PLINTH, SODIUM } from './layout';
 import { controller, key, cassette, lcdModule, crtStation } from './exhibits';
-import { reel, type Reel } from './reel';
+import { reel, type Reel } from '../../labs/reel';
 import { nameplateFace, numberTag, dispatchBoardFace, consoleKeys } from './boards';
 import { streakBoard } from './streak';
 
@@ -258,7 +258,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   const reels: Reel[] = [reel('/screens/phob.webp', 2, 2, 2.3, { pixel: true }), reel('/screens/hk.webp', 2, 2, 3.1)];
   const makers: Record<string, () => THREE.Group> = {
     'phob-screen': () => lcdModule(reels[0]!.texture),
-    'hollow-knight-melee': () => crtStation(reels[1]!.texture),
+    'hollow-knight-melee': () => crtStation(reels[1]!.texture, store.model('crt_tv')),
     ezkey: key,
     conch: () => controller(store.model('gamecube_controller')),
     earworm: cassette,

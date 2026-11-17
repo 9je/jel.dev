@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
 import { grounded, once, repeat, place } from '../../merge';
 import { cableTray, papers } from '../../labs/props';
-import { arcadeCabinet, canteenChair, canteenTable, crtBracket, crtSet, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
+import { arcadeCabinet, canteenChair, canteenTable, crtBracket, scannedSet, drinksMachine, fridge, kitchenette, locker, mug, poster, splashback } from '../../labs/furniture';
 import { battens } from '../../labs/fixtures';
 import { signBox } from '../../labs/signage';
+import { reel, type Reel } from '../../labs/reel';
 import { deskBoard, labsIdent } from '../../labs/textures';
 import { DESK } from '../../../../content/desk';
-import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL, DESK_VIEW } from './layout';
+import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL, TRADING_DESK } from './layout';
 
-export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial }
+export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial; dispose(): void }
 
 /**
  * The break room, in two halves of one room. The east half is the served end: fridge, counter, the
@@ -27,6 +28,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const { store, anchors, pace } = ctx;
   const prop = (key: string) => grounded(store.model(key));
   const add = async (o: THREE.Object3D) => { root.add(o); await pace(); };
+  // The scanned wooden set, with a picture on it.
+  const tv = (face: THREE.Texture) => scannedSet(store.model('wood_tv'), 'wood_tv', face);
 
   // A conduit run the length of the served wall, a half metre under the ceiling. The wall above the
   // cupboards is the one large blank in the frame, and a service tray is what a building of this
@@ -69,13 +72,30 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   rail.position.set(ROW_PANEL.x, ROW_PANEL.h + 0.02, Z0 + 0.07); await add(rail);
 
   const hotspots: Hotspot[] = [];
+  // Two of the machines show what they stand for: the bots' own output, as a still on the glass.
+  // The third keeps its drawn attract screen until there are pictures of the app to put on it.
+  const stills: Record<string, Reel> = { 'kayou-bot': reel('/screens/kayou.webp', 1, 1, 60), 'character-bot': reel('/screens/character.webp', 1, 1, 60) };
   for (const [key, title, x, accent, ry, kind] of CABINETS) {
-    const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7, kind }), x, 0, CABINET_Z, ry);
+    const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7, kind, screen: stills[key]?.texture }), x, 0, CABINET_Z, ry);
     await add(cabinet);
     hotspots.push({ id: key, kind: 'project', label: title, object: cabinet, stop: 'recreation' });
     // Off the cabinet's own x, so a card still lands on its machine when the row is re-spaced.
     if (key === 'faction-tools') anchors.set('faction-tools', new THREE.Vector3(x, 2.15, Z0 + 1.0));
   }
+  // The trading desk, second in the row as it is second in the list. A desk, not a machine: the
+  // project is called a desk, and somebody did set one up in the corner of the break room where the
+  // arcade is. A metal office desk against the wall, a set on it tuned to the desk's board and
+  // showing its peak, and the stool pushed back from it. Everything square to the wall. One group,
+  // so the pointer picks the desk, the set and the stool as the one exhibit.
+  const station = new THREE.Group(); station.name = 'trading-desk';
+  station.add(store.model('desk'));
+  const deskSet = tv(deskBoard(DESK.peak, DESK.on));
+  deskSet.scale.setScalar(1.15); deskSet.position.set(0.2, 0.79, -0.08); station.add(deskSet);
+  const seat = store.model('stool'); seat.position.set(-0.25, 0, 0.78); station.add(seat);
+  station.position.set(TRADING_DESK.x, 0, TRADING_DESK.z);
+  await add(station);
+  hotspots.push({ id: 'trading-desk', kind: 'project', label: 'AI trading desk', object: station, stop: 'recreation' });
+
   // The sign over the row, on the wall above the marquees. A lit box at the head of an aisle is how
   // a building this size tells you what a corner of a room is for, and it is what makes the row the
   // thing you look at on the way in rather than the machines.
@@ -109,7 +129,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   anchors.set('recreation', new THREE.Vector3(-25.4, 2.0, -33.9));
 
   // ---- North wall: the quiet side ---------------------------------------------------------------
-  await add(place(statusBoard(), -29.6, 2.05, Z1 - 0.02, Math.PI));
+  await add(place(statusBoard(tv(labsIdent())), -29.6, 2.05, Z1 - 0.02, Math.PI));
 
   // Two canteen tables against the wall with a chair at each end, and every chair turned to face
   // the table it belongs to. Both chairs at both tables used to face away from theirs, which is
@@ -167,7 +187,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const board = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.95, 0.05), new THREE.MeshStandardMaterial({ color: 0x2f3a42, roughness: 0.8 }));
   board.position.set(-46.5, 1.7, Z1 - 0.03); board.rotation.y = Math.PI; await add(board);
   await add(place(poster('NOTICE', 1.0, 0.72, 7), -46.5, 1.72, Z1 - 0.07, Math.PI));
-  await add(place(statusBoard(), -49.45, 2.05, Z1 - 0.02, Math.PI));
+  await add(place(statusBoard(tv(labsIdent())), -49.45, 2.05, Z1 - 0.02, Math.PI));
   await add(deadPlant(once(prop('plant'), -50.4, 0, Z1 - 0.5, 1.1)));
   await add(place(canteenTable(1.6, 0.8), -53.5, 0, Z1 - 0.62, 0));
   // Two chairs at the ends, both facing the table, and a spare stood back against the wall square
@@ -180,35 +200,26 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The clock on the west end wall, south of the doorway, so the far end of the room has something
   // to read rather than being the place the light runs out.
   await add(once(prop('wall_clock'), HALL_FACE + 0.07, 2.2, -34.0, Math.PI / 2));
-  // And a set on the same wall the other side of the doorway, tuned to the trading desk: that
-  // project's exhibit. A set on the north wall is passed at four metres and seen edge on, sixty
-  // degrees off its face at best, and a beat that turned the head to it swung the frame at twice
-  // the rate the walk allows. On the end wall it hangs square to its wall and faces the room, which
-  // is also the way the walk comes: the figure is dead ahead and a little right for the whole
-  // length of the room, growing, and it is let go at the doorway. Nothing is turned to the camera.
-  const deskSet = place(statusBoard(deskBoard(DESK.peak, DESK.on), 2), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2);
-  await add(deskSet);
-  // From the room's hold the set is 28 m off and behind the camera's right shoulder, so opening the
-  // project from the list walks down the room to five metres from it first (`view`).
-  hotspots.push({ id: 'trading-desk', kind: 'project', label: 'AI trading desk', object: deskSet, stop: 'recreation', view: DESK_VIEW });
+  // And a set on the same wall the other side of the doorway, tuned to the trading desk's board. It
+  // hangs square to its wall and faces the room, which is also the way the walk comes, so the
+  // figure is dead ahead for the length of the room. It is dressing: the desk itself stands in the
+  // arcade row, where the camera stops.
+  await add(place(statusBoard(tv(deskBoard(DESK.peak, DESK.on)), 1.75), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2));
 
   await add(papers([[-33.9, 0, -33.4, 0.3], [-30.6, 0, -28.4, 1.6], [-46.8, 0, -33.9, 2.1], [-51.2, 0, -33.6, 0.9], [-44.2, 0, -28.3, 1.2]]));
 
-  return { hotspots, header: litHeader };
+  return { hotspots, header: litHeader, dispose() { for (const r of Object.values(stills)) r.dispose(); } };
 }
 
-/** The television on its wall bracket, square to the wall it hangs on, showing the Labs mark
- *  unless it is handed something else to show. It is the same set the containment floor
- *  has, whose screen sits in its own bezel, half again as big. It stands the way a set on a canteen
- *  wall does, facing the room, not turned to meet the walk: the room is meant to look lived in, not
- *  posed for the camera passing through it. */
-function statusBoard(face: THREE.Texture = labsIdent(), S = 1.5): THREE.Group {
-  const set = crtSet(face);
+/** A television on its wall bracket, square to the wall it hangs on. It stands the way a set on a
+ *  canteen wall does, facing the room, not turned to meet the walk: the room is meant to look lived
+ *  in, not posed for the camera passing through it. `set` is the scanned wooden set, 0.6 m across
+ *  and 0.47 deep, with the picture already on it. */
+function statusBoard(set: THREE.Group, S = 1.3): THREE.Group {
   set.scale.setScalar(S);
-  // The set is 0.6 m deep behind its face at this size, so the shelf runs the whole of that and the
-  // set stands with the back of its funnel just off the wall.
-  const back = 0.415 * S, front = 0.16 * S;
-  const g = crtBracket(set, 0.52 * S * 0.92, back + front + 0.04);
+  // The shelf runs the whole depth of the set, which stands with its back just off the wall.
+  const back = 0.258 * S, front = 0.212 * S;
+  const g = crtBracket(set, 0.6 * S * 0.92, back + front + 0.04);
   set.position.z = back + 0.03;
   return g;
 }

@@ -24,6 +24,8 @@ const box = (g: THREE.Group) => { g.updateMatrixWorld(true); return new THREE.Bo
 // 23.5 tall with the face on top, 33 deep with the grips toward +z.
 const gamecube = () => { const m = new THREE.Group(); const mesh = new THREE.Mesh(new THREE.BoxGeometry(51.8, 23.5, 33.1)); mesh.position.set(0, 12, 4.5); m.add(mesh); return m; };
 const controllerExhibit = () => controller(gamecube());
+// A stand in for the scanned set, at its own bounds: 40 cm across, 41 tall, 35 deep, base at the origin.
+const television = () => { const m = new THREE.Group(); const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.411, 0.35)); mesh.position.set(-0.002, 0.2055, -0.053); m.add(mesh); return m; };
 
 describe('fabrication exhibits', () => {
   it.each([['controller', () => controllerExhibit()], ['key', () => key()], ['cassette', () => cassette()]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
@@ -42,7 +44,7 @@ describe('fabrication exhibits', () => {
   });
   // The two that carry a lit screen: the phob-screen module and the set Hollow Knight: Melee plays
   // on. Held to the same cap as the rest, on the narrower plinth the five wide row stands on.
-  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture())]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
+  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture(), television())]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
     const b = box(make());
     expect(Math.max(b.max.x - b.min.x, b.max.y - b.min.y)).toBeGreaterThan(0.5);
     expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
@@ -50,9 +52,9 @@ describe('fabrication exhibits', () => {
     expect(b.min.x).toBeGreaterThan(-0.55); expect(b.max.x).toBeLessThan(0.55);
     expect(b.min.z).toBeGreaterThan(-0.5); expect(b.max.z).toBeLessThan(0.4);
   });
-  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture())]] as const)('%s lights its own screen with the frames it is handed', (_name, make) => {
+  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture(), television())]] as const)('%s lights its own screen with the frames it is handed', (_name, make) => {
     const tex = new THREE.Texture();
-    const g = _name === 'lcd module' ? lcdModule(tex) : crtStation(tex);
+    const g = _name === 'lcd module' ? lcdModule(tex) : crtStation(tex, television());
     void make;
     let screen: THREE.Mesh | null = null;
     g.traverse((o) => { if (o.name === 'screen') screen = o as THREE.Mesh; });
@@ -104,7 +106,7 @@ describe('fabrication exhibits', () => {
     expect(b.min.y).toBeGreaterThanOrEqual(-0.001);
   });
   it('keeps each product to a handful of draw calls', () => {
-    for (const make of [() => controllerExhibit(), () => key(), () => cassette(), () => lcdModule(new THREE.Texture()), () => crtStation(new THREE.Texture())]) {
+    for (const make of [() => controllerExhibit(), () => key(), () => cassette(), () => lcdModule(new THREE.Texture()), () => crtStation(new THREE.Texture(), television())]) {
       let n = 0; make().traverse((o) => { if ((o as THREE.Mesh).isMesh) n++; });
       expect(n).toBeLessThanOrEqual(10);
     }

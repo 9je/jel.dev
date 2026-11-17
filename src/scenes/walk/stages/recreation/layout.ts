@@ -29,9 +29,6 @@ export const W = X1 - X0, D = Z1 - Z0, XC = (X0 + X1) / 2, ZC = (Z0 + Z1) / 2;
  */
 export const BAY_DOOR = { x: -18.8, z: -32.5, w: 5, h: 2.8, depth: 2.4 };
 export const HALL_DOOR = { x: -57.2, z: -31, w: 4, h: 3.2, depth: 1.6 };
-/** Where the walk stands to look at the trading desk's set on the end wall: its own scroll, about
- *  seven metres short of the wall, with the set a little to the left of the way ahead. */
-export const DESK_VIEW = 0.498;
 /** The room's west wall plane: the near mouth of the server hall's doorway. */
 export const HALL_FACE = HALL_DOOR.x + HALL_DOOR.depth / 2;
 /** The height of the opening into the server hall as the room sees it, under its head panel. */
@@ -66,10 +63,13 @@ export const CABINET_Z = Z0 + 0.45;
  * -28.1, where the camera parks, so the hold looks straight down the middle rather than at one end.
  */
 export const CABINETS: [string, string, number, string, number, string][] = [
-  ['faction-tools', 'faction.tools', -26.9, '#3D7BE0', 0, 'FACTION OPS'],
-  ['kayou-bot', 'MLPEKAYOU', -28.1, '#D7383A', 0, 'DISCORD BOT'],
-  ['character-bot', 'character bot', -29.3, '#3FD47A', 0, 'DISCORD BOT'],
+  ['faction-tools', 'faction.tools', -26.0, '#3D7BE0', 0, 'FACTION OPS'],
+  ['kayou-bot', 'MLPEKAYOU', -29.3, '#D7383A', 0, 'DISCORD BOT'],
+  ['character-bot', 'character bot', -30.5, '#3FD47A', 0, 'DISCORD BOT'],
 ];
+/** The trading desk stands in the row where its project sits in the list, second, between the
+ *  first cabinet and the other two: a real desk two metres long with a set on it. `x` is its centre. */
+export const TRADING_DESK = { x: -27.65, z: Z0 + 0.62 };
 /** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a
  *  blue machine on a blue wall has no edge. `[x, width, height]`. */
 /**
@@ -79,7 +79,7 @@ export const CABINETS: [string, string, number, string, number, string][] = [
  */
 export const MESS_TABLES = [-27.2, -32.4];
 
-export const ROW_PANEL = { x: -28.1, w: 4.3, h: 2.5 };
+export const ROW_PANEL = { x: -28.25, w: 5.9, h: 2.5 };
 
 export const ACCENT = '#3D7BE0';
 

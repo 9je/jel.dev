@@ -12,7 +12,7 @@ export async function build(ctx: StageContext): Promise<Stage> {
   const { scene, tier } = ctx;
   const root = new THREE.Group(); root.name = 'recreation'; scene.add(root);
   const shell = await buildShell(ctx, root);
-  const { hotspots, header } = await buildDressing(ctx, root);
+  const { hotspots, header, dispose: dropStills } = await buildDressing(ctx, root);
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.Points) return;
     const translucent = (o.material as THREE.Material).transparent;
@@ -51,7 +51,7 @@ export async function build(ctx: StageContext): Promise<Stage> {
       const h = (clock + 2.4) % 8.7;
       header.emissiveIntensity = rested * (h < 0.09 ? 0.25 : h < 0.17 ? 1.04 : h < 0.23 ? 0.35 : 1);
     },
-    dispose() { for (const p of fx) p.dispose(); root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
+    dispose() { dropStills(); for (const p of fx) p.dispose(); root.traverse((o) => { if (o instanceof THREE.InstancedMesh) o.dispose(); }); disposeObject(root); scene.remove(root); },
   };
 }
 

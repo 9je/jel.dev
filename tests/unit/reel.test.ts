@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { reel as Reel, reelWindow as ReelWindow } from '../../src/scenes/walk/stages/fabrication/reel';
+import type { reel as Reel, reelWindow as ReelWindow } from '../../src/scenes/walk/labs/reel';
 
 // The reel starts on a canvas, and vitest runs in node: a stub is enough, nothing reads a pixel.
 let reel: typeof Reel, reelWindow: typeof ReelWindow;
 beforeAll(async () => {
   const ctx = new Proxy({} as Record<string | symbol, unknown>, { get: (t, k) => (k in t ? t[k] : () => undefined), set: (t, k, v) => { t[k] = v; return true; } });
   (globalThis as unknown as { document: unknown }).document = { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) };
-  ({ reel, reelWindow } = await import('../../src/scenes/walk/stages/fabrication/reel'));
+  ({ reel, reelWindow } = await import('../../src/scenes/walk/labs/reel'));
 });
 
 describe('a reel of frames on a screen in the room', () => {
