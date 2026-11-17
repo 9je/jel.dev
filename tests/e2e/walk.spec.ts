@@ -232,13 +232,12 @@ test('a project opens from its row, loads its pictures only then, and walks on t
   // The row is a door to the panel now, it does not unfold in the column as well.
   await expect(section.locator('details[data-flagship="phob-screen"]')).not.toHaveAttribute('open', '');
   await expect.poll(() => media.filter((m) => m.startsWith('/projects/phob-screen/')).length).toBe(4);
-  // And each comes up in its plate once it has arrived.
-  await expect(card.locator('.panel-shot[data-current] img')).toHaveAttribute('data-loaded', '');
+  // Four screens of one small panel, shown together at the panel's own size, each coming up once
+  // it has arrived. None of them is wider than the 240 pixels it was drawn at.
+  await expect(card.locator('.panel-sheet .panel-cell')).toHaveCount(4);
+  await expect(card.locator('.panel-cell img').first()).toHaveAttribute('data-loaded', '');
+  expect(await card.locator('.panel-cell img').first().evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(240);
   expect(media.every((m) => m.startsWith('/projects/phob-screen/'))).toBe(true);
-  // One picture shows at a time, and a tab swaps it.
-  await expect(card.locator('.panel-shot[data-current]')).toHaveCount(1);
-  await card.locator('[data-shot-tab="2"]').click();
-  await expect(card.locator('.panel-shot[data-current]')).toHaveAttribute('data-shot', '2');
   await expect(page).toHaveURL(/#phob-screen$/);
 
   // The foot walks to the next project: the same one panel, refilled, never a second.
@@ -314,6 +313,18 @@ test('the trading desk walks down the room to its own set before it opens', asyn
   await expect(page.locator('section[data-stop="recreation"]')).toHaveAttribute('data-active', '');
   // No dollar amount anywhere in what the panel says.
   expect(await card.innerText()).not.toMatch(/\$\s?\d/);
+  // Nor a current return: the desk is live, and the panel quotes its peak.
+  await expect(card.locator('.panel-facts')).toContainText('Peak return');
+
+  // Put away, the next project down the list walks back to the room's hold and opens. Its
+  // pictures show one at a time, and a tab swaps them.
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+  await page.locator('section[data-stop="recreation"] details[data-project="kayou-bot"] summary').click();
+  await expect(card.locator('[data-panel-title]')).toHaveText('MLPEKAYOU bot', { timeout: 60_000 });
+  await expect(card.locator('.panel-shot[data-current]')).toHaveCount(1);
+  await card.locator('[data-shot-tab="1"]').click();
+  await expect(card.locator('.panel-shot[data-current]')).toHaveAttribute('data-shot', '1');
 });
 
 test('the copy column on the walk is one line for each project in the room', async ({ page }) => {

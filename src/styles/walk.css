@@ -131,7 +131,9 @@
    light, no shader and no post pass, and reads the same on every tier. */
 .walk-dim { display: none; position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: var(--fd, 0);
   background: radial-gradient(ellipse 30vmax 34vmax at var(--fx, 50%) var(--fy, 50%), transparent 0, transparent 26%, rgb(3 6 9 / 0.3) 55%, rgb(3 6 9 / 0.62) 100%); }
-.walk[data-mode='full'] .walk-dim { display: block; }
+/* Laid out only while it has something to do. A full frame layer over the canvas, even a clear
+   one, is a layer the compositor blends on every frame. */
+.walk[data-mode='full'] .walk-dim[data-on] { display: block; }
 .walk[data-mode='full'] .walk-spacer { display: block; }
 .walk[data-mode='full'] .preloader[data-state='loading'], .walk[data-mode='full'] .preloader[data-state='slow'], .walk[data-mode='full'] .preloader[data-state='done'] { display: grid; }
 .walk[data-mode='full'] .stops { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
@@ -424,6 +426,13 @@
 .panel-shot::before { left: -1px; top: -1px; border-left: 2px solid var(--wing-light); border-top: 2px solid var(--wing-light); }
 .panel-shot::after { right: -1px; bottom: -1px; border-right: 2px solid var(--wing-light); border-bottom: 2px solid var(--wing-light); }
 .exhibit-card .panel-shot :is(img, video) { display: block; width: 100%; height: 100%; margin: 0; object-fit: contain; background: #04070a; }
+/* A sheet of small screens: four across, each no larger than the panel it was drawn for. */
+.panel-sheet { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
+.panel-cell { margin: 0; display: grid; gap: 0.35rem; }
+.exhibit-card .panel-cell img { display: block; width: 100%; max-width: 240px; height: auto; margin: 0; aspect-ratio: 1; background: #04070a; outline: 1px solid rgb(217 232 238 / 0.14); opacity: 0; transition: opacity 260ms ease; }
+.exhibit-card .panel-cell img[data-loaded] { opacity: 1; }
+.panel-cell figcaption { color: var(--text-dim); font-size: 0.8rem; font-weight: 600; font-stretch: 75%; }
+@media (max-width: 520px) { .panel-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .panel-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem 1.2rem; }
 .panel-tab { padding: 0.25rem 0; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-dim); font: inherit; font-size: 0.88rem; font-weight: 600; font-stretch: 75%; cursor: pointer; }
 .panel-tab:hover { color: var(--panel-white); }

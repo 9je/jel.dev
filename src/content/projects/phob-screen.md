@@ -15,13 +15,6 @@ facts:
     value: v1 built
 media:
   - kind: image
-    src: /projects/phob-screen/01.webp
-    alt: Princess Peach winking, playing as the idle animation on the controller's screen.
-    caption: Idle
-    pixel: true
-    width: 480
-    height: 480
-  - kind: image
     src: /projects/phob-screen/02.webp
     alt: The stick calibration screen, measuring notch 6 of 32 with live x and y readouts.
     caption: Measure
@@ -42,6 +35,13 @@ media:
     pixel: true
     width: 960
     height: 960
+  - kind: image
+    src: /projects/phob-screen/01.webp
+    alt: Princess Peach winking, playing as the idle animation on the controller's screen.
+    caption: Idle
+    pixel: true
+    width: 480
+    height: 480
 exhibit:
   anchor: phob-screen
 started: 2026-11

@@ -186,7 +186,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // the rate the walk allows. On the end wall it hangs square to its wall and faces the room, which
   // is also the way the walk comes: the figure is dead ahead and a little right for the whole
   // length of the room, growing, and it is let go at the doorway. Nothing is turned to the camera.
-  const deskSet = place(statusBoard(deskBoard(DESK.ret, DESK.since), 2), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2);
+  const deskSet = place(statusBoard(deskBoard(DESK.peak, DESK.on), 2), HALL_FACE + 0.02, 1.9, -27.95, Math.PI / 2);
   await add(deskSet);
   // From the room's hold the set is 28 m off and behind the camera's right shoulder, so opening the
   // project from the list walks down the room to five metres from it first (`view`).

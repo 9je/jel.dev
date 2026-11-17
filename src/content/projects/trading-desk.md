@@ -2,30 +2,22 @@
 title: AI trading desk
 wing: recreation
 status: operational
-summary: Up over 200 percent in its first fifteen days. An AI desk that day trades my own account, with code holding the risk.
+summary: Peaked at over 200 percent inside its first fifteen days. An AI desk that day trades my own account, with code holding the risk.
 stack: [Python, Claude, SQLite, Docker]
 role: Solo build
 facts:
-  - label: Return
-    value: +215%
-  - label: Since
+  - label: Peak return
+    value: +219%
+  - label: Reached
+    value: 17 Nov 2026
+  - label: Live since
     value: 2 Nov 2026
   - label: Closed trades
-    value: "43"
-  - label: S&P 500, same days
-    value: -4.1%
+    value: "44"
 media:
-  - kind: image
-    src: /projects/trading-desk/01.webp
-    alt: The desk's scoreboard headline. Claude is up 215.43 percent since Nov 2. SPY is down 4.07 percent.
-    caption: Scoreboard
-    invert: true
-    width: 1600
-    height: 392
   - kind: image
     src: /projects/trading-desk/02.webp
     alt: The list of closed trades, each with its setup, its entry and exit times, why it was sold, and its return. Dollar amounts are hidden.
-    caption: Closed trades
     invert: true
     width: 1328
     height: 1280
@@ -38,4 +30,4 @@ A desk that day trades my own brokerage account through the Robinhood MCP. It wa
 
 The model decides. Code enforces. Claude never places an order itself. It runs as an unprivileged process that cannot read the broker token, and every decision passes a risk module that sizes the trade and can refuse it. Stops, targets and the daily loss limit are mechanical, so an exit never waits on a model. A watchdog, a shadow benchmark and a replay mode keep the record honest.
 
-At midday on 17 November 2026 it was up 215 percent since it went live on 2 November, measured on unit value so deposits do not count as gains. It wins 44 percent of its trades and makes its money on the size of the winners. It is a small account and a short record, and I expect it to have bad weeks.
+It went live on 2 November 2026 and peaked at 219 percent up on 17 November, measured on unit value so deposits do not count as gains. It wins under half of its trades and makes its money on the size of the winners. It is a small account and a short record, and I expect it to have bad weeks.

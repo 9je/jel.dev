@@ -8,7 +8,7 @@ import { crtSet } from '../../labs/furniture';
 import { signBox, tapeCross } from '../../labs/signage';
 import { chainlink, passerby, redactedSheet, staticNoise } from '../../labs/textures';
 import { radialTexture } from '../../textures';
-import { X1, Z1, AISLE_CLEAR, BANK, CRT, HALL_DOOR, ISLANDS, MISSING, SEALED, TABLE } from './layout';
+import { X1, Z1, AISLE_CLEAR, BANK, CRT, HALL_DOOR, ISLANDS, MISSING, SEALED, TABLE, TABLE_VIEW } from './layout';
 import { holeAt } from './shell';
 
 /** What the room animates: the seam of red around the sealed door. */
@@ -118,7 +118,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   second.add(sheet(redactedSheet('SECOND DISCLOSURE', 'IN TRIAGE'), TABLE.x + 0.36, TABLE.z + 0.02, -0.34, TOP + 0.031));
   await add(second);
   anchors.set('bug-bounty-2', new THREE.Vector3(TABLE.x + 0.36, TOP + 0.05, TABLE.z + 0.02));
-  hotspots.push({ id: 'bug-bounty-2', kind: 'project', label: 'Second disclosure', object: second, stop: 'containment' });
+  hotspots.push({ id: 'bug-bounty-2', kind: 'project', label: 'Second disclosure', object: second, stop: 'containment', view: TABLE_VIEW });
 
   // The lamp stands at the back corner of the table with its head over the page. Its bulb is the
   // room's one warm light, declared in lighting.ts at the head's own position.
@@ -132,7 +132,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // the shot and covered the lamp, the page and the sealed door all three.
   anchors.set('bug-bounty-1', new THREE.Vector3(-82.4, 1.5, 12.4));
   anchors.set('containment', new THREE.Vector3(-79, 1.8, 10));
-  hotspots.push({ id: 'bug-bounty-1', kind: 'project', label: 'First disclosure', object: table, stop: 'containment' });
+  // The table stands nearly nine metres up the room from the hold. Leaned to from there, with the
+  // frame moved aside for the panel, it was a lamp in the distance behind a cabinet. So opening
+  // either report walks up to four metres from the table first (`view`).
+  hotspots.push({ id: 'bug-bounty-1', kind: 'project', label: 'First disclosure', object: table, stop: 'containment', view: TABLE_VIEW });
 
   // ---- The sealed bay -------------------------------------------------------------------------
   // A steel door in the north wall with the light on behind it, taped shut, and a lit sign over it

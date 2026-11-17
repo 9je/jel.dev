@@ -274,11 +274,11 @@ export function redactedSheet(title = 'FIRST DISCLOSURE', stamp = 'PENDING RELEA
 
 /**
  * The break room set tuned to the trading desk: the Labs mark small in the corner, the desk's
- * return as the one thing on the screen that is meant to be read, and the date it has run since.
+ * lifetime peak as the one thing on the screen that is meant to be read, and the day it reached it.
  * The rows under it are a board's furniture, bars with no names and no figures on them. The set is
  * passed at an angle and never faced, so the figure is drawn as large as the tube allows.
  */
-export function deskBoard(ret: string, since: string): THREE.CanvasTexture {
+export function deskBoard(peak: string, on: string): THREE.CanvasTexture {
   const w = 640, h = 480;
   const [c, ctx] = canvas(w, h);
   const bg = ctx.createLinearGradient(0, 0, 0, h);
@@ -298,9 +298,9 @@ export function deskBoard(ret: string, since: string): THREE.CanvasTexture {
   // The figure.
   ctx.textAlign = 'center';
   ctx.fillStyle = '#3ddc84'; ctx.font = '600 150px Michroma, system-ui, sans-serif';
-  ctx.fillText(ret, w / 2, 218, w - 60);
+  ctx.fillText(peak, w / 2, 218, w - 60);
   ctx.fillStyle = '#E6F2F7'; ctx.font = '600 34px Michroma, system-ui, sans-serif';
-  ctx.fillText(`SINCE ${since.toUpperCase()}`, w / 2, 322);
+  ctx.fillText(`PEAK  ${on.toUpperCase()}`, w / 2, 322);
   // The board's furniture: bars, nothing to read.
   for (let i = 0; i < 3; i++) {
     const y = 372 + i * 30;

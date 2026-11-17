@@ -351,7 +351,8 @@ async function activateHotspot(h: Hotspot, els: WalkElements, coarse: boolean, i
   // A project opens its panel, on a phone as much as anywhere: there the panel is a sheet. It
   // opens where the camera stands. The reader picked a thing they can see, and walking them back
   // to the room's hold first would take it out of the frame they picked it in.
-  if (panelTemplate(els, h.id)) { showProject(h.id, els, { push: true }); return; }
+  // Unless the exhibit names a better place to see it from than here, and then the walk goes there.
+  if (panelTemplate(els, h.id)) { if (h.view !== undefined) await goProject(h.id, els, { push: true }); else showProject(h.id, els, { push: true }); return; }
   await walkTo(h.stop);
   if (gen !== generation) return;
   // The panel may be showing a project. A certification's card takes its place.
@@ -598,6 +599,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
       const f = handle.focusState();
       if (f.dim === 0 && dimmed === 0) return;
       dimmed = f.dim;
+      dim.toggleAttribute('data-on', f.dim > 0);
       dim.style.setProperty('--fd', f.dim.toFixed(3));
       dim.style.setProperty('--fx', `${(f.x * 100).toFixed(2)}%`);
       dim.style.setProperty('--fy', `${(f.y * 100).toFixed(2)}%`);
@@ -770,6 +772,9 @@ async function init() {
   const tier = decideTier(input);
   // Readable from devtools on a machine that runs badly: which tier it got and why.
   els.root.dataset.tier = tier; els.root.dataset.renderer = input.renderer;
+  // `?timing` prints what this visit's load and frames did, on the page, for a machine that is slow
+  // where the build machine is not. Fetched only when asked for.
+  if (new URLSearchParams(location.search).has('timing')) void import('./timing').then((m) => m.startTiming(els.root));
   wireEffectsToggle(els, tier);
   if (tier === 'lite') { input.context?.getExtension('WEBGL_lose_context')?.loseContext(); startLite(els); } else await startFull(els, tier, input.coarse, input.context);
 }

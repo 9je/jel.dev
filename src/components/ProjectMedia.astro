@@ -10,8 +10,22 @@ import type { Media } from '../content/schema';
 interface Props { media: Media[]; mode: 'panel' | 'inline' }
 const { media, mode } = Astro.props;
 const tab = (m: Media, i: number) => m.caption ?? `${i + 1}`;
+// Several screens of one small panel are shown together at the size the panel draws them, as a
+// sheet of four, not one at a time blown up to the width of the column: a 240 pixel screen filling
+// half the panel was the loudest thing on the page.
+const sheet = mode === 'panel' && media.length > 1 && media.every((m) => m.pixel);
 ---
-{media.length > 0 && mode === 'panel' && (
+{sheet && (
+  <div class="panel-sheet" data-panel-hero>
+    {media.map((m) => (
+      <figure class="panel-cell" data-pixel>
+        <img data-src={m.src} alt={m.alt} width={m.width} height={m.height} decoding="async" />
+        {m.caption && <figcaption>{m.caption}</figcaption>}
+      </figure>
+    ))}
+  </div>
+)}
+{media.length > 0 && mode === 'panel' && !sheet && (
   <div class="panel-hero" data-panel-hero>
     {media.map((m, i) => (
       <figure class="panel-shot" data-shot={i} data-current={i === 0 ? '' : undefined} data-pixel={m.pixel || undefined} data-invert={m.invert || undefined} style={`--ar:${m.width} / ${m.height}; --arn:${(m.width / m.height).toFixed(4)}`}>

@@ -65,6 +65,8 @@ export const CRT = { x: -81.9, z: 10.9, ry: Math.PI - 0.5 };
  * -81.45 is a quarter metre outside the aisle's clearance line.
  */
 export const TABLE = { x: -82.05, z: 12.25 };
+/** Where the walk stands to look at the table: its own scroll, four and a half metres short of it. */
+export const TABLE_VIEW = 0.898;
 /** The chair, pulled round to the table's west end and turned as if somebody stood up from it. */
 export const CHAIR = { x: -83.05, z: 12.15, ry: Math.PI / 2 - 0.35 };
 /** The wet floor sign, stood in the aisle beside the tiles that came down, on the clearance line. */
