@@ -1,0 +1,19 @@
+---
+// What a sealed disclosure shows in place of its details: two lines under bars. The words are in
+// the markup for a screen reader and for anyone who selects them, and say only that they are held.
+---
+<p data-redacted>
+  <span class="redact">Program and vendor withheld until publication.</span>
+  <span class="redact">Impact class withheld until publication.</span>
+</p>
+
+<style>
+  .redact {
+    display: block;
+    width: fit-content;
+    margin-bottom: 0.4rem;
+    color: transparent;
+    background: #05080b;
+    user-select: none;
+  }
+</style>
