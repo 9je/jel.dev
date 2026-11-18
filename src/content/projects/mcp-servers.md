@@ -7,11 +7,11 @@ stack: [MCP, Copilot, ConnectWise]
 role: Contributor and reviewer on a larger dev team
 facts:
   - label: Vendor servers
-    value: Deployed to Copilot
+    value: Deployed
   - label: In-house servers
-    value: Built with the dev team
+    value: In build
   - label: My part
-    value: Pull requests and reviews
+    value: PRs and reviews
   - label: Status
     value: Current focus
 order: 15

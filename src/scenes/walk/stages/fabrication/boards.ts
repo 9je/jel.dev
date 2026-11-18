@@ -45,39 +45,69 @@ function engrave(ctx: Ctx, text: string, x: number, y: number, ink = '#1b2129'):
   ctx.fillStyle = ink; ctx.fillText(text, x, y);
 }
 
+const CONDENSED = '"Saira Variable", "Saira", Michroma, system-ui, sans-serif';
+const condensed = (ctx: Ctx, px: number, weight: number, track = 0.03) => {
+  ctx.font = `${weight} ${px}px ${CONDENSED}`;
+  (ctx as Ctx & { fontStretch?: string }).fontStretch = 'extra-condensed';
+  tracked(ctx, Math.round(px * track));
+};
+
 /**
- * A museum nameplate, 1024 by 280 for a plate 1.1 by 0.3: brushed steel with a machined edge, the
- * product's name engraved in tracked Michroma across the upper half, a hairline rule, and a one
- * line subtitle in a plain sans under it. Two countersunk screw heads at the ends of the rule, so
- * the plate reads as bolted to the standoffs behind it.
+ * An equipment plate, 1024 by 280 for a plate 0.95 by 0.3: steel painted charcoal, the name
+ * stencilled on it in the building's heavy condensed face in a cream that has gone a little yellow,
+ * a block of the bay's sodium orange at the left end, the one line of what the thing is under a
+ * rule, and a bolt through each end. The paint is worn back to the steel along the edges and round
+ * the bolts, and scratched across the face.
+ *
+ * It was brushed steel with the name engraved in a wide display face, tracked out, with a bevel
+ * drawn round it. Every part of that was clean and even, and in a loading bay it read as a label
+ * drawn for a screen. The signs over the doors are painted metal that has been there for years,
+ * and this is the same shop's work at a smaller size.
  */
 export function nameplateFace(name: string, subtitle: string, seed = 5): THREE.CanvasTexture {
   const W = 1024, H = 280;
   const [c, raw] = canvas(W, H); const ctx = raw as Ctx;
-  brushed(ctx, W, H, seed);
-  bevel(ctx, W, H, 6);
+  const r = rng(seed * 7 + 3);
+  // The paint, a touch lighter through the middle where it has been wiped.
+  const ground = ctx.createLinearGradient(0, 0, 0, H);
+  ground.addColorStop(0, '#20262a'); ground.addColorStop(0.5, '#2a3136'); ground.addColorStop(1, '#1b2024');
+  ctx.fillStyle = ground; ctx.fillRect(0, 0, W, H);
+  // The orange block, with the paint's own unevenness.
+  ctx.fillStyle = '#c96f26'; ctx.fillRect(0, 0, 34, H);
+  ctx.fillStyle = 'rgba(20,14,8,0.25)'; for (let k = 0; k < 40; k++) ctx.fillRect(r() * 34, r() * H, 2 + r() * 10, 1 + r() * 3);
+  // The name. Stencilled, so close set and heavy, sized to the plate and not tracked out.
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  // The name, tracked out: a nameplate's engraver sets wide, and at four metres the tracking is
-  // what keeps the letters apart.
-  let px = 96;
-  const setName = () => { ctx.font = `600 ${px}px ${MICHROMA}`; tracked(ctx, Math.round(px * 0.12)); };
-  setName();
-  while (px > 40 && ctx.measureText(name).width > W - 140) { px -= 4; setName(); }
-  engrave(ctx, name, 70, 138);
+  let px = 150;
+  condensed(ctx, px, 800);
+  while (px > 60 && ctx.measureText(name).width > W - 150) { px -= 4; condensed(ctx, px, 800); }
+  ctx.fillStyle = '#d8d3bd'; ctx.fillText(name, 74, 150);
+  // The rule, and what it is under it.
+  ctx.fillStyle = 'rgba(216,211,189,0.5)'; ctx.fillRect(74, 178, W - 148, 3);
+  condensed(ctx, 54, 600, 0.08);
+  ctx.fillStyle = '#a9a591'; ctx.fillText(subtitle.toUpperCase(), 74, 240);
   tracked(ctx, 0);
-  // The rule and its screws.
-  ctx.fillStyle = 'rgba(10,16,22,0.5)'; ctx.fillRect(70, 168, W - 140, 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(70, 170, W - 140, 1);
-  for (const x of [46, W - 46]) {
-    const g = ctx.createRadialGradient(x - 3, 169 - 3, 2, x, 169, 14);
-    g.addColorStop(0, '#e2e8eb'); g.addColorStop(0.7, '#8c969c'); g.addColorStop(1, '#4c565c');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, 169, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(20,28,34,0.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 9, 169 - 4); ctx.lineTo(x + 9, 169 + 4); ctx.stroke();
+  // Wear. The stencil paint has gone in flecks, the charcoal has gone to bare steel along the edges
+  // and in a few long scratches, and there is dirt in the corners and along the foot.
+  ctx.fillStyle = '#252b30';
+  for (let k = 0; k < 160; k++) ctx.fillRect(74 + r() * (W - 150), 40 + r() * 210, 1 + r() * 5, 1 + r() * 3);
+  ctx.fillStyle = 'rgba(160,170,176,0.55)';
+  for (let k = 0; k < 70; k++) { const top = r() > 0.5; ctx.fillRect(r() * W, top ? r() * 5 : H - r() * 6, 4 + r() * 30, 1 + r() * 3); }
+  for (let k = 0; k < 30; k++) { const left = r() > 0.5; ctx.fillRect(left ? r() * 4 : W - r() * 6, r() * H, 1 + r() * 3, 4 + r() * 22); }
+  ctx.strokeStyle = 'rgba(150,160,166,0.35)'; ctx.lineWidth = 1;
+  for (let k = 0; k < 9; k++) { const x = r() * W, y = r() * H, len = 40 + r() * 220, a = (r() - 0.5) * 0.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); ctx.stroke(); }
+  for (const [cx, cy] of [[0, 0], [W, 0], [0, H], [W, H]] as [number, number][]) {
+    const corner = ctx.createRadialGradient(cx, cy, 0, cx, cy, H * 0.7);
+    corner.addColorStop(0, 'rgba(6,8,8,0.6)'); corner.addColorStop(1, 'rgba(6,8,8,0)');
+    ctx.fillStyle = corner; ctx.fillRect(0, 0, W, H);
   }
-  // The subtitle, plain and small.
-  ctx.font = `500 44px ${SANS}`; tracked(ctx, 2);
-  engrave(ctx, subtitle, 70, 232, '#2b3740');
-  tracked(ctx, 0);
+  // The bolts, each in a ring of bare steel where the paint has cracked away from the washer.
+  for (const x of [W - 40]) for (const y of [44, H - 44]) {
+    ctx.fillStyle = 'rgba(150,160,166,0.5)'; ctx.beginPath(); ctx.arc(x, y, 19, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(x - 3, y - 3, 2, x, y, 14);
+    g.addColorStop(0, '#c9d0d4'); g.addColorStop(0.7, '#737d83'); g.addColorStop(1, '#3a4348');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(16,22,26,0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 9, y - 4); ctx.lineTo(x + 9, y + 4); ctx.stroke();
+  }
   return own(c);
 }
 

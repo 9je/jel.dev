@@ -6,7 +6,7 @@ summary: Automation built across Pia, Rewst and Power Automate, with user onboar
 stack: [Pia, Rewst, Power Automate, PowerShell]
 facts:
   - label: Orchestrators
-    value: Pia, Rewst, Power Automate
+    value: Three
   - label: Onboarding steps carried
     value: A dozen
   - label: Hands on keyboard

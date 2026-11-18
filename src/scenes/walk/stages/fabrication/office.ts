@@ -10,7 +10,7 @@ import { papers, glassRoom } from '../../labs/props';
 import { paperSheet } from '../../labs/textures';
 import { signBox } from '../../labs/signage';
 import { EXHIBITS, OFFICE, PLINTH, SODIUM } from './layout';
-import { controller, key, cassette, lcdModule, crtStation } from './exhibits';
+import { controller, keyCabinet, turntable, lcdModule, crtStation } from './exhibits';
 import { reel, type Reel } from '../../labs/reel';
 import { nameplateFace, numberTag, dispatchBoardFace, consoleKeys } from './boards';
 import { streakBoard } from './streak';
@@ -41,13 +41,13 @@ function nameplate(label: string, subtitle: string, LIFT = 0.5): THREE.Group {
   // The plate, hinged at its foot and leaned back: a body of plain steel and the engraved face
   // on it, so the map sits on the front only.
   const tilt = new THREE.Group(); tilt.position.y = LIFT; tilt.rotation.x = -RAKE; g.add(tilt);
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(W, Hp, 0.012), labSteel(0x9aa5ad));
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(W, Hp, 0.012), labSteel(0x2a3136));
   plate.position.set(0, Hp / 2, 0); plate.name = 'plate'; tilt.add(plate);
   const face = nameplateFace(label, subtitle, label.length);
-  const ink = new THREE.Mesh(new THREE.PlaneGeometry(W, Hp), new THREE.MeshStandardMaterial({ map: face, color: 0xffffff, metalness: 0.2, roughness: 0.72 }));
+  const ink = new THREE.Mesh(new THREE.PlaneGeometry(W, Hp), new THREE.MeshStandardMaterial({ map: face, color: 0xffffff, metalness: 0.35, roughness: 0.6 }));
   ink.position.set(0, Hp / 2, 0.0065); ink.name = 'ink'; tilt.add(ink);
   // The lit edge: a bar of acrylic along the top of the plate, lit from its ends.
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(W + 0.02, 0.022, 0.022), new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: SODIUM, emissiveIntensity: 2.2 }));
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(W + 0.02, 0.022, 0.022), new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: SODIUM, emissiveIntensity: 1.3 }));
   strip.position.set(0, Hp + 0.011, 0); strip.name = 'strip'; tilt.add(strip);
   return g;
 }
@@ -256,12 +256,14 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
   // firmware's own screens on the module, the game itself on the set. Their reels run on clocks
   // that share no factor with each other or with anything else that changes in the bay.
   const reels: Reel[] = [reel('/screens/phob.webp', 2, 2, 2.3, { pixel: true }), reel('/screens/hk.webp', 2, 2, 3.1)];
+  // What turns: the record's label, at the speed a long player turns.
+  const spinning: THREE.Object3D[] = [];
   const makers: Record<string, () => THREE.Group> = {
     'phob-screen': () => lcdModule(reels[0]!.texture),
     'hollow-knight-melee': () => crtStation(reels[1]!.texture, store.model('crt_tv')),
-    ezkey: key,
+    ezkey: keyCabinet,
     conch: () => controller(store.model('gamecube_controller')),
-    earworm: cassette,
+    earworm: () => { const t = turntable(); spinning.push(t.userData.spin as THREE.Object3D); return t; },
   };
   const hotspots: Hotspot[] = [];
   const ex = -hx + 0.9;
@@ -284,7 +286,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
     // The offset was there to keep the controller's cable clear of the plate's standoffs. The cable
     // is shorter now instead.
     exhibit.add(place(plinth(store, i + 1), ex, 0, dz, Math.PI / 2));
-    exhibit.add(place(nameplate(label, subtitle, key === 'hollow-knight-melee' || key === 'phob-screen' ? 0.72 : 0.5), ex - 0.34, 1.045, dz, Math.PI / 2));
+    exhibit.add(place(nameplate(label, subtitle, key === 'conch' ? 0.5 : 0.74), ex - 0.34, 1.045, dz, Math.PI / 2));
     exhibit.add(place(make(), ex, 1.045, dz, Math.PI / 2));
     g.add(exhibit);
     hotspots.push({ id: key, kind: 'project', label, object: exhibit, stop: 'fabrication' });
@@ -298,7 +300,7 @@ export function buildOffice(ctx: StageContext, root: THREE.Group): { light: Poin
 
   return {
     light: { kind: 'point', position: [OX, H - 0.4, OZ], color: LABS.cold, intensity: 6, distance: 12, decay: 1.8 }, hotspots,
-    update(dt) { for (const r of reels) r.update(dt); },
+    update(dt) { for (const r of reels) r.update(dt); for (const o of spinning) o.rotation.z -= dt * 3.49; },
     dispose() { for (const r of reels) r.dispose(); },
   };
 }

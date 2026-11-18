@@ -72,9 +72,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   rail.position.set(ROW_PANEL.x, ROW_PANEL.h + 0.02, Z0 + 0.07); await add(rail);
 
   const hotspots: Hotspot[] = [];
-  // Two of the machines show what they stand for: the bots' own output, as a still on the glass.
-  // The third keeps its drawn attract screen until there are pictures of the app to put on it.
-  const stills: Record<string, Reel> = { 'kayou-bot': reel('/screens/kayou.webp', 1, 1, 60), 'character-bot': reel('/screens/character.webp', 1, 1, 60) };
+  // Each machine shows what it stands for, as a still on the glass: the app's own home screen and
+  // the two bots' own output.
+  const stills: Record<string, Reel> = { 'faction-tools': reel('/screens/faction.webp', 1, 1, 60), 'kayou-bot': reel('/screens/kayou.webp', 1, 1, 60), 'character-bot': reel('/screens/character.webp', 1, 1, 60) };
   for (const [key, title, x, accent, ry, kind] of CABINETS) {
     const cabinet = place(arcadeCabinet({ title, accent, seed: x * -7, kind, screen: stills[key]?.texture }), x, 0, CABINET_Z, ry);
     await add(cabinet);

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as THREE from 'three';
-import type { cassette as Cassette, controller as Controller, key as Key, lcdModule as LcdModule, crtStation as CrtStation } from '../../src/scenes/walk/stages/fabrication/exhibits';
+import type { cassette as Cassette, controller as Controller, key as Key, lcdModule as LcdModule, crtStation as CrtStation, keyCabinet as KeyCabinet, turntable as Turntable } from '../../src/scenes/walk/stages/fabrication/exhibits';
 
 // The cassette prints its own label, and vitest runs in node with no DOM. A stub canvas is enough:
 // nothing here reads a pixel back, only the shapes the products are built from are measured.
-let controller: typeof Controller, key: typeof Key, cassette: typeof Cassette, lcdModule: typeof LcdModule, crtStation: typeof CrtStation;
+let controller: typeof Controller, key: typeof Key, cassette: typeof Cassette, lcdModule: typeof LcdModule, crtStation: typeof CrtStation, keyCabinet: typeof KeyCabinet, turntable: typeof Turntable;
 beforeAll(async () => {
   const context = () => new Proxy({} as Record<string | symbol, unknown>, {
     get: (t, k) => (k in t ? t[k] : () => ({ width: 100, addColorStop() {} })),
@@ -13,7 +13,7 @@ beforeAll(async () => {
   (globalThis as unknown as { document: unknown }).document = {
     createElement: () => { const ctx = context(); return { width: 0, height: 0, getContext: () => ctx }; },
   };
-  ({ controller, key, cassette, lcdModule, crtStation } = await import('../../src/scenes/walk/stages/fabrication/exhibits'));
+  ({ controller, key, cassette, lcdModule, crtStation, keyCabinet, turntable } = await import('../../src/scenes/walk/stages/fabrication/exhibits'));
 });
 
 // The office stands each product at the plinth top, face toward +z, on a cap 1.0 m across and
@@ -44,7 +44,16 @@ describe('fabrication exhibits', () => {
   });
   // The two that carry a lit screen: the phob-screen module and the set Hollow Knight: Melee plays
   // on. Held to the same cap as the rest, on the narrower plinth the five wide row stands on.
-  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture(), television())]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
+  it('gives the record player a part to turn, and turns nothing else', () => {
+    const g = turntable();
+    const spin = g.userData.spin as THREE.Object3D;
+    expect(spin).toBeTruthy();
+    let inside = false; g.traverse((o) => { if (o === spin) inside = true; });
+    expect(inside).toBe(true);
+    // The label and the clamp, and not the grooves or the arm.
+    expect(spin.children.length).toBe(2);
+  });
+  it.each([['lcd module', () => lcdModule(new THREE.Texture())], ['crt station', () => crtStation(new THREE.Texture(), television())], ['key cabinet', () => keyCabinet()], ['record player', () => turntable()]] as const)('%s reads at exhibition scale and stays on the cap', (_name, make) => {
     const b = box(make());
     expect(Math.max(b.max.x - b.min.x, b.max.y - b.min.y)).toBeGreaterThan(0.5);
     expect(b.min.y).toBeGreaterThanOrEqual(-0.001);

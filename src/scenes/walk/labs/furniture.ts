@@ -595,42 +595,52 @@ export function attractScreen(title: string, accent = '#3D7BE0', seed = 1, kind?
   return own(c);
 }
 
-/** A lit marquee: the accent as the ground with the title punched through it in white. One texture
- *  on one plane, rather than a lit panel with a stencil plane in front of it. Colour and emissive. */
+/**
+ * A lit marquee: printed art behind glass, the way a cabinet's header is. The accent is the ground,
+ * darker toward its edges where the tube behind it does not reach, with a band of speed stripes
+ * raked across it, and the game's name over that in the building's heavy condensed face, slanted,
+ * in cream with a hard drop shadow. One texture on one plane. Colour and emissive.
+ *
+ * It was the name in a wide display face, white, centred on a flat plate of colour, which is a
+ * label and not a marquee: "text on cabs feels generated". A header is a piece of printed artwork
+ * with a logo on it, and a logo is drawn heavy, slanted and shadowed so it reads from across a room.
+ */
 export function marqueeFace(title: string, accent = '#3D7BE0'): THREE.CanvasTexture {
-  const [c, ctx] = canvas(512, 146);
-  // The plate is darkened until white lettering has something to sit on. Every marquee in the row
-  // keeps white letters, which is the arcade look, so the plate is what gives way: yellow carries
-  // nearly twice the luminance of blue, and white on it was the one pair in the row that could not
-  // be read. Anything already dark enough is printed as it was chosen.
-  const rgb = [1, 3, 5].map((n) => parseInt(accent.slice(n, n + 2), 16) / 255);
-  const lum = 0.21 * rgb[0]! + 0.72 * rgb[1]! + 0.07 * rgb[2]!;
-  const k = lum > 0.5 ? 0.5 / lum : 1;
-  ctx.fillStyle = `rgb(${rgb.map((v) => Math.round(v * k * 255)).join(',')})`;
-  ctx.fillRect(0, 0, 512, 146);
-  ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, 512, 10); ctx.fillRect(0, 136, 512, 10);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // A long title is condensed rather than shrunk. Michroma is a wide face, so setting a name like
-  // "character bot" to fit at full size dropped it to about half the cap height of the short ones
-  // and it could not be read at the hold at all. Squeezing the x axis keeps the letters as tall as
-  // every other marquee, which is what carries at four metres.
-  let px = 64;
-  const set = () => { ctx.font = `600 ${px}px Michroma, system-ui, sans-serif`; return ctx.measureText(title).width; };
-  let wide = set();
-  // Condense first, down to a floor where the letters are still a face and not a comb, then take
-  // the size down until what is left fits. Condensing alone left "character bot" 35 px wider than
-  // its own plate and the marquee read "character b".
-  const squeeze = wide > 460 ? Math.max(0.62, 460 / wide) : 1;
-  while (wide * squeeze > 460 && px > 22) { px -= 2; wide = set(); }
-  ctx.save();
-  ctx.translate(256, 76); ctx.scale(squeeze, 1);
-  // A keyline under the letters. The marquee is a lit panel behind a bloom threshold, so whatever
-  // the exposure does to the colour around them the letters keep an edge: white on a hot yellow
-  // plate is two clipped channels and no contrast at all, which is what "barely readable" was.
-  ctx.lineJoin = 'round'; ctx.lineWidth = 9; ctx.strokeStyle = 'rgba(6,10,16,0.92)';
-  ctx.strokeText(title, 0, 0);
-  ctx.fillStyle = '#ffffff'; ctx.fillText(title, 0, 0);
+  const W = 512, H = 146;
+  const [c, ctx] = canvas(W, H);
+  const rgb = [1, 3, 5].map((n) => parseInt(accent.slice(n, n + 2), 16));
+  const tone = (k: number) => `rgb(${rgb.map((v) => Math.round(Math.min(255, v * k))).join(',')})`;
+  // Held down so cream lettering has something to sit on, whatever the accent.
+  const lum = (0.21 * rgb[0]! + 0.72 * rgb[1]! + 0.07 * rgb[2]!) / 255;
+  const base = lum > 0.45 ? 0.45 / lum : 1;
+  ctx.fillStyle = tone(base * 0.82); ctx.fillRect(0, 0, W, H);
+  // The stripes: three raked bars of a lighter tone running off the right end.
+  ctx.save(); ctx.transform(1, 0, -0.45, 1, 0, 0);
+  for (const [x, w, k] of [[380, 26, 1.25], [424, 16, 1.25], [456, 9, 1.25], [60, 9, 0.6], [84, 16, 0.6]] as [number, number, number][]) { ctx.fillStyle = tone(base * k); ctx.fillRect(x + 60, -10, w, H + 20); }
   ctx.restore();
+  // The tube's fall off toward the ends, and a dark keyline round the print.
+  const ends = ctx.createLinearGradient(0, 0, W, 0);
+  ends.addColorStop(0, 'rgba(0,0,0,0.5)'); ends.addColorStop(0.2, 'rgba(0,0,0,0)'); ends.addColorStop(0.8, 'rgba(0,0,0,0)'); ends.addColorStop(1, 'rgba(0,0,0,0.5)');
+  ctx.fillStyle = ends; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(8,10,14,0.85)'; ctx.lineWidth = 8; ctx.strokeRect(4, 4, W - 8, H - 8);
+  // The name: capitals, heavy, condensed, slanted. Sized to the plate, which a condensed face lets
+  // a long name do without shrinking to nothing.
+  const name = title.toUpperCase();
+  let px = 104;
+  const set = () => {
+    ctx.font = `800 ${px}px "Saira Variable", "Saira", Michroma, system-ui, sans-serif`;
+    (ctx as CanvasRenderingContext2D & { fontStretch?: string }).fontStretch = 'extra-condensed';
+    (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${Math.round(px * 0.02)}px`;
+    return ctx.measureText(name).width;
+  };
+  while (set() > W - 96 && px > 40) px -= 4;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.save(); ctx.translate(W / 2, H / 2 + 6); ctx.transform(1, 0, -0.18, 1, 0, 0);
+  ctx.fillStyle = 'rgba(8,10,14,0.9)'; ctx.fillText(name, 6, 6);
+  ctx.lineJoin = 'round'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,10,14,0.95)'; ctx.strokeText(name, 0, 0);
+  ctx.fillStyle = '#f1ead2'; ctx.fillText(name, 0, 0);
+  ctx.restore();
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '0px';
   return own(c);
 }
 

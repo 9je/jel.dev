@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { merged } from '../../merge';
 import { LABS } from '../../labs/materials';
-import { canvas, own } from '../../labs/textures';
+import { canvas, own, rng } from '../../labs/textures';
 import { scannedSet } from '../../labs/furniture';
 
 /**
@@ -313,5 +313,172 @@ export function crtStation(screen: THREE.Texture, model: THREE.Object3D): THREE.
   set.scale.setScalar(1.75);
   set.position.z = 0.06;
   g.add(set);
+  return g;
+}
+
+
+/**
+ * earworm.games: a record player, the upright kind that stands on a shelf with the record turning
+ * in front of you. earworm plays a slice of a song off a turning record and asks what it is, so the
+ * thing on the plinth is that record, turning.
+ *
+ * Upright because a deck lying flat shows a lens at eye height the edge of a platter and nothing
+ * on it. These are made to stand, and standing one puts the whole record and its label square to
+ * the row. The grooves are a still disc and only the label and the clamp turn: a record's sheen
+ * stays where the light is while the label goes round, and it is the label that shows the turning.
+ * `userData.spin` is the part to rotate about its own z. Origin on the cap, facing +z.
+ */
+export function turntable(): THREE.Group {
+  const g = new THREE.Group();
+  const W = 0.74, H = 0.68, T = 0.07, R = 0.285, CY = 0.385;
+  // The plinth it stands in: a slab of dark stained ply, leaning back four degrees on a steel foot.
+  const lean = new THREE.Group(); lean.rotation.x = -0.07; lean.position.y = 0.016; g.add(lean);
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(W, H, T), new THREE.MeshStandardMaterial({ map: plyFace(), roughness: 0.62, metalness: 0.05 }));
+  slab.position.set(0, H / 2 + 0.03, 0); lean.add(slab);
+  const steel: THREE.BufferGeometry[] = [new THREE.BoxGeometry(W * 0.8, 0.03, 0.3).translate(0, 0.015, -0.03)];
+  // The platter, proud of the slab, with the strobe dots round its rim.
+  const platter = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.016, R + 0.016, 0.03, 48).rotateX(Math.PI / 2), shell(0xaab2b7, 0.35, 0.85));
+  platter.position.set(0, CY, T / 2 + 0.015); lean.add(platter);
+  const record = new THREE.Mesh(new THREE.CircleGeometry(R, 64), new THREE.MeshStandardMaterial({ map: grooveFace(), roughness: 0.32, metalness: 0.25 }));
+  record.position.set(0, CY, T / 2 + 0.034); lean.add(record);
+  // What turns: the label and the clamp that holds the record on an upright spindle.
+  const spin = new THREE.Group(); spin.position.set(0, CY, T / 2 + 0.036); lean.add(spin);
+  const label = new THREE.Mesh(new THREE.CircleGeometry(R * 0.42, 40), new THREE.MeshStandardMaterial({ map: labelFace(), roughness: 0.7 }));
+  spin.add(label);
+  const clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.03, 20).rotateX(Math.PI / 2), shell(0xb9c1c6, 0.3, 0.85));
+  clamp.position.z = 0.016; spin.add(clamp);
+  // The arm: a pivot on the slab's upper right, a straight tube down across the record to the
+  // head, a counterweight behind the pivot, and the rest it parks on.
+  const px = W / 2 - 0.075, py = CY + 0.235, z = T / 2 + 0.05;
+  steel.push(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 20).rotateX(Math.PI / 2).translate(px, py, T / 2 + 0.025));
+  const hx = R * 0.56, hy = CY - R * 0.42;
+  const len = Math.hypot(px - hx, py - hy), ang = Math.atan2(hy - py, hx - px);
+  steel.push(new THREE.CylinderGeometry(0.007, 0.007, len, 8).rotateZ(Math.PI / 2).translate(-len / 2, 0, 0).rotateZ(ang + Math.PI).translate(px, py, z));
+  steel.push(new THREE.CylinderGeometry(0.022, 0.022, 0.07, 14).rotateZ(Math.PI / 2).translate(0.06, 0, 0).rotateZ(ang + Math.PI).translate(px, py, z));
+  lean.add(merged(steel, shell(0xaeb6bb, 0.32, 0.85)));
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.022).rotateZ(ang), shell(0x15191d, 0.5, 0.2));
+  head.position.set(hx, hy, z - 0.008); lean.add(head);
+  // The speed switch and its lamp, lower left.
+  const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.025, 20).rotateX(Math.PI / 2), shell(0x1b2025, 0.45, 0.5));
+  knob.position.set(-W / 2 + 0.085, 0.115, T / 2 + 0.012); lean.add(knob);
+  const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.009, 12), new THREE.MeshStandardMaterial({ color: 0x1a0a04, emissive: 0xe0813a, emissiveIntensity: 2.4 }));
+  lamp.position.set(-W / 2 + 0.15, 0.115, T / 2 + 0.002); lean.add(lamp);
+  g.userData.spin = spin;
+  return g;
+}
+
+/** Dark stained ply: long grain along the slab, a few darker bands, worn pale at the edges. */
+function plyFace(): THREE.CanvasTexture {
+  const [c, ctx] = canvas(512, 512); const r = rng(41);
+  ctx.fillStyle = '#6f4a2c'; ctx.fillRect(0, 0, 512, 512);
+  for (let k = 0; k < 900; k++) {
+    const y = r() * 512, x = r() * 512, len = 60 + r() * 380;
+    ctx.fillStyle = r() > 0.5 ? `rgba(168,120,78,${(0.06 + r() * 0.14).toFixed(3)})` : `rgba(38,22,12,${(0.08 + r() * 0.18).toFixed(3)})`;
+    ctx.fillRect(x, y, len, 1 + r() * 1.5);
+  }
+  for (let k = 0; k < 5; k++) { ctx.fillStyle = 'rgba(40,22,10,0.25)'; ctx.fillRect(0, r() * 512, 512, 6 + r() * 26); }
+  return own(c);
+}
+
+/** The playing surface: black vinyl, the grooves as fine rings, the bands between tracks a little
+ *  smoother, and the two soft wedges of light a record throws across itself. Drawn still. */
+function grooveFace(): THREE.CanvasTexture {
+  const S = 1024, [c, ctx] = canvas(S, S); const r = rng(17);
+  const m = S / 2;
+  ctx.fillStyle = '#050607'; ctx.fillRect(0, 0, S, S);
+  for (let rad = m * 0.4; rad < m * 0.985; rad += 2.2) {
+    ctx.strokeStyle = `rgba(170,180,190,${(0.1 + r() * 0.16).toFixed(3)})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(m, m, rad, 0, Math.PI * 2); ctx.stroke();
+  }
+  for (const f of [0.55, 0.68, 0.79, 0.9]) { ctx.strokeStyle = 'rgba(4,5,6,0.95)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(m, m, m * f, 0, Math.PI * 2); ctx.stroke(); }
+  // The sheen: two wedges opposite each other, from the label out to the rim.
+  for (const a of [-0.55, Math.PI - 0.55]) {
+    for (let k = 0; k < 26; k++) {
+      const da = (k - 13) * 0.012, alpha = 0.16 * (1 - Math.abs(k - 13) / 13);
+      ctx.strokeStyle = `rgba(215,225,235,${alpha.toFixed(3)})`; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(m + Math.cos(a + da) * m * 0.4, m + Math.sin(a + da) * m * 0.4); ctx.lineTo(m + Math.cos(a + da) * m * 0.98, m + Math.sin(a + da) * m * 0.98); ctx.stroke();
+    }
+  }
+  return own(c);
+}
+
+/** The label: earworm's purple, its name across the top half, a rule, small print round the foot
+ *  and a pale wedge off to one side, so the eye can see it go round. */
+function labelFace(): THREE.CanvasTexture {
+  const S = 512, [c, ctx] = canvas(S, S); const m = S / 2;
+  ctx.fillStyle = '#6a3fb0'; ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#e9e2f5'; ctx.beginPath(); ctx.moveTo(m, m); ctx.arc(m, m, m, 0.5, 1.15); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#4c2a86'; ctx.beginPath(); ctx.arc(m, m, m * 0.99, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f3eefb'; ctx.font = '600 76px Michroma, system-ui, sans-serif'; ctx.fillText('earworm', m, m - 96);
+  ctx.fillStyle = 'rgba(243,238,251,0.8)'; ctx.fillRect(m - 150, m - 40, 300, 3);
+  ctx.font = '600 26px "Saira Variable", "Saira", system-ui, sans-serif'; ctx.fillStyle = '#e9e2f5';
+  ctx.fillText('SIDE A', m - 120, m + 60); ctx.fillText('33 RPM', m - 108, m + 100);
+  return own(c);
+}
+
+const TAGS = [0xc8322b, 0x2f6fd0, 0xe0a51e, 0x3f9c5a, 0xd9652a, 0xd7dbdc];
+
+/**
+ * ezkey.io: a key cabinet, the steel box on an office wall that the keys are kept in, standing
+ * open. ezkey is a store of keys, and this is the one physical thing everybody knows that is a
+ * store of keys: rows of hooks, a key on most of them, each on a coloured tag, and a few hooks
+ * empty where one is out.
+ *
+ * It replaces a single large key on an easel, which said "key" and nothing about keeping them, and
+ * was a torus and five boxes beside scanned props. Origin on the cap, the open cabinet facing +z,
+ * its door swung out on the left.
+ */
+export function keyCabinet(): THREE.Group {
+  const g = new THREE.Group();
+  const W = 0.54, H = 0.62, D = 0.11, WALL = 0.012;
+  const r = rng(23);
+  const paint = () => new THREE.MeshStandardMaterial({ color: 0x59646b, roughness: 0.5, metalness: 0.55 });
+  // The carcass: a back and four walls, standing on a low steel foot.
+  const box: THREE.BufferGeometry[] = [
+    new THREE.BoxGeometry(W, H, WALL).translate(0, 0, -D / 2),
+    new THREE.BoxGeometry(W, WALL, D).translate(0, H / 2, 0), new THREE.BoxGeometry(W, WALL, D).translate(0, -H / 2, 0),
+    new THREE.BoxGeometry(WALL, H, D).translate(-W / 2, 0, 0), new THREE.BoxGeometry(WALL, H, D).translate(W / 2, 0, 0),
+  ];
+  const Y = H / 2 + 0.04;
+  const carcass = merged(box, paint()); carcass.position.y = Y; g.add(carcass);
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(W * 0.7, 0.04, 0.26).translate(0, 0.02, 0), shell(0x39434b, 0.5, 0.6)));
+  // Inside, pale, so the keys stand off it.
+  const lining = new THREE.Mesh(new THREE.PlaneGeometry(W - WALL * 2, H - WALL * 2), new THREE.MeshStandardMaterial({ color: 0xb9c0c2, roughness: 0.8, metalness: 0.1 }));
+  lining.position.set(0, Y, -D / 2 + WALL / 2 + 0.001); g.add(lining);
+  // Five rails of hooks. A key hangs on most hooks: a bow with its hole, a blade with its cuts, and
+  // the tag hanging in front of it. One batch for the steel and one for the tags.
+  const steel: THREE.BufferGeometry[] = [], tags: THREE.BufferGeometry[] = [];
+  const colour = new THREE.Color();
+  const ROWS = 5, COLS = 7;
+  for (let row = 0; row < ROWS; row++) {
+    const ry = Y + H / 2 - 0.07 - row * 0.114, z = -D / 2 + 0.02;
+    steel.push(new THREE.BoxGeometry(W - 0.07, 0.014, 0.008).translate(0, ry, z));
+    for (let col = 0; col < COLS; col++) {
+      const x = -W / 2 + 0.065 + col * ((W - 0.13) / (COLS - 1));
+      steel.push(new THREE.CylinderGeometry(0.003, 0.003, 0.03, 6).rotateX(Math.PI / 2).translate(x, ry - 0.004, z + 0.015));
+      if (r() < 0.22) continue;
+      const swing = (r() - 0.5) * 0.25, kz = z + 0.022;
+      const bow = new THREE.TorusGeometry(0.014, 0.0045, 6, 14).translate(0, -0.016, 0);
+      const blade = new THREE.BoxGeometry(0.009, 0.05, 0.003).translate(0, -0.052, 0);
+      const cut = new THREE.BoxGeometry(0.006, 0.008, 0.003).translate(0.006, -0.058 - r() * 0.012, 0);
+      for (const part of [bow, blade, cut]) { part.rotateZ(swing).translate(x, ry, kz); steel.push(part); }
+      const tag = new THREE.BoxGeometry(0.026, 0.04, 0.003).translate(0.004, -0.05, 0.007).rotateZ(swing * 1.6 + 0.12).translate(x, ry, kz);
+      colour.setHex(TAGS[Math.floor(r() * TAGS.length)]!);
+      const rgb = new Float32Array(tag.attributes.position!.count * 3);
+      for (let v = 0; v < tag.attributes.position!.count; v++) colour.toArray(rgb, v * 3);
+      tag.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+      tags.push(tag);
+    }
+  }
+  g.add(merged(steel, shell(0xc9cfd2, 0.3, 0.9)));
+  g.add(merged(tags, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55 })));
+  // The door, hung on the left wall and swung out past square, its lock and the key left in it.
+  const hinge = new THREE.Group(); hinge.position.set(-W / 2, Y, D / 2); hinge.rotation.y = -1.95; g.add(hinge);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(W, H, WALL), paint()); door.position.x = W / 2; hinge.add(door);
+  const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 14).rotateX(Math.PI / 2), shell(0xc9cfd2, 0.3, 0.9));
+  lock.position.set(W - 0.06, 0, 0.012); hinge.add(lock);
+  // Stood back on the cap, so the open door swings over the cap and not out past its front edge.
+  const set = new THREE.Group(); set.position.z = -0.18; set.add(...g.children); g.add(set);
   return g;
 }
