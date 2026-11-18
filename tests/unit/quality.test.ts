@@ -19,6 +19,12 @@ describe('chooseTier', () => {
     expect(chooseTier({ ...base, renderer: 'Apple M2' })).toBe('medium');
     expect(chooseTier({ ...base, renderer: '' })).toBe('medium');
   });
+  it('reads Firefox\'s top discrete buckets as discrete, since it hides the card\'s real name', () => {
+    expect(chooseTier({ ...base, renderer: 'Radeon R9 200 Series, or similar' })).toBe('high');
+    expect(chooseTier({ ...base, renderer: 'ANGLE (AMD, Radeon R9 200 Series Direct3D11 vs_5_0 ps_5_0), or similar' })).toBe('high');
+    expect(chooseTier({ ...base, renderer: 'GeForce GTX 980, or similar' })).toBe('high');
+    expect(chooseTier({ ...base, renderer: 'Radeon HD 3200 Graphics, or similar' })).toBe('medium');
+  });
   it('picks lite without webgl', () => expect(chooseTier({ ...base, webgl: false })).toBe('lite'));
   it('picks lite for software renderers and for a performance caveat', () => {
     expect(chooseTier({ ...base, renderer: 'Google SwiftShader' })).toBe('lite');

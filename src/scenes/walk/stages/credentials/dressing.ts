@@ -337,8 +337,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const loader = new THREE.TextureLoader();
   const byId = new Map((certs as { id: string; name: string; issuer: string; badgeImage: string }[]).map((c) => [c.id, c]));
   let n = 0;
+  // One viewer to a step: each draws its own film face, and eight in one go held a frame for 100 ms.
   for (const side of ['west', 'east'] as const) {
-    VIEWER_ORDER[side].forEach((id, i) => {
+    for (const [i, id] of VIEWER_ORDER[side].entries()) {
+      await pace();
       const x = VIEWER_X[side], z = VIEWER_Z[i]!;
       const c = id ? byId.get(id) : undefined;
       const badge = new THREE.Mesh(new THREE.PlaneGeometry(VIEWER.badge, VIEWER.badge), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
@@ -347,14 +349,14 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
       v.position.set(x, 0, z);
       v.rotation.y = side === 'west' ? Math.PI / 2 : -Math.PI / 2;
       root.add(v);
-      if (!c) return;
+      if (!c) continue;
       hotspots.push({ id: c.id, kind: 'cert', label: c.name, object: v, stop: 'credentials' });
       loader.load(c.badgeImage, (t) => {
         if (disposed) { t.dispose(); return; }
         t.colorSpace = THREE.SRGBColorSpace; t.userData.owned = true; badges.push(t);
         const m = badge.material as THREE.MeshBasicMaterial; m.map = t; m.opacity = 1; m.needsUpdate = true;
       }, undefined, () => { /* name only */ });
-    });
+    }
   }
   await pace();
 

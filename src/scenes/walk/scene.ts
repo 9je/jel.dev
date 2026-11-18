@@ -13,6 +13,7 @@ import { greybox } from './stages/greybox';
 import { STAGES } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
+import { createCalm, needed } from './calm';
 import { disposeStray, disposeObject, anchorTiles } from './materials';
 import { createHover, pickHotspot } from './interact';
 
@@ -127,6 +128,21 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const loading = Promise.all(gatedGroups.map((g) => store.loadGroup(g, (l, t) => { progress.set(g, [l, t]); report(); })));
   for (const d of gated) void d.preload?.().catch(() => { /* the build reports it */ });
   const built = new Map<string, Stage>(); const pending = new Map<string, Promise<void>>();
+  // The rooms that build behind the walk wait for the camera to park (calm.ts). `building` is the
+  // one the background loop is on, and is null under the preloader, where nothing waits. A room
+  // somebody asked for by name, a dock jump, is not made to wait either.
+  const calm = createCalm();
+  let building: StageDef | null = null;
+  const wanted = new Set<StopId>();
+  const span = (id: StopId): [number, number] => { const i = STOPS.findIndex((x) => x.id === id); return [STOPS[i]?.enter ?? 0, STOPS[i + 1]?.enter ?? 1]; };
+  const hurry = () => {
+    if (disposed || !building) return true;
+    const [enter, leave] = span(building.stop);
+    if (needed(current, enter, leave)) return true;
+    for (const id of wanted) { const d = defs.find((x) => x.stop === id); if (d && !built.has(d.id) && !settled.has(d.id)) return true; }
+    return false;
+  };
+  const parked = () => (building ? calm.wait(hurry) : Promise.resolve());
   // Scroll: where the walk is asked to be, and where the camera is on its way there.
   let target = opts.initialProgress ?? 0, current = opts.initialProgress ?? 0, raf = 0;
 
@@ -147,7 +163,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       await fontReady;
       if (disposed) return;
       let paces = 0;
-      const stage = await def.build(onStep ? { ...ctx, pace: () => { onStep(0.4 * (++paces / (paces + 10))); return pacer.pace(); } } : ctx);
+      const stage = await def.build(onStep ? { ...ctx, pace: () => { onStep(0.4 * (++paces / (paces + 10))); return pacer.pace(); } } : { ...ctx, pace: async () => { await parked(); await pacer.pace(); } });
       if (disposed) { stage.dispose(); return; }
       onStep?.(0.4);
       anchorTiles(stage.root);
@@ -301,6 +317,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       }
     });
     for (const rep of stand) {
+      await parked();
       if (disposed) return;
       const before = programs();
       probe.add(rep);
@@ -386,6 +403,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     const burst = onGroup ? 12_000_000 : 4_000_000;
     let queued = 0;
     for (const t of textures) {
+      await parked();
       if (disposed) return;
       renderer.initTexture(t);
       const img = t.image as { width?: number; height?: number } | undefined;
@@ -412,6 +430,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       while (i < groups.length && (members.length === 0 || (members.length < per && tris + triangles(groups[i]!) < 60_000))) {
         const g = groups[i++]!; tris += triangles(g); members.push(g); lot.add(g);
       }
+      await parked();
       await compileGroup(lot, !parallel && !onGroup);
       for (const g of members) {
         root.add(g);
@@ -419,7 +438,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       }
       lot.removeFromParent();
       batch += tris; fresh += programs() - known; known = programs();
-      if (batch >= 60_000 || fresh >= 4 || i === groups.length) {
+      // Behind the walk a draw goes out for every new program and every twenty thousand triangles:
+      // the first draw of either is what holds the thread, so there it is taken in small pieces.
+      if (batch >= (onGroup ? 60_000 : 20_000) || fresh >= (onGroup ? 4 : 1) || i === groups.length) {
+        await parked();
         root.visible = true;
         renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
         root.visible = false;
@@ -603,6 +625,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     const dt = Math.min(clock.getDelta(), 0.05);
     if (warming === 0) sample(Math.max(0.001, dt - paced / 1000));
     current = damp(current, target, 8, dt);
+    if (Math.abs(target - current) > 1e-4) calm.moved();
     cameraAt(current, cam);
     focus.update(dt, opening ? 0 : holdWeight(current));
     if (!still) focus.apply(cam);
@@ -641,7 +664,10 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     try {
       for (const d of later) {
         if (disposed) { settleReadiness(); return; }
+        building = d;
         try {
+          // The decode of a room's files stalls frames as well, so it waits its turn like the rest.
+          await parked();
           await Promise.all(d.groups.map((g) => store.loadGroup(g)));
           await ensure(d);
           // ensure() swallows a build error in its own catch, so a room that threw shows up here only
@@ -660,6 +686,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
         readiness.get(d.stop)?.resolve();
       }
     } finally {
+      building = null;
       // The scene the machine actually has to run starts here. The discounted frames through the
       // build were still evidence, but they were evidence about a scene with rooms missing, so the
       // governor starts its warmup and its windows again on the finished one.
@@ -708,7 +735,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       return focusOut;
     },
     ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id) || settled.has(d.id); },
-    whenReady: (id) => readiness.get(id)?.promise ?? Promise.resolve(),
+    whenReady: (id) => { wanted.add(id); return readiness.get(id)?.promise ?? Promise.resolve(); },
     dispose() {
       disposed = true; cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize); window.visualViewport?.removeEventListener('resize', onResize);

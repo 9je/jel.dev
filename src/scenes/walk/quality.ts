@@ -18,7 +18,10 @@ export interface TierInput {
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render|warp/i;
 // Checked before INTEGRATED because every Intel string, Arc included, also matches "intel".
-const DISCRETE = /nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|radeon vii|\barc\b|\bfirepro\b/i;
+// "Radeon R9 200 Series, or similar" is Firefox: it hides the card's real name behind a bucket, and
+// that one is its top AMD bucket, where an RX 9070 XT lands. Some lesser cards share it, and the
+// frame governor trims those within three seconds, which is what it is for.
+const DISCRETE = /nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|radeon vii|radeon r9 200 series|\barc\b|\bfirepro\b/i;
 // Shares system memory with the CPU and a fraction of a discrete card's fill rate. Iris Xe on a
 // U-series laptop, Radeon(TM) Graphics on a Ryzen APU, and the phone GPUs all belong here.
 const INTEGRATED = /intel|iris|uhd graphics|hd graphics|radeon\(tm\)|vega|mali|adreno|powervr|videocore|xclipse|immortalis/i;
