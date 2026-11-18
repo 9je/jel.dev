@@ -65,6 +65,12 @@ Unless listed under "Other sources" below, every asset is CC0 from [Poly Haven](
 | medical_tape | [medical_tape](https://polyhaven.com/a/medical_tape) | model |
 | crt_tv | [television_02](https://polyhaven.com/a/television_02) | model |
 | wood_tv | [Television_01](https://polyhaven.com/a/Television_01) | model |
+| hand_truck | [hand_truck](https://polyhaven.com/a/hand_truck) | model |
+| ops_box | [cardboard_box_01](https://polyhaven.com/a/cardboard_box_01) | model |
+| ops_cart | [tool_cart](https://polyhaven.com/a/tool_cart) | model |
+| ops_clipboard | [clipboard](https://polyhaven.com/a/clipboard) | model |
+| drill | [Drill_01](https://polyhaven.com/a/Drill_01) | model |
+| toolbox | [metal_toolbox](https://polyhaven.com/a/metal_toolbox) | model |
 
 ## Other sources
 

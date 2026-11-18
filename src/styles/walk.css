@@ -268,7 +268,7 @@
   @media (prefers-reduced-motion: reduce) { .walk[data-mode='full'] .stop-inner::before, .walk[data-mode='full'] .stop[data-active] .stop-inner::before { animation: none; transform: none; } }
   .walk[data-mode='full'] .stop [data-project-list] { border-top: 1px solid rgb(217 232 238 / 0.14); }
   .walk[data-mode='full'] .stop .row { border-color: rgb(217 232 238 / 0.14); }
-  .walk[data-mode='full'] .stop .row-summary:hover, .walk[data-mode='full'] .stop .row-summary:focus-visible, .walk[data-mode='full'] .stop .row[open] .row-summary { background: rgb(217 232 238 / 0.06); }
+  .walk[data-mode='full'] .stop .row-summary:hover, .walk[data-mode='full'] .stop .row-summary:focus-visible, .walk[data-mode='full'] .stop .row[data-hot] .row-summary { background: rgb(217 232 238 / 0.09); box-shadow: inset 2px 0 0 var(--wing-light); }
   .walk[data-mode='full'] .stop .row-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; align-items: baseline; }
   .walk[data-mode='full'] .stop .row-title { min-width: 0; overflow-wrap: anywhere; font-size: 1rem; }
   .walk[data-mode='full'] .stop .row-line { grid-column: 1 / -1; font-size: 0.95rem; }
@@ -294,7 +294,9 @@
   .walk[data-mode='full'] .stop .bay { display: block; margin: 0; padding: 0; background: none; background-image: none; border: 0; border-bottom: 1px solid rgb(217 232 238 / 0.14); border-radius: 0; }
   .walk[data-mode='full'] .stop .bay[data-sealed] { border-image: none; }
   .walk[data-mode='full'] .stop .bay-head { justify-content: space-between; gap: 0.35rem 0.75rem; padding: 0.6rem 0.25rem; }
-  .walk[data-mode='full'] .stop .bay-head:hover, .walk[data-mode='full'] .stop .bay[open] > .bay-head { background: rgb(217 232 238 / 0.06); }
+  /* Lit only under the pointer, or while the pointer is on its exhibit in the room: a row that is
+     lit all the time reads as the one being pointed at. */
+  .walk[data-mode='full'] .stop .bay-head:hover, .walk[data-mode='full'] .stop .bay-head:focus-visible, .walk[data-mode='full'] .stop .bay[data-hot] > .bay-head { background: rgb(217 232 238 / 0.09); box-shadow: inset 2px 0 0 var(--wing-light); }
   .walk[data-mode='full'] .stop .bay-title { font-size: 1rem; font-weight: 600; }
   .walk[data-mode='full'] .stop .bay-visual { display: none; }
   .walk[data-mode='full'] .stop .bay-body { padding: 0 0.25rem 1rem; }

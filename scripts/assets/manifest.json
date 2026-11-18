@@ -297,6 +297,30 @@
     "wood_tv": {
       "id": "Television_01",
       "group": "recreation"
+    },
+    "hand_truck": {
+      "id": "hand_truck",
+      "group": "operations"
+    },
+    "ops_box": {
+      "id": "cardboard_box_01",
+      "group": "operations"
+    },
+    "ops_cart": {
+      "id": "tool_cart",
+      "group": "operations"
+    },
+    "ops_clipboard": {
+      "id": "clipboard",
+      "group": "operations"
+    },
+    "drill": {
+      "id": "Drill_01",
+      "group": "operations"
+    },
+    "toolbox": {
+      "id": "metal_toolbox",
+      "group": "operations"
     }
   },
   "sizes": {

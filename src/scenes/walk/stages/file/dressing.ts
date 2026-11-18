@@ -182,7 +182,8 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // would be a column of unbacked white text standing over the room. The anchor is registered all
   // the same, so the day that rule grows a surface the panel lands beside the exhibit.
   anchors.set('file', new THREE.Vector3(FILE.x - 0.35, 1.15, FILE.z - 0.2));
-  hotspots.push({ id: 'file', kind: 'project', label: 'Personnel file', object: exhibit, stop: 'file' });
+  // Not a hotspot. Its copy is the column already open beside it, so a click had nothing to open,
+  // and a thing that takes the pointer and then does nothing is worse than a thing that is only there.
 
   // ---- The screens -----------------------------------------------------------------------------
   // One alive, two dead. The live one carried the record typed up, which made the folder and the

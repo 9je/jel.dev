@@ -107,18 +107,14 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // shifted".
   const page = redactedSheet();
   table.add(sheet(page, TABLE.x + 0.06, TABLE.z - 0.09, 0.12, TOP + 0.023));
-  await add(table);
-
   // The second disclosure, on the same table: a report that came in after the first, still in the
-  // folder it arrived in. It lies where the first page's spare sheet lay, a little further along,
-  // and it is its own exhibit, so it is its own group and the pointer picks it apart from the table.
-  const second = new THREE.Group(); second.name = 'second-disclosure';
+  // folder it arrived in. Part of the table, not an exhibit of its own. Two sheets of paper a few
+  // centimetres apart each took the pointer under its own name, which made no sense to hover, and
+  // each leaned the camera its own way. The table is the exhibit, and the two reports are its pages.
   const folder = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.008, 0.34), new THREE.MeshStandardMaterial({ color: 0x9c7a4a, roughness: 0.9, metalness: 0 }));
-  folder.position.set(TABLE.x + 0.36, TOP + 0.025, TABLE.z + 0.02); folder.rotation.y = -0.34; second.add(folder);
-  second.add(sheet(redactedSheet('SECOND DISCLOSURE', 'IN TRIAGE'), TABLE.x + 0.36, TABLE.z + 0.02, -0.34, TOP + 0.031));
-  await add(second);
-  anchors.set('bug-bounty-2', new THREE.Vector3(TABLE.x + 0.36, TOP + 0.05, TABLE.z + 0.02));
-  hotspots.push({ id: 'bug-bounty-2', kind: 'project', label: 'Second disclosure', object: second, stop: 'containment', view: TABLE_VIEW });
+  folder.position.set(TABLE.x + 0.36, TOP + 0.025, TABLE.z + 0.02); folder.rotation.y = -0.34; table.add(folder);
+  table.add(sheet(redactedSheet('SECOND DISCLOSURE', 'IN TRIAGE'), TABLE.x + 0.36, TABLE.z + 0.02, -0.34, TOP + 0.031));
+  await add(table);
 
   // The lamp stands at the back corner of the table with its head over the page. Its bulb is the
   // room's one warm light, declared in lighting.ts at the head's own position.
@@ -135,7 +131,10 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // The table stands nearly nine metres up the room from the hold. Leaned to from there, with the
   // frame moved aside for the panel, it was a lamp in the distance behind a cabinet. So opening
   // either report walks up to four metres from the table first (`view`).
-  hotspots.push({ id: 'bug-bounty-1', kind: 'project', label: 'First disclosure', object: table, stop: 'containment', view: TABLE_VIEW });
+  // One object under two names: the pointer finds the first, which opens the first report, and the
+  // second report is the next page of the same panel, or its own row in the list.
+  hotspots.push({ id: 'bug-bounty-1', kind: 'project', label: 'Sealed disclosures', object: table, stop: 'containment', view: TABLE_VIEW });
+  hotspots.push({ id: 'bug-bounty-2', kind: 'project', label: 'Sealed disclosures', object: table, stop: 'containment', view: TABLE_VIEW });
 
   // ---- The sealed bay -------------------------------------------------------------------------
   // A steel door in the north wall with the light on behind it, taped shut, and a lit sign over it

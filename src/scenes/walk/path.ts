@@ -10,7 +10,7 @@ export type StopId = 'booth' | 'fabrication' | 'recreation' | 'operations' | 'cr
  *  85, so a stop whose subject is a row (three exhibits, three cabinets, two walls of plates) shows
  *  one piece of it. On a narrow frame the hold sweeps its aim from the first point to the second
  *  as the reader scrolls through it, and the turn in and out lands on those ends. */
-export interface Stop { id: StopId; t: number; enter: number; hold: [number, number]; lookAt: [number, number, number]; pan?: [[number, number, number], [number, number, number]]; wideAim?: [number, number, number]; wing?: Wing; light: string }
+export interface Stop { id: StopId; t: number; enter: number; hold: [number, number]; lookAt: [number, number, number]; pan?: [[number, number, number], [number, number, number]]; wideAim?: [number, number, number]; /** Something to glance at on the way out: once the hold is over the stop's aim swings to it, before the turn to the path lets the aim go. */ leave?: [number, number, number]; wing?: Wing; light: string }
 
 export const EYE = 1.7;
 
@@ -31,7 +31,7 @@ export const STOPS: Stop[] = [
   // The fabrication hold is inside the dispatch office. The camera turns west to the three exhibits
   // along its glass.
   // On a phone the hold pans the row from conch to earworm, plinth tops at 1.2 m.
-  { id: 'fabrication', t: 0.2, enter: 0.105, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], pan: [[-6.5, 1.25, -8.3], [-6.5, 1.25, -12.9]], wing: 'fabrication', light: '#E0813A' },
+  { id: 'fabrication', t: 0.2, enter: 0.105, hold: [0.17, 0.25], lookAt: [-7, 1.5, -11], pan: [[-6.5, 1.25, -8.3], [-6.5, 1.25, -12.9]], leave: [-5.15, 1.55, -14.9], wing: 'fabrication', light: '#E0813A' },
   // The break room hold turns south to the arcade row rather than west down the corridor. The
   // camera parks at (-28.09, -31.05) for the whole hold and the row is built about that x, so this
   // aim is square to the four cabinets: "pan the camera to it dont tilt the cabs".
@@ -356,7 +356,21 @@ export function panProgress(stop: Stop, u: number): number {
 }
 
 const _qPan = new Quaternion();
+/** The scroll over which a hold's aim swings to the thing it glances at on the way out: it starts
+ *  in the last of the hold, with the camera still parked, and is done just after the walk sets off. */
+export const LEAVE_LEAD = 0, LEAVE_SPAN = 0.022;
+const _qLeave = new Quaternion();
 function lookQuat(stop: Stop, u: number): Quaternion {
+  const held = holdQuat(stop, u);
+  // The streak board hangs on the office wall beside the door the walk leaves by. The turn from the
+  // exhibits to that door swept across it with the camera already moving, so it went by cut off at
+  // the edge of the frame. The aim goes to it first, while the camera has barely left the hold, and
+  // the turn to the path then lets it go like any other aim: a look on the way out, not a stop.
+  const from = stop.hold[1] - LEAVE_LEAD;
+  if (!stop.leave || u <= from) return held;
+  return _qLeave.slerpQuaternions(held, aimQuat(stop, `${stop.id}:leave`, stop.leave), smoothstep((u - from) / LEAVE_SPAN));
+}
+function holdQuat(stop: Stop, u: number): Quaternion {
   if (wide && stop.wideAim) return aimQuat(stop, `${stop.id}:wide`, stop.wideAim);
   if (!narrow || !stop.pan) return aimQuat(stop, stop.id, stop.lookAt);
   return _qPan.slerpQuaternions(aimQuat(stop, `${stop.id}:0`, stop.pan[0]), aimQuat(stop, `${stop.id}:1`, stop.pan[1]), panProgress(stop, u));

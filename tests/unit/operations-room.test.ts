@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CatmullRomCurve3, Vector3 } from 'three';
 import { CONTROL_POINTS, STOPS, cameraAt } from '../../src/scenes/walk/path';
 import { lights } from '../../src/scenes/walk/stages/operations/lighting';
-import { BATTEN_ROWS, BATTEN_XS, BATTEN_Y, CAGE_Z, CARTONS, RACK_Z, STANCHIONS, TAPE_RUNS, TRUNK, X0, Z0, Z1 } from '../../src/scenes/walk/stages/operations/layout';
+import { BATTEN_ROWS, BATTEN_XS, BATTEN_Y, CAGE_Z, RACK_Z, STANCHIONS, STATIONS, TAPE_RUNS, TRUNK, X0, Z0, Z1 } from '../../src/scenes/walk/stages/operations/layout';
 import { LAB } from '../../src/scenes/walk/stages/credentials/layout';
 
 // The walked line, as the path builds it, sampled finely enough to measure a clearance against.
@@ -77,14 +77,15 @@ describe('the server hall', () => {
     }
   });
 
-  it('stacks the cartons on the floor and on each other, none floating', () => {
-    const [a, b, top] = CARTONS;
-    expect(a[1]).toBe(0);
-    expect(b[1]).toBe(0);
-    // The one on top stands on the first carton's own lid, square to it.
-    expect(top[1]).toBeCloseTo(0.38 * a[4]);
-    expect(top[0]).toBe(a[0]); expect(top[2]).toBe(a[2]); expect(top[3]).toBe(a[3]);
-    expect(top[4]).toBeLessThan(a[4]);
-    for (const [x, z] of [[a[0], a[2]], [b[0], b[2]]]) expect(clearance(x, z)).toBeGreaterThanOrEqual(2.2);
+  it('stands the three jobs between the walked line and the south cage', () => {
+    for (const [x, z] of [STATIONS.rollout, STATIONS.cart, STATIONS.frame, STATIONS.toolbox]) {
+      expect(clearance(x, z)).toBeGreaterThanOrEqual(2.2);
+      expect(z).toBeGreaterThan(CAGE_Z.south + 0.9);
+      expect(x).toBeGreaterThan(X0 + 4);
+    }
+    // Clear of each other and of the tape posts.
+    const spots = [STATIONS.rollout, STATIONS.cart, STATIONS.frame];
+    for (let i = 0; i < spots.length; i++) for (let j = i + 1; j < spots.length; j++) expect(Math.hypot(spots[i]![0] - spots[j]![0], spots[i]![1] - spots[j]![1])).toBeGreaterThan(2.4);
+    for (const [sx, sz] of STANCHIONS) expect(Math.hypot(sx - STATIONS.frame[0], sz - STATIONS.frame[1])).toBeGreaterThan(2);
   });
 });

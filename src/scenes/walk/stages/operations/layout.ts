@@ -87,9 +87,15 @@ export const TAPE_RUNS: [[number, number], [number, number]][] = [
   [STANCHIONS[3]!, STANCHIONS[1]!],
 ];
 
-/** The cartons dropped at the south gate: two on the floor and one set square on the first. */
-export const CARTONS: [number, number, number, number, number][] = [
-  [GATE_X + 0.75, 0, -34.2, 0.25, 1],
-  [GATE_X + 1.32, 0, -34.38, 0.08, 0.92],
-  [GATE_X + 0.75, 0.38, -34.2, 0.25, 0.82],
-];
+/**
+ * The three jobs standing in the aisle, down the south side in the order the walk meets them: the
+ * rollout parked at the open gate, the cart of servers under the south cold spot, the cross connect
+ * frame beyond it. `[x, z, ry]`. All three stand between the walked line and the south cage, far
+ * enough off the line that the walk passes them and never brushes one.
+ */
+export const STATIONS = {
+  rollout: [GATE_X + 0.7, -34.55, 0] as const,
+  cart: [-64.7, -33.95, 0.1] as const,
+  frame: [-67.3, -34.25, 0] as const,
+  toolbox: [-66.55, -33.85, 0.5] as const,
+};

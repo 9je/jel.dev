@@ -24,7 +24,7 @@ media:
 exhibit:
   anchor: trading-desk
 started: 2026-10
-order: 20
+order: 50
 ---
 A desk that day trades my own brokerage account through the Robinhood MCP. It wakes before the open, reads what is moving and why, and takes a trade only when it sees a reason. Every entry has a thesis, a target and a stop written down before the order goes in.
 

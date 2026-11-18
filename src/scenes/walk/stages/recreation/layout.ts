@@ -62,14 +62,19 @@ export const CABINET_Z = Z0 + 0.45;
  * on a 0.76 wide cabinet so the row still fills the wall it is centred on, and that centre is
  * -28.1, where the camera parks, so the hold looks straight down the middle rather than at one end.
  */
+/** The middle of the three machines, and so of the sign over them and the batten that lights them.
+ *  The row used to be one machine, a desk, then two machines, with the sign over none of them:
+ *  "sign off center to everything". Three machines shoulder to shoulder under their sign, and the
+ *  desk beside them as its own thing. */
+export const ROW_X = -29.45;
 export const CABINETS: [string, string, number, string, number, string][] = [
-  ['faction-tools', 'faction.tools', -26.0, '#3D7BE0', 0, 'FACTION OPS'],
-  ['kayou-bot', 'MLPEKAYOU', -29.3, '#D7383A', 0, 'DISCORD BOT'],
-  ['character-bot', 'character bot', -30.5, '#3FD47A', 0, 'DISCORD BOT'],
+  ['faction-tools', 'faction.tools', ROW_X + 1.15, '#3D7BE0', 0, 'FACTION OPS'],
+  ['kayou-bot', 'MLPEKAYOU', ROW_X, '#D7383A', 0, 'DISCORD BOT'],
+  ['character-bot', 'character bot', ROW_X - 1.15, '#3FD47A', 0, 'DISCORD BOT'],
 ];
 /** The trading desk stands in the row where its project sits in the list, second, between the
  *  first cabinet and the other two: a real desk two metres long with a set on it. `x` is its centre. */
-export const TRADING_DESK = { x: -27.65, z: Z0 + 0.62 };
+export const TRADING_DESK = { x: -26.65, z: Z0 + 0.62 };
 /** The dark panel the row stands against: the dado's blue runs behind the cabinets otherwise, and a
  *  blue machine on a blue wall has no edge. `[x, width, height]`. */
 /**

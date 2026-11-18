@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import type { Hotspot, StageContext } from '../types';
-import { grounded, instances, merged, once, place, type Spot } from '../../merge';
-import { papers, wallScreen } from '../../labs/props';
+import { grounded, merged, once, place } from '../../merge';
+import { papers } from '../../labs/props';
 import { taskChair } from '../../labs/furniture';
 import { cage, cageGate, cableBundle, serverRack, trunkPipe, wallPanel } from '../../labs/plant';
 import { labSteel } from '../../labs/materials';
 import { stanchion, tapeStrip } from '../../labs/signage';
 import { canvas, own, rng } from '../../labs/textures';
 import { radialTexture } from '../../textures';
-import { X0, W, XC, ZC, Z0, Z1, RACK_Z, TRUNK, CAGE_Z, RACK_XS, GATE_X, FIRE_NORTH, TAPE_Y, TAPE_RUNS, STANCHIONS, CARTONS } from './layout';
+import { X0, W, XC, ZC, Z0, Z1, RACK_Z, TRUNK, CAGE_Z, RACK_XS, GATE_X, FIRE_NORTH, TAPE_Y, TAPE_RUNS, STANCHIONS, STATIONS } from './layout';
+import { patchFrame, rolloutStation, serverCart, toolbox } from './exhibits';
 
 /** One rack's unit material and the seed that gives it its own beat. */
 export interface Blink { material: THREE.MeshStandardMaterial; seed: number }
@@ -149,14 +150,23 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const decal = labsStencil(3.4, 1.15);
   decal.position.set(X0 + 0.012, 2.5, -33.0); decal.rotation.y = Math.PI / 2;
   await add(decal);
-  await add(place(wallScreen(1.6, 0.9, ['RACK STATUS', 'row A  ok', 'row B  fault'], '#CFE6EE'), X0 + 0.1, 3.15, -36.2, Math.PI / 2));
 
   // ---- The aisle ------------------------------------------------------------------------------
   // Each loose thing is somewhere a person left it for a reason: the chair pushed back from the
   // desk, the cartons dropped at the cage gate waiting to go in, the ladder up at the wall panels.
   // Spread down the aisle they read as scatter, and Jordan's note was "model position feels random".
   await add(place(taskChair(), X0 + 2.2, 0, -31.7, -Math.PI / 2 + 0.3));
-  await add(cartons(CARTONS));
+  // The three jobs down the south side, each one group so the pointer picks the whole of it.
+  const rollout = place(rolloutStation(store), STATIONS.rollout[0], 0, STATIONS.rollout[1], STATIONS.rollout[2]);
+  await add(rollout);
+  hotspots.push({ id: 'product-rollouts', kind: 'project', label: 'Product rollouts', object: rollout, stop: 'operations' });
+  const cart = place(serverCart(store), STATIONS.cart[0], 0, STATIONS.cart[1], STATIONS.cart[2]);
+  await add(cart);
+  hotspots.push({ id: 'mcp-servers', kind: 'project', label: 'MCP servers', object: cart, stop: 'operations' });
+  const frame = place(patchFrame(), STATIONS.frame[0], 0, STATIONS.frame[1], STATIONS.frame[2]);
+  await add(frame);
+  await add(place(toolbox(store), STATIONS.toolbox[0], 0, STATIONS.toolbox[1], STATIONS.toolbox[2]));
+  hotspots.push({ id: 'workflow-automation', kind: 'project', label: 'Workflow automation', object: frame, stop: 'operations' });
   await add(place(stepladder(), -64.6, 0, Z1 - 0.75, 0.15));
   await add(papers([
     [X0 + 3, 0, -30.4, 0.2], [X0 + 3.8, 0, -31.6, 1.1], [-66, 0, -30.2, 2.4], [-61, 0, -31.8, 0.7],
@@ -284,71 +294,6 @@ function extinguisher(): THREE.Group {
   const band = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.002, R + 0.002, 0.14, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0xe9e6dc, roughness: 0.7, side: THREE.DoubleSide }));
   band.position.y = y0 + H * 0.35; g.add(band);
   return g;
-}
-
-/**
- * Cardboard cartons, each spot a carton with its own turn and size, three draw calls in all. The
- * box is a shipping carton rather than a brown cube: its sides bulge a centimetre under the load,
- * the lid is domed where the flaps meet, and the faces are printed: a strip of brown tape across
- * the top seam, a label and an arrows mark on the sides. Origin on the floor under each carton.
- */
-function cartons(spots: Spot[]): THREE.InstancedMesh {
-  const W = 0.5, H = 0.38, D = 0.4;
-  const geo = new THREE.BoxGeometry(W, H, D, 2, 2, 2);
-  const pos = geo.attributes.position as THREE.BufferAttribute, nor = geo.attributes.normal as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    const ny = nor.getY(i);
-    // A side face's mid vertices push out along the face normal; the lid's centre lifts; the base
-    // stays flat so the carton sits on the floor, or on the one under it.
-    const centre = Math.abs(y) < 1e-6 && (Math.abs(x) < 1e-6 || Math.abs(z) < 1e-6);
-    if (Math.abs(ny) < 0.5 && centre) { pos.setX(i, x + nor.getX(i) * 0.014); pos.setZ(i, z + nor.getZ(i) * 0.014); }
-    if (ny > 0.5 && Math.abs(x) < 1e-6 && Math.abs(z) < 1e-6) pos.setY(i, y + 0.012);
-  }
-  pos.needsUpdate = true; geo.computeVertexNormals();
-  geo.translate(0, H / 2, 0);
-  const side = new THREE.MeshStandardMaterial({ map: cartonFace('side'), roughness: 0.92 });
-  const top = new THREE.MeshStandardMaterial({ map: cartonFace('top'), roughness: 0.9 });
-  const base = new THREE.MeshStandardMaterial({ map: cartonFace('base'), roughness: 0.95 });
-  const mesh = instances(geo, side, spots);
-  // BoxGeometry's groups run +x, -x, +y, -y, +z, -z.
-  mesh.material = [side, side, top, base, side, side];
-  mesh.name = 'cartons';
-  return mesh;
-}
-
-/** One face of a carton: kraft with its own grain, and the print the face carries. */
-function cartonFace(which: 'side' | 'top' | 'base'): THREE.CanvasTexture {
-  const S = 256;
-  const [c, ctx] = canvas(S, S); const r = rng(which === 'side' ? 3 : which === 'top' ? 5 : 9);
-  ctx.fillStyle = '#a8865a'; ctx.fillRect(0, 0, S, S);
-  // The grain: faint horizontal streaks, the way corrugated board prints.
-  for (let i = 0; i < 90; i++) { ctx.fillStyle = `rgba(${r() > 0.5 ? '120,90,50' : '200,170,120'},${(0.05 + r() * 0.08).toFixed(3)})`; ctx.fillRect(0, r() * S, S, 1 + r() * 2); }
-  ctx.fillStyle = 'rgba(70,45,20,0.18)'; ctx.fillRect(0, 0, S, 4); ctx.fillRect(0, S - 4, S, 4); ctx.fillRect(0, 0, 4, S); ctx.fillRect(S - 4, 0, 4, S);
-  if (which === 'top') {
-    // The flaps meet along the carton's length, and a strip of brown tape runs along the seam with
-    // a short cross piece at each end. Canvas x is the carton's own x on the lid.
-    ctx.fillStyle = 'rgba(60,40,18,0.55)'; ctx.fillRect(0, S / 2 - 2, S, 4);
-    ctx.fillStyle = 'rgba(60,40,18,0.25)'; ctx.fillRect(S / 2 - 1, 0, 2, S);
-    ctx.fillStyle = '#7a5530'; ctx.fillRect(0, S / 2 - 22, S, 44);
-    ctx.fillStyle = 'rgba(255,230,190,0.16)'; ctx.fillRect(0, S / 2 - 18, S, 8);
-    ctx.fillStyle = '#7a5530'; ctx.fillRect(14, 20, 30, 216); ctx.fillRect(S - 44, 20, 30, 216);
-    ctx.fillStyle = 'rgba(255,230,190,0.14)'; ctx.fillRect(18, 20, 6, 216); ctx.fillRect(S - 40, 20, 6, 216);
-  } else if (which === 'side') {
-    // A shipping label, its barcode and two lines of print, and the arrows mark to the right.
-    ctx.fillStyle = '#e9e4d6'; ctx.fillRect(22, 40, 128, 92);
-    ctx.fillStyle = '#17334f'; ctx.fillRect(22, 40, 128, 14);
-    ctx.fillStyle = '#1b1b1b';
-    let x = 30; while (x < 140) { const w = 1 + Math.floor(r() * 3); ctx.fillRect(x, 96, w, 28); x += w + 1 + Math.floor(r() * 3); }
-    for (let i = 0; i < 3; i++) ctx.fillRect(30, 62 + i * 10, 40 + r() * 60, 4);
-    ctx.fillStyle = 'rgba(30,22,12,0.7)';
-    ctx.beginPath(); ctx.moveTo(200, 52); ctx.lineTo(222, 84); ctx.lineTo(208, 84); ctx.lineTo(208, 118); ctx.lineTo(192, 118); ctx.lineTo(192, 84); ctx.lineTo(178, 84); ctx.closePath(); ctx.fill();
-    ctx.fillRect(176, 126, 48, 4);
-    ctx.font = '600 13px Michroma, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('FRAGILE', 86, 150);
-    ctx.fillText('THIS WAY UP', 200, 150);
-  }
-  return own(c);
 }
 
 /**

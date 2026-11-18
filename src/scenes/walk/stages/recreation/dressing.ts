@@ -8,7 +8,7 @@ import { signBox } from '../../labs/signage';
 import { reel, type Reel } from '../../labs/reel';
 import { deskBoard, labsIdent } from '../../labs/textures';
 import { DESK } from '../../../../content/desk';
-import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL, TRADING_DESK } from './layout';
+import { Z0, Z1, CABINETS, CABINET_Z, ACCENT, HALL_FACE, FITTINGS, MESS_TABLES, ROW_PANEL, ROW_X, TRADING_DESK } from './layout';
 
 export interface Dressing { hotspots: Hotspot[]; header: THREE.MeshStandardMaterial; dispose(): void }
 
@@ -90,8 +90,9 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const station = new THREE.Group(); station.name = 'trading-desk';
   station.add(store.model('desk'));
   const deskSet = tv(deskBoard(DESK.peak, DESK.on));
-  deskSet.scale.setScalar(1.15); deskSet.position.set(0.2, 0.79, -0.08); station.add(deskSet);
-  const seat = store.model('stool'); seat.position.set(-0.25, 0, 0.78); station.add(seat);
+  deskSet.scale.setScalar(1.15); deskSet.position.set(0, 0.79, -0.08); station.add(deskSet);
+  // The stool square in the knee hole, in front of the set.
+  const seat = store.model('stool'); seat.position.set(0, 0, 0.62); station.add(seat);
   station.position.set(TRADING_DESK.x, 0, TRADING_DESK.z);
   await add(station);
   hotspots.push({ id: 'trading-desk', kind: 'project', label: 'AI trading desk', object: station, stop: 'recreation' });
@@ -103,7 +104,7 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   // ROOM, which is the room the sign is hanging in: a facility signs the thing you are walking up
   // to, not the room you are already standing in, and "BREAK ROOM / ARCADE" read as a label for the
   // whole room rather than for the three machines under it.
-  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'JEL LABS' }), -28.1, 2.28, Z0 + 0.13));
+  await add(place(signBox('ARCADE', { w: 1.7, h: 0.42, accent: 0x3d7be0, on: true, code: 'JEL LABS' }), ROW_X, 2.28, Z0 + 0.13));
 
   // ---- South wall, west of the row: the machines --------------------------------------------------
   // Past the cabinets, where they are the backdrop the row stands against and the light that leaks

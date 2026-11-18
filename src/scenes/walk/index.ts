@@ -393,6 +393,13 @@ function wireSheets(els: WalkElements): () => void {
   return () => { for (const f of undo) f(); undo.length = 0; };
 }
 
+/** Lights the list row of the exhibit under the pointer, so the room and the list point at the same thing. */
+function markRow(els: WalkElements, id: string | null) {
+  for (const el of els.root.querySelectorAll('[data-hot]')) el.removeAttribute('data-hot');
+  if (!id) return;
+  for (const el of els.root.querySelectorAll<HTMLElement>('.stops [data-project], .stops [data-flagship]')) if ((el.dataset.project ?? el.dataset.flagship) === id) el.setAttribute('data-hot', '');
+}
+
 /** Pointer picking over the canvas. Returns the function that removes everything it added. */
 function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): () => void {
   const label = els.hotspotLabel;
@@ -407,6 +414,7 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     hovered = h;
     handle?.hover(h);
     els.canvas.style.cursor = h ? 'pointer' : '';
+    markRow(els, h?.id ?? null);
   };
   const pickAt = (x: number, y: number) => {
     if (!handle) return null;
@@ -483,6 +491,12 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     const go = el.closest<HTMLElement>('[data-panel-go]');
     if (go && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); showProject(go.dataset.panelGo!, els); }
   };
+  // And the other way: the pointer on a row lights its exhibit in the room.
+  const rowOf = (e: Event) => { const r = (e.target as Element).closest?.<HTMLElement>('[data-project], [data-flagship]'); return r ? r.dataset.project ?? r.dataset.flagship : undefined; };
+  const onRowOver = (e: Event) => { const id = rowOf(e); const h = id ? handle?.hotspots().find((x) => x.id === id) ?? null : null; handle?.hover(h); };
+  const onRowOut = () => handle?.hover(null);
+  els.root.querySelector('.stops')?.addEventListener('pointerover', onRowOver);
+  els.root.querySelector('.stops')?.addEventListener('pointerleave', onRowOut);
   els.root.querySelector('.stops')?.addEventListener('click', onRow as EventListener);
   els.card?.addEventListener('click', onCard);
   closeBtn?.addEventListener('click', onClose);
@@ -511,6 +525,8 @@ function wirePointer(els: WalkElements, coarse: boolean, interact: Interact): ()
     document.removeEventListener('keydown', onEscape);
     closeBtn?.removeEventListener('click', onClose);
     els.root.querySelector('.stops')?.removeEventListener('click', onRow as EventListener);
+    els.root.querySelector('.stops')?.removeEventListener('pointerover', onRowOver);
+    els.root.querySelector('.stops')?.removeEventListener('pointerleave', onRowOut);
     els.card?.removeEventListener('click', onCard);
     closeCard(els);
     if (raf) { cancelAnimationFrame(raf); raf = 0; }

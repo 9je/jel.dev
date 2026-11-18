@@ -100,11 +100,13 @@ export async function buildDressing(ctx: StageContext, root: THREE.Group): Promi
   const glyph = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.55 })); glyph.position.z = 0.002; plate.add(glyph);
   const core = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0xb3251e, roughness: 0.55 })); core.position.z = 0.004; plate.add(core);
   await add(place(plate, -11.5, 1.9, F + 0.03));
-  const exitPaint = new THREE.MeshBasicMaterial({ map: stencilTexture('EXIT', { width: 512, height: 192, color: `#${SAFETY.toString(16)}`, font: '600 150px Michroma, system-ui, sans-serif', alpha: 0.82 }), transparent: true, depthWrite: false });
-  await add(place(new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.64), exitPaint), -10.1, 2.75, F + 0.03));
+  const exitPaint = new THREE.MeshBasicMaterial({ map: stencilTexture('EXIT', { width: 640, height: 192, color: `#${SAFETY.toString(16)}`, font: '600 150px Michroma, system-ui, sans-serif', alpha: 0.82 }), transparent: true, depthWrite: false });
+  // A wider canvas than the word, so the T is not at its edge, and the whole mark a little smaller
+  // and further from the racking, whose upright stood across the last letter.
+  await add(place(new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.45), exitPaint), -10.35, 2.75, F + 0.03));
   // The tip at the origin and the shaft out to +x: on a wall facing +z that points the way out, -x.
   const arrow = new THREE.Shape([[0, 0], [0.42, 0.34], [0.42, 0.13], [0.95, 0.13], [0.95, -0.13], [0.42, -0.13], [0.42, -0.34]].map(([x, y]) => new THREE.Vector2(x, y)));
-  await add(place(new THREE.Mesh(new THREE.ShapeGeometry(arrow), new THREE.MeshBasicMaterial({ color: SAFETY, transparent: true, opacity: 0.82, depthWrite: false })), -11.95, 2.75, F + 0.03));
+  await add(place(new THREE.Mesh(new THREE.ShapeGeometry(arrow), new THREE.MeshBasicMaterial({ color: SAFETY, transparent: true, opacity: 0.82, depthWrite: false })), -11.95, 2.75, F + 0.03, 0, 0.8));
   await add(once(store.model('power_box'), -8.9, 1.6, F + 0.08, 0));
   const conduit = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 4, 8), new THREE.MeshStandardMaterial({ color: 0x8e969c, roughness: 0.5, metalness: 0.6 }));
   await add(place(conduit, -8.9, 2, F + 0.06));
