@@ -390,13 +390,16 @@ test('the flagship bay sits in the copy column and is never pinned', async ({ pa
 test('every room builds in the background and a far dock jump lands', async ({ page }) => {
   // The preloader and the flight share the test's budget, and under SwiftShader the first can take
   // a minute on its own, so this one is not run against the file's default.
-  test.setTimeout(240_000);
+  // The jump itself is the slow part here and not on a real card: SwiftShader takes four to twenty
+  // seconds to upload each of a room's textures, so from the click to the hash measured 25 to 110
+  // seconds across runs of the same build. At 90 the test failed on luck about one run in three.
+  test.setTimeout(420_000);
   await page.goto('/?quality=low');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   // credentials now has a real room, so this click waits on its background build, not just the
   // dock click and preloader states.
   await page.locator('a[data-stop-link="credentials"]').click();
-  await expect(page).toHaveURL(/#credentials$/, { timeout: 90_000 });
+  await expect(page).toHaveURL(/#credentials$/, { timeout: 220_000 });
   await expect(page.locator('section[data-stop="credentials"]')).toHaveAttribute('data-active', '', { timeout: 30_000 });
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 30_000 });
   expect(await page.locator('[data-walk]').getAttribute('data-degraded')).toBeNull();

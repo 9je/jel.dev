@@ -139,6 +139,11 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (disposed || !building) return true;
     const [enter, leave] = span(building.stop);
     if (needed(current, enter, leave)) return true;
+    return awaited();
+  };
+  /** Somebody jumped to a room that is not built and is looking at the loading sign until it is.
+   *  Nothing is on screen to stutter, so the build runs the way it does under the preloader. */
+  const awaited = () => {
     for (const id of wanted) { const d = defs.find((x) => x.stop === id); if (d && !built.has(d.id) && !settled.has(d.id)) return true; }
     return false;
   };
@@ -400,7 +405,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     // Under the preloader the burst is three times the size: every wait for the queue is at least
     // one timer, a room has eighty of them at 4 MB, and a longer block on the thread costs nothing
     // while there is no walk on screen to hold up.
-    const burst = onGroup ? 12_000_000 : 4_000_000;
+    const burst = () => (onGroup || awaited() ? 12_000_000 : 4_000_000);
     let queued = 0;
     for (const t of textures) {
       await parked();
@@ -408,7 +413,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       renderer.initTexture(t);
       const img = t.image as { width?: number; height?: number } | undefined;
       queued += (img?.width ?? 256) * (img?.height ?? 256) * 4;
-      if (queued > burst) { await drained(); queued = 0; }
+      if (queued > burst()) { await drained(); queued = 0; }
     }
     // Into the real scene, hidden from the frame loop, its groups held back until each is compiled.
     const groups = [...root.children];
@@ -421,17 +426,20 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     // time that was two seconds of every load spent waiting on timers, the same two seconds on a
     // fast machine as on a slow one. In the background, with the walk running, they still go one
     // at a time, so no single step holds a frame for a batch's worth of work.
-    const per = onGroup ? 10 : 1;
+    // In big pieces under the preloader, and under the loading sign of a dock jump, where a room
+    // warmed a program at a time took a minute on a slow renderer with the reader waiting on it.
+    const big = () => !!onGroup || awaited();
+    const warmed: THREE.Object3D[] = [];
     let batch = 0, fresh = 0, known = programs();
     for (let i = 0; i < groups.length;) {
       if (disposed) return;
       const lot = new THREE.Group(), members: THREE.Object3D[] = [];
       let tris = 0;
-      while (i < groups.length && (members.length === 0 || (members.length < per && tris + triangles(groups[i]!) < 60_000))) {
+      while (i < groups.length && (members.length === 0 || (members.length < (big() ? 10 : 1) && tris + triangles(groups[i]!) < 60_000))) {
         const g = groups[i++]!; tris += triangles(g); members.push(g); lot.add(g);
       }
       await parked();
-      await compileGroup(lot, !parallel && !onGroup);
+      await compileGroup(lot, !parallel && !big());
       for (const g of members) {
         root.add(g);
         g.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
@@ -440,11 +448,21 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
       batch += tris; fresh += programs() - known; known = programs();
       // Behind the walk a draw goes out for every new program and every twenty thousand triangles:
       // the first draw of either is what holds the thread, so there it is taken in small pieces.
-      if (batch >= (onGroup ? 60_000 : 20_000) || fresh >= (onGroup ? 4 : 1) || i === groups.length) {
+      if (batch >= (big() ? 60_000 : 20_000) || fresh >= (big() ? 4 : 1) || i === groups.length) {
         await parked();
+        // Only what is new is drawn. This draw used to take the whole scene with it, every room
+        // standing and every group of this one already warmed, and behind the walk it now goes out
+        // several times as often: on a slow renderer each was a full frame of somebody else's
+        // geometry, and a dock jump waiting on the room could not get a frame of its own in. The
+        // lights are the rig's and stay, so the programs are the ones the real frame will ask for.
+        const hidden: THREE.Object3D[] = [];
+        for (const o of scene.children) if (o !== root && o.name !== 'rig' && o.visible) { o.visible = false; hidden.push(o); }
+        for (const g of warmed) if (g.visible) { g.visible = false; hidden.push(g); }
         root.visible = true;
         renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
         root.visible = false;
+        for (const o of hidden) o.visible = true;
+        for (const g of root.children) if (!warmed.includes(g)) warmed.push(g);
         batch = 0; fresh = 0;
         await new Promise(requestAnimationFrame);
       }
