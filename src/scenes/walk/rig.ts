@@ -1,26 +1,39 @@
 import * as THREE from 'three';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { STOPS, roomAt, standingIn, type StopId } from './path';
 import type { Tier } from './quality';
 import { GRADES, GradeState } from './grade';
 
 export interface SpotPlacement { kind: 'spot'; position: [number, number, number]; target: [number, number, number]; color: number; intensity: number; distance: number; angle: number; penumbra: number; decay?: number; shadow?: boolean }
 export interface PointPlacement { kind: 'point'; position: [number, number, number]; color: number; intensity: number; distance: number; decay?: number }
-export type Placement = SpotPlacement | PointPlacement;
-export interface RigSize { spots: number; points: number }
+/** A lit rectangle facing `target`, `width` by `height` metres: a tube run or a light box, whose wash on
+ *  the wall follows its own shape. A spot pointed at a wall throws a round pool however wide the
+ *  thing it stands for; a run of neon a metre and a half long threw a disc behind its middle letters.
+ *  It lights standard materials only, has no reach or decay, and casts no shadow. */
+export interface RectPlacement { kind: 'rect'; position: [number, number, number]; target: [number, number, number]; color: number; intensity: number; width: number; height: number }
+export type Placement = SpotPlacement | PointPlacement | RectPlacement;
+export interface RigSize { spots: number; points: number; rects?: number }
 
 /** What one room may declare. The rig holds the current room, the next and the previous, in that
  *  order of priority, so a room that spends its whole budget still leaves the next room half lit
  *  on desktop (ten lights, spec 8) and is alone on phones (six). */
-export const ROOM_BUDGET: RigSize = { spots: 4, points: 2 };
-export const RIG_DESKTOP: RigSize = { spots: 6, points: 4 };
-export const RIG_PHONE: RigSize = { spots: 4, points: 2 };
+export const ROOM_BUDGET: RigSize = { spots: 4, points: 2, rects: 1 };
+// One rect slot on every rig: the booth's sign is the walk's first frame, phones included.
+export const RIG_DESKTOP: RigSize = { spots: 6, points: 4, rects: 1 };
+export const RIG_PHONE: RigSize = { spots: 4, points: 2, rects: 1 };
+
+const capacity = (size: RigSize, kind: Placement['kind']): number => kind === 'spot' ? size.spots : kind === 'point' ? size.points : size.rects ?? 0;
+/** Slots run spots, then points, then rects. */
+const slotKind = (size: RigSize, i: number): Placement['kind'] => i < size.spots ? 'spot' : i < size.spots + size.points ? 'point' : 'rect';
+const slotTotal = (size: RigSize): number => size.spots + size.points + (size.rects ?? 0);
 
 export function rigSizeFor(_tier: Tier, coarse: boolean): RigSize { return coarse ? RIG_PHONE : RIG_DESKTOP; }
 
 export function checkBudget(lights: Placement[]): void {
-  const spots = lights.filter((l) => l.kind === 'spot').length, points = lights.filter((l) => l.kind === 'point').length;
-  if (spots > ROOM_BUDGET.spots) throw new Error(`a room may declare ${ROOM_BUDGET.spots} spots, this one declares ${spots}`);
-  if (points > ROOM_BUDGET.points) throw new Error(`a room may declare ${ROOM_BUDGET.points} points, this one declares ${points}`);
+  for (const kind of ['spot', 'point', 'rect'] as const) {
+    const n = lights.filter((l) => l.kind === kind).length, max = capacity(ROOM_BUDGET, kind);
+    if (n > max) throw new Error(`a room may declare ${max} ${kind}s, this one declares ${n}`);
+  }
 }
 
 const isCaster = (p: Placement): boolean => p.kind === 'spot' && !!p.shadow;
@@ -39,7 +52,7 @@ export function composeSet(rooms: Map<StopId, Placement[]>, stop: StopId): Place
   return out;
 }
 
-/** Slot array, spots first then points. Priority is `wanted` order, which composeSet has already put
+/** Slot array, spots first, then points, then rects. Priority is `wanted` order, which composeSet has already put
  *  in room order, and whatever fits the rig's per-type capacity in that order is selected.
  *  Shadow slots go to the leading run of casters in `wanted`, which is the current room's casters,
  *  and only when the rig casts shadows at all. Ranking every caster in the composed set ahead of
@@ -55,16 +68,12 @@ export function composeSet(rooms: Map<StopId, Placement[]>, stop: StopId): Place
  *  `wanted` (composeSet keeps the previous room around at low priority so a step back still finds it
  *  lit). */
 export function assignSlots(previous: (Placement | null)[], wanted: Placement[], size: RigSize, shadows: boolean): (Placement | null)[] {
-  const out: (Placement | null)[] = new Array(size.spots + size.points).fill(null);
-  const isSpotSlot = (i: number) => i < size.spots;
+  const out: (Placement | null)[] = new Array(slotTotal(size)).fill(null);
   const lead: Placement[] = [];
   if (shadows) for (const p of wanted) { if (!isCaster(p)) break; lead.push(p); }
-  let spotsLeft = size.spots, pointsLeft = size.points;
+  const left = { spot: size.spots, point: size.points, rect: size.rects ?? 0 };
   const selected: Placement[] = [];
-  for (const p of wanted) {
-    if (p.kind === 'spot') { if (spotsLeft > 0) { selected.push(p); spotsLeft--; } }
-    else if (pointsLeft > 0) { selected.push(p); pointsLeft--; }
-  }
+  for (const p of wanted) if (left[p.kind] > 0) { selected.push(p); left[p.kind]--; }
   const selectedCasters = selected.filter((p) => lead.includes(p));
   selectedCasters.forEach((p, i) => { out[i] = p; });
   const rest = new Set(selected.filter((p) => !selectedCasters.includes(p)));
@@ -72,7 +81,7 @@ export function assignSlots(previous: (Placement | null)[], wanted: Placement[],
   const placed = new Set(out.filter(Boolean) as Placement[]);
   for (const p of selected) {
     if (placed.has(p)) continue;
-    const slot = out.findIndex((s, i) => s === null && isSpotSlot(i) === (p.kind === 'spot'));
+    const slot = out.findIndex((s, i) => s === null && slotKind(size, i) === p.kind);
     if (slot === -1) continue;
     out[slot] = p; placed.add(p);
   }
@@ -81,7 +90,7 @@ export function assignSlots(previous: (Placement | null)[], wanted: Placement[],
 
 const damp = (a: number, b: number, lambda: number, dt: number) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 
-interface Slot { light: THREE.SpotLight | THREE.PointLight; current: Placement | null; target: Placement | null; level: number }
+interface Slot { light: THREE.SpotLight | THREE.PointLight | THREE.RectAreaLight; current: Placement | null; target: Placement | null; level: number }
 
 /**
  * The scene's lights. Fixed in number for the whole session: three rebuilds every lit material's
@@ -112,11 +121,17 @@ export class LightRig {
       const l = new THREE.PointLight(0xffffff, 0, 1, 2);
       this.group.add(l); this.slots.push({ light: l, current: null, target: null, level: 0 });
     }
+    // A rect light reads its shading from lookup tables the renderer only has once this has run.
+    if (size.rects) RectAreaLightUniformsLib.init();
+    for (let i = 0; i < (size.rects ?? 0); i++) {
+      const l = new THREE.RectAreaLight(0xffffff, 0, 1, 1);
+      this.group.add(l); this.slots.push({ light: l, current: null, target: null, level: 0 });
+    }
     // Ambient fill for every room. Scene-wide and unshadowed, low enough that a lit room still reads
     // as its own lit room.
     this.hemi = new THREE.HemisphereLight(0x6d7f8f, 0x1a2530, 1.3); this.group.add(this.hemi);
     this.applyGrade();
-    this.lightCount = size.spots + size.points + 1;
+    this.lightCount = slotTotal(size) + 1;
   }
 
   register(stop: StopId, lights: Placement[]): void { checkBudget(lights); this.rooms.set(stop, lights); this.stop = null; }
@@ -148,6 +163,7 @@ export class LightRig {
     const p = s.current; if (!p) return;
     s.light.position.set(p.position[0], p.position[1], p.position[2]);
     if (p.kind === 'spot' && s.light instanceof THREE.SpotLight) s.light.target.position.set(p.target[0], p.target[1], p.target[2]);
+    if (p.kind === 'rect' && s.light instanceof THREE.RectAreaLight) s.light.lookAt(p.target[0], p.target[1], p.target[2]);
   }
 
   private apply(s: Slot): void {
@@ -155,6 +171,11 @@ export class LightRig {
     if (!p) { s.light.intensity = 0; return; }
     s.light.color.setHex(p.color);
     s.light.intensity = p.intensity * s.level;
+    if (p.kind === 'rect') {
+      if (s.light instanceof THREE.RectAreaLight) { s.light.width = p.width; s.light.height = p.height; }
+      return;
+    }
+    if (s.light instanceof THREE.RectAreaLight) return;
     s.light.distance = p.distance;
     s.light.decay = p.decay ?? 2;
     if (p.kind === 'spot' && s.light instanceof THREE.SpotLight) { s.light.angle = p.angle; s.light.penumbra = p.penumbra; }

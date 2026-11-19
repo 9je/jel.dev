@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { Light, Scene } from 'three';
+import { Light, RectAreaLight, Scene } from 'three';
 import { ROOM_BUDGET, RIG_DESKTOP, RIG_PHONE, checkBudget, composeSet, assignSlots, rigSizeFor, LightRig, type Placement } from '../../src/scenes/walk/rig';
 import { STOPS, type StopId } from '../../src/scenes/walk/path';
 
 const spot = (x: number, shadow = false): Placement => ({ kind: 'spot', position: [x, 6, 0], target: [x, 0, 0], color: 0xffffff, intensity: 100, distance: 30, angle: 1, penumbra: 0.5, shadow });
 const point = (x: number): Placement => ({ kind: 'point', position: [x, 3, 0], color: 0xffffff, intensity: 5, distance: 10 });
+const rect = (x: number): Placement => ({ kind: 'rect', position: [x, 3, 1], target: [x, 3, 0], color: 0xffffff, intensity: 8, width: 2, height: 0.4 });
 
 function lightsIn(scene: Scene): Light[] {
   const out: Light[] = [];
@@ -22,7 +23,8 @@ describe('rig sizing', () => {
     expect(() => checkBudget([spot(0), spot(1), spot(2), spot(3), point(0), point(1)])).not.toThrow();
     expect(() => checkBudget([spot(0), spot(1), spot(2), spot(3), spot(4)])).toThrow(/spots/);
     expect(() => checkBudget([point(0), point(1), point(2)])).toThrow(/points/);
-    expect(ROOM_BUDGET).toEqual({ spots: 4, points: 2 });
+    expect(() => checkBudget([rect(0), rect(1)])).toThrow(/rects/);
+    expect(ROOM_BUDGET).toEqual({ spots: 4, points: 2, rects: 1 });
   });
 });
 
@@ -102,13 +104,13 @@ describe('LightRig', () => {
     const scene = new Scene();
     const rig = new LightRig(scene, RIG_DESKTOP, false);
     const n = () => lightsIn(scene).length;
-    expect(n()).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + 1);
+    expect(n()).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + (RIG_DESKTOP.rects ?? 0) + 1);
     rig.register('booth', [spot(0), point(0)]);
     rig.register('fabrication', [spot(10), spot(11), spot(12), spot(13), point(10), point(11)]);
-    for (const s of STOPS) { rig.update(s.t, 0.016); expect(n()).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + 1); }
+    for (const s of STOPS) { rig.update(s.t, 0.016); expect(n()).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + (RIG_DESKTOP.rects ?? 0) + 1); }
     rig.unregister('fabrication');
     rig.update(0.2, 0.016);
-    expect(n()).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + 1);
+    expect(n()).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + (RIG_DESKTOP.rects ?? 0) + 1);
   });
   it('fades a slot out before moving it, then fades it in', () => {
     const scene = new Scene();
@@ -144,6 +146,19 @@ describe('LightRig', () => {
     const casting = lightsIn(scene).filter((l) => l.castShadow);
     expect(casting).toHaveLength(2);
     const rigOff = new LightRig(new Scene(), RIG_DESKTOP, false);
-    expect(rigOff.lightCount).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + 1);
+    expect(rigOff.lightCount).toBe(RIG_DESKTOP.spots + RIG_DESKTOP.points + (RIG_DESKTOP.rects ?? 0) + 1);
+  });
+  it('puts a rect only in a rect slot, sized and facing its target', () => {
+    const out = assignSlots([null, null, null], [rect(0), spot(1), point(2)], { spots: 1, points: 1, rects: 1 }, false);
+    expect(out.map((p) => p?.kind)).toEqual(['spot', 'point', 'rect']);
+    const scene = new Scene();
+    const rig = new LightRig(scene, { spots: 0, points: 0, rects: 1 }, false);
+    rig.register('booth', [rect(0)]);
+    for (let i = 0; i < 120; i++) rig.update(0, 0.016);
+    const l = lightsIn(scene).find((x) => (x as RectAreaLight).isRectAreaLight) as RectAreaLight;
+    expect(l.intensity).toBeCloseTo(8, 0); expect(l.width).toBe(2); expect(l.height).toBe(0.4);
+    // It faces down -z, toward its target.
+    const dir = new (l.position.constructor as any)(0, 0, -1).applyQuaternion(l.quaternion);
+    expect(dir.z).toBeCloseTo(-1, 5);
   });
 });

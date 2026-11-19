@@ -6,13 +6,13 @@ import { hazardTexture } from './textures';
 import { signLetters } from './labs/signage';
 import { neonGlow } from './labs/textures';
 import { instances } from './merge';
-import type { PointPlacement, SpotPlacement } from './rig';
+import type { PointPlacement, RectPlacement } from './rig';
 
-export interface Door { root: THREE.Group; lamp: PointPlacement; glow: SpotPlacement; update(open: number, clock?: number): void; dispose(): void }
+export interface Door { root: THREE.Group; lamp: PointPlacement; glow: RectPlacement; update(open: number, clock?: number): void; dispose(): void }
 
 /** The sign's colour, and the levels a steady tube runs at. */
 export const NEON = 0x3fd7f0;
-const NEON_CORE = 3.4, NEON_WASH = 12, NEON_HALO = 0.6;
+const NEON_CORE = 3.4, NEON_WASH = 18, NEON_HALO = 0.6;
 
 /**
  * How lit the sign is at a moment, 0 to 1. A tube in good order does not blink: it hums, a few
@@ -106,11 +106,13 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
   halo.position.set(-(inkCx - glowMap.w / 2) * perPx, fasciaY + (inkCy - glowMap.h / 2) * perPx, 0.29);
   halo.name = 'halo'; sign.add(halo);
   const [tube, walls] = letters.material as THREE.MeshStandardMaterial[];
-  // The tube's wash on the fascia. Wide, short, and standing off the sign by half a metre so the
-  // backing and the head box take it as a broad pool rather than a hot spot on the letters' feet.
-  const glow: SpotPlacement = {
-    kind: 'spot', position: [opts.position[0], fasciaY + opts.position[1] + 0.05, 0.85 + opts.position[2]], target: [opts.position[0], fasciaY + opts.position[1], opts.position[2]],
-    color: NEON, intensity: NEON_WASH, distance: 3.2, angle: Math.PI / 2.2, penumbra: 1, decay: 1.6,
+  // The tube's wash on the fascia: a lit strip as wide and as tall as the run, a little in front of
+  // the letters and facing the wall, so the pool it throws is the run's own shape, brightest behind
+  // the middle and fading toward both ends. A spot here threw a round disc behind "L LA" whatever its
+  // angle, which read as one bulb hidden behind the sign rather than eight letters of tube.
+  const glow: RectPlacement = {
+    kind: 'rect', position: [opts.position[0], fasciaY + opts.position[1], 0.62 + opts.position[2]], target: [opts.position[0], fasciaY + opts.position[1], opts.position[2]],
+    color: NEON, intensity: NEON_WASH, width: run.max.x - run.min.x, height: run.max.y - run.min.y,
   };
 
   // The standby lamp is a bulkhead fitting on the face of the right jamb post at head height. The

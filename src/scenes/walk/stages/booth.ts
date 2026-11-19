@@ -6,7 +6,7 @@ import { LABS } from '../labs/materials';
 import { batten } from '../labs/fixtures';
 import { buildDoor } from '../door';
 import { doorOpenAmount } from '../path';
-import type { Placement, PointPlacement, SpotPlacement } from '../rig';
+import type { Placement, PointPlacement, RectPlacement } from '../rig';
 import { STAGE_META } from './registry';
 
 // The booth is the room the walk opens in. The camera stands at z 26 on the path and looks at the
@@ -19,7 +19,7 @@ const DOOR_W = 6, DOOR_H = 3.6;
  *  budget without standing a scene up. The door's standby lamp and the neon sign's wash are the
  *  door's own placements, passed in rather than declared here, because the lamp's colour follows
  *  the shutter and the wash follows the tube's flicker. */
-export function boothLights(lamp: PointPlacement, glow: SpotPlacement): Placement[] {
+export function boothLights(lamp: PointPlacement, glow: RectPlacement): Placement[] {
   return [
     // Cool ceiling strip washing down the shutter, warm pool at the desk.
     { kind: 'spot', position: [0, H - 0.3, 25.4], target: [0, 0.1, 23.3], color: 0x8fd0e0, intensity: 16, distance: 12, angle: Math.PI / 4.2, penumbra: 0.9, decay: 1.7, shadow: true },

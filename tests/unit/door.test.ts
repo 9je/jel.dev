@@ -90,7 +90,13 @@ describe('buildDoor', () => {
   });
   it('washes the fascia with the tube colour from in front of the sign, in world space', () => {
     const door = build();
-    expect(door.glow.kind).toBe('spot'); expect(door.glow.color).toBe(mod.NEON);
+    expect(door.glow.kind).toBe('rect'); expect(door.glow.color).toBe(mod.NEON);
+    if (door.glow.kind !== 'rect') throw new Error('not a rect');
+    // The wash is the run's shape, not a disc: as wide as the letters and much wider than tall.
+    const letters = door.root.getObjectByName('letters') as import('three').Mesh;
+    letters.geometry.computeBoundingBox(); const box = letters.geometry.boundingBox!;
+    expect(door.glow.width).toBeCloseTo(box.max.x - box.min.x, 5);
+    expect(door.glow.width).toBeGreaterThan(door.glow.height * 4);
     expect(door.glow.position[2]).toBeGreaterThan(door.glow.target[2]);
     expect(door.glow.target[2]).toBeCloseTo(22, 5);
     expect(door.glow.target[1]).toBeCloseTo(3.7, 5);
