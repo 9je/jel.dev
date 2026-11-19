@@ -106,7 +106,7 @@ describe('buildDoor', () => {
     const door = build();
     const tube = ((door.root.getObjectByName('letters') as import('three').Mesh).material as import('three').MeshStandardMaterial[])[0];
     door.update(0, 1); const steady = tube.emissiveIntensity, wash = door.glow.intensity;
-    door.update(0, 9.72); expect(tube.emissiveIntensity).toBeLessThan(steady * 0.2); expect(door.glow.intensity).toBeLessThan(wash * 0.2);
+    door.update(0, mod.NEON_PERIOD + 0.02); expect(tube.emissiveIntensity).toBeLessThan(steady * 0.7); expect(door.glow.intensity).toBeLessThan(wash * 0.7); expect(door.glow.intensity).toBeGreaterThan(wash * 0.4);
     door.update(0, 12); expect(tube.emissiveIntensity).toBeGreaterThan(steady * 0.9);
     door.dispose();
   });
@@ -121,14 +121,17 @@ describe('buildDoor', () => {
 });
 
 describe('neonLevel', () => {
-  it('runs near full between stutters and never fully dark', () => {
+  it('runs near full between catches', () => {
     const levels = Array.from({ length: 200 }, (_, i) => mod.neonLevel(0.4 + i * 0.045));
     for (const l of levels) { expect(l).toBeGreaterThan(0.94); expect(l).toBeLessThanOrEqual(1); }
-    expect(mod.neonLevel(9.7)).toBeGreaterThan(0.05);
-    expect(mod.neonLevel(9.7)).toBeLessThan(0.2);
   });
-  it('keeps the stutter short', () => {
-    const dark = Array.from({ length: 970 }, (_, i) => mod.neonLevel(i * 0.01)).filter((l) => l < 0.9).length * 0.01;
-    expect(dark).toBeLessThan(0.4);
+  it('never sags below half, so the closed booth is never blacked out', () => {
+    for (let i = 0; i < 5000; i++) expect(mod.neonLevel(i * 0.01)).toBeGreaterThanOrEqual(0.5);
+    expect(mod.neonLevel(mod.NEON_PERIOD)).toBeLessThan(0.7);
+  });
+  it('catches rarely and briefly', () => {
+    expect(mod.NEON_PERIOD).toBeGreaterThan(20);
+    const low = Array.from({ length: 2330 }, (_, i) => mod.neonLevel(i * 0.01)).filter((l) => l < 0.9).length * 0.01;
+    expect(low).toBeLessThan(0.3);
   });
 });

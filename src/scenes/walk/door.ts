@@ -16,22 +16,23 @@ const NEON_CORE = 3.4, NEON_WASH = 18, NEON_HALO = 0.6;
 
 /**
  * How lit the sign is at a moment, 0 to 1. A tube in good order does not blink: it hums, a few
- * percent either way at mains speed, and now and then the transformer catches and it stutters for
- * a third of a second before it comes back. The stutter is on a 9.7 s clock so it never lines up
- * with the break room's faults, and the hum is a slow beat between two rates rather than one sine,
- * or it reads as a metronome. Pure, so the timing can be pinned without a scene.
+ * percent either way at mains speed, and now and then the transformer catches and it wavers for
+ * a quarter of a second before it comes back. The wash is the closed booth's main light, so a deep
+ * dip blacks out the whole frame: the catch only sags to about half. It runs on a 23.3 s clock so
+ * it is an occasional fault rather than a rhythm, and never lines up with the break room's. The hum
+ * is a slow beat between two rates rather than one sine, or it reads as a metronome. Pure, so the
+ * timing can be pinned without a scene.
  */
+export const NEON_PERIOD = 23.3;
 export function neonLevel(clock: number): number {
   const hum = 1 - 0.035 * (0.5 + 0.5 * Math.sin(clock * 41) * Math.sin(clock * 5.3));
-  const s = clock % 9.7;
-  if (s < 0.34) {
-    // Three dips of falling depth: a catch, a shorter catch, a wobble, then steady.
-    if (s < 0.08) return 0.12;
-    if (s < 0.13) return 0.75;
-    if (s < 0.2) return 0.3;
-    if (s < 0.24) return 0.9;
-    if (s < 0.29) return 0.55;
-    return hum * 0.85;
+  const s = clock % NEON_PERIOD;
+  if (s < 0.24) {
+    // Two sags of falling depth, then steady.
+    if (s < 0.07) return 0.55;
+    if (s < 0.12) return 0.88;
+    if (s < 0.18) return 0.72;
+    return hum * 0.92;
   }
   return hum;
 }
