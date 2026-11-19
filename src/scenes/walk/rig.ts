@@ -18,9 +18,10 @@ export interface RigSize { spots: number; points: number; rects?: number }
  *  order of priority, so a room that spends its whole budget still leaves the next room half lit
  *  on desktop (ten lights, spec 8) and is alone on phones (six). */
 export const ROOM_BUDGET: RigSize = { spots: 4, points: 2, rects: 1 };
-// One rect slot on every rig: the booth's sign is the walk's first frame, phones included.
-export const RIG_DESKTOP: RigSize = { spots: 6, points: 4, rects: 1 };
-export const RIG_PHONE: RigSize = { spots: 4, points: 2, rects: 1 };
+// No rect slot on the shipped rigs. One RectAreaLight in the scene puts area-light code in every lit
+// material's shader, so the booth's sign carries its wash in the door's own materials instead (door.ts).
+export const RIG_DESKTOP: RigSize = { spots: 6, points: 4, rects: 0 };
+export const RIG_PHONE: RigSize = { spots: 4, points: 2, rects: 0 };
 
 const capacity = (size: RigSize, kind: Placement['kind']): number => kind === 'spot' ? size.spots : kind === 'point' ? size.points : size.rects ?? 0;
 /** Slots run spots, then points, then rects. */

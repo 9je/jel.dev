@@ -6,6 +6,44 @@ import { hazardTexture } from './textures';
 import { signLetters } from './labs/signage';
 import { neonGlow } from './labs/textures';
 import { instances } from './merge';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+
+/** The sign's wash as a strip light only the door's own materials know about. A RectAreaLight in the
+ *  scene makes three.js add its area-light code to every lit material in every room, and every one of
+ *  those shaders compiles slower for it on a first visit. The wash only ever lands on the door, so the
+ *  same maths goes into the door's three materials under their own uniform names and nowhere else. */
+interface Strip { uniform: { value: { color: THREE.Color; position: THREE.Vector3; halfWidth: THREE.Vector3; halfHeight: THREE.Vector3 }[] }; sync: THREE.Object3D['onBeforeRender'] }
+function stripLight(center: THREE.Vector3, width: number, height: number): Strip {
+  const entry = { color: new THREE.Color(), position: new THREE.Vector3(), halfWidth: new THREE.Vector3(), halfHeight: new THREE.Vector3() };
+  const rot = new THREE.Matrix4();
+  return {
+    uniform: { value: [entry] },
+    // The shader wants the strip in view space, so it is placed again for whichever camera is drawing.
+    sync(_r, _s, camera, _g, material) {
+      entry.position.copy(center).applyMatrix4(camera.matrixWorldInverse);
+      rot.extractRotation(camera.matrixWorldInverse);
+      entry.halfWidth.set(width / 2, 0, 0).applyMatrix4(rot); entry.halfHeight.set(0, height / 2, 0).applyMatrix4(rot);
+      (material as THREE.ShaderMaterial).uniformsNeedUpdate = true;
+    },
+  };
+}
+const STRIP_CHUNKS = ['lights_pars_begin', 'lights_physical_pars_fragment', 'lights_fragment_begin'] as const;
+function washed<M extends THREE.MeshStandardMaterial>(mat: M, strip: Strip): M {
+  mat.onBeforeCompile = (shader, renderer) => {
+    RectAreaLightUniformsLib.init();
+    const lib = THREE.UniformsLib as unknown as Record<string, THREE.Texture>;
+    const float = renderer.extensions.has('OES_texture_float_linear');
+    shader.uniforms.signStrip = strip.uniform;
+    shader.uniforms.signLtc1 = { value: float ? lib.LTC_FLOAT_1 : lib.LTC_HALF_1 };
+    shader.uniforms.signLtc2 = { value: float ? lib.LTC_FLOAT_2 : lib.LTC_HALF_2 };
+    for (const name of STRIP_CHUNKS) {
+      const own = THREE.ShaderChunk[name].replace(/NUM_RECT_AREA_LIGHTS/g, '1').replace(/\brectAreaLights\b/g, 'signStrip').replace(/\bltc_1\b/g, 'signLtc1').replace(/\bltc_2\b/g, 'signLtc2');
+      shader.fragmentShader = shader.fragmentShader.replace(`#include <${name}>`, own);
+    }
+  };
+  mat.customProgramCacheKey = () => 'sign-strip';
+  return mat;
+}
 import type { PointPlacement, RectPlacement } from './rig';
 
 export interface Door { root: THREE.Group; lamp: PointPlacement; glow: RectPlacement; update(open: number, clock?: number): void; dispose(): void }
@@ -116,6 +154,11 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
     color: NEON, intensity: NEON_WASH, width: run.max.x - run.min.x, height: run.max.y - run.min.y,
   };
 
+  const strip = stripLight(new THREE.Vector3(...glow.position), glow.width, glow.height);
+  const stripColor = new THREE.Color(NEON);
+  washed(slatMat, strip); washed(frameMat, strip); washed(backing.material as THREE.MeshStandardMaterial, strip);
+  root.traverse((o) => { const m = (o as THREE.Mesh).material; if (m === slatMat || m === frameMat || m === backing.material) o.onBeforeRender = strip.sync; });
+
   // The standby lamp is a bulkhead fitting on the face of the right jamb post at head height. The
   // bare emissive ball it replaces had nothing around it to say how big it was or what it was bolted
   // to, and its bloom ran straight across the shutter.
@@ -138,7 +181,7 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
       const level = neonLevel(clock);
       tube.emissiveIntensity = NEON_CORE * level; walls.emissiveIntensity = NEON_CORE * 0.45 * level;
       (halo.material as THREE.MeshBasicMaterial).opacity = NEON_HALO * level;
-      glow.intensity = NEON_WASH * level;
+      glow.intensity = NEON_WASH * level; strip.uniform.value[0].color.copy(stripColor).multiplyScalar(NEON_WASH * level);
       slats.scale.y = Math.max(0.001, p.slatScaleY);
       (slatMat.map as THREE.Texture).repeat.y = p.slatScaleY; (slatMat.normalMap as THREE.Texture).repeat.y = p.slatScaleY; arm.repeat.y = p.slatScaleY;
       rail.position.y = p.bottomY + 0.06;

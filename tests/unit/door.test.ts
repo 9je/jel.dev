@@ -110,6 +110,25 @@ describe('buildDoor', () => {
     door.update(0, 12); expect(tube.emissiveIntensity).toBeGreaterThan(steady * 0.9);
     door.dispose();
   });
+  it('carries the wash as a strip light in the door\'s own shaders, so no other material pays for it', () => {
+    const door = build();
+    const slats = door.root.children.find((c) => (c as import('three').Mesh).geometry?.type === 'PlaneGeometry') as import('three').Mesh;
+    const mats = [slats.material, (door.root.getObjectByName('backing') as import('three').Mesh).material] as import('three').MeshStandardMaterial[];
+    const tube = ((door.root.getObjectByName('letters') as import('three').Mesh).material as import('three').MeshStandardMaterial[])[0];
+    expect(tube.customProgramCacheKey()).not.toBe(mats[0].customProgramCacheKey());
+    for (const m of mats) {
+      const shader = { uniforms: {} as Record<string, { value: unknown }>, fragmentShader: '#include <lights_pars_begin>\n#include <lights_physical_pars_fragment>\n#include <lights_fragment_begin>' };
+      m.onBeforeCompile(shader as never, { extensions: { has: () => true } } as never);
+      expect(shader.fragmentShader).toContain('signStrip[ 1 ]');
+      expect(shader.fragmentShader).not.toMatch(/NUM_RECT_AREA_LIGHTS|rectAreaLights|ltc_1/);
+      expect(shader.uniforms.signLtc1.value).toBeDefined();
+      // The strip follows the tube's catch like the rest of the sign.
+      const strip = (shader.uniforms.signStrip.value as { color: import('three').Color }[])[0];
+      door.update(0, 1); const steady = strip.color.g;
+      door.update(0, mod.NEON_PERIOD + 0.02); expect(strip.color.g).toBeLessThan(steady * 0.7); expect(strip.color.g).toBeGreaterThan(steady * 0.4);
+    }
+    door.dispose();
+  });
   it('stands the standby light clear of its housing, in world space', () => {
     const door = build();
     expect(door.lamp.position).toEqual([3.15, 3.05, 22.5]);

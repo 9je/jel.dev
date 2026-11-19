@@ -25,6 +25,8 @@ describe('rig sizing', () => {
     expect(() => checkBudget([point(0), point(1), point(2)])).toThrow(/points/);
     expect(() => checkBudget([rect(0), rect(1)])).toThrow(/rects/);
     expect(ROOM_BUDGET).toEqual({ spots: 4, points: 2, rects: 1 });
+    // The shipped rigs put no rect light in the scene: one would lengthen every lit shader.
+    expect(RIG_DESKTOP.rects).toBe(0); expect(RIG_PHONE.rects).toBe(0);
   });
 });
 
