@@ -80,29 +80,15 @@ export function build({ scene, store, anchors, tier, typeface }: StageContext): 
 
   anchors.set('booth', new THREE.Vector3(-2.5, 1.6, 23));
 
-  // The ceiling strip is an old tube on its way out: every ten to seventeen seconds it drops out
-  // and strikes back two or three times in under half a second, and the wash it throws down the
-  // shutter goes with it. The wash is the rig's spot, which reads its placement's intensity each
-  // frame, so the stutter is made by moving that number.
+  // The ceiling strip burns steady. It used to stutter every ten to seventeen seconds, cutting the
+  // wash down the shutter to a fifth two or three times in half a second, and with the shutter being
+  // most of the first frame that read as the whole room going black. The sign's own sag is the
+  // room's only flicker now (door.ts).
   const placements = boothLights(door.lamp, door.glow);
-  const wash = placements[0]!, WASH_I = wash.intensity;
-  const tube = (strip.getObjectByName('tube') as THREE.Mesh).material as THREE.MeshStandardMaterial, TUBE_I = tube.emissiveIntensity;
-  // Off and on times inside one stutter, in seconds.
-  const STUTTER = [0, 0.05, 0.11, 0.2, 0.26, 0.29, 0.43];
-  let clock = 0, next = 6 + Math.random() * 5, at = -1;
+  let clock = 0;
   return {
     id: 'booth', root, lights: placements,
-    update(t, dt) {
-      clock += dt; door.update(doorOpenAmount(t), clock);
-      let on = true;
-      if (at < 0 && clock >= next) at = clock;
-      if (at >= 0) {
-        const e = clock - at;
-        if (e > STUTTER[STUTTER.length - 1]!) { at = -1; next = clock + 10 + Math.random() * 7; } else on = STUTTER.filter((s) => s <= e).length % 2 === 0;
-      }
-      wash.intensity = on ? WASH_I : WASH_I * 0.18;
-      tube.emissiveIntensity = on ? TUBE_I : 0.15;
-    },
+    update(t, dt) { clock += dt; door.update(doorOpenAmount(t), clock); },
     dispose() { door.dispose(); disposeObject(root); scene.remove(root); },
   };
 }
