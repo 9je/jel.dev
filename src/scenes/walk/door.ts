@@ -50,6 +50,7 @@ export interface Door { root: THREE.Group; lamp: PointPlacement; glow: RectPlace
 
 /** The sign's colour, and the levels a steady tube runs at. */
 export const NEON = 0x3fd7f0;
+const LAMP_LENS = 2.6, LAMP_LIGHT = 2;
 const NEON_CORE = 3.4, NEON_WASH = 18, NEON_HALO = 0.6;
 
 /**
@@ -73,6 +74,18 @@ export function neonLevel(clock: number): number {
     return hum * 0.92;
   }
   return hum;
+}
+
+/** The standby lamp's bulb is loose: every LAMP_PERIOD seconds it drops out twice in a quarter of
+ *  a second. A small light off to the side, so it can flicker hard without taking the room with it.
+ *  Its period is no near multiple of the sign's, so the two never catch together. */
+export const LAMP_PERIOD = 13.7;
+export function lampLevel(clock: number): number {
+  const s = clock % LAMP_PERIOD;
+  if (s < 0.06) return 0.08;
+  if (s < 0.13) return 1;
+  if (s < 0.21) return 0.08;
+  return 1;
 }
 
 export function doorPose(open: number, height: number) {
@@ -165,14 +178,14 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
   const lampX = width / 2 + 0.15, lampY = height - 0.55, lampZ = 0.32;
   const housing = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.26, 0.12), frameMat);
   housing.position.set(lampX, lampY, lampZ); root.add(housing);
-  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a0403, emissive: 0xc8322b, emissiveIntensity: 2.6 }));
+  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a0403, emissive: 0xc8322b, emissiveIntensity: LAMP_LENS }));
   lens.position.set(lampX, lampY, lampZ + 0.06); root.add(lens);
   const cage = instances(new THREE.BoxGeometry(0.012, 0.24, 0.012), frameMat, Array.from({ length: 6 }, (_, i): [number, number, number] => [lampX - 0.075 + i * 0.03, lampY, lampZ + 0.13]));
   root.add(cage);
   // The rig owns the light now, but the placement has to sit in world space: the door's own root is
   // parented at opts.position, and a Placement carries no parent transform to inherit that from.
   // It stands clear of the housing, which would otherwise swallow the pool it is meant to throw.
-  const lamp: PointPlacement = { kind: 'point', position: [lampX + opts.position[0], lampY + opts.position[1], 0.5 + opts.position[2]], color: 0xc8322b, intensity: 2, distance: 3.2, decay: 2 };
+  const lamp: PointPlacement = { kind: 'point', position: [lampX + opts.position[0], lampY + opts.position[1], 0.5 + opts.position[2]], color: 0xc8322b, intensity: LAMP_LIGHT, distance: 3.2, decay: 2 };
 
   return {
     root, lamp, glow,
@@ -187,6 +200,7 @@ export function buildDoor(store: AssetStore, opts: { width: number; height: numb
       rail.position.y = p.bottomY + 0.06;
       drum.scale.set(p.drumRadius / 0.22, 1, p.drumRadius / 0.22);
       const g = open > 0.05; (lens.material as THREE.MeshStandardMaterial).emissive.set(g ? 0x2ecc71 : 0xc8322b); lamp.color = g ? 0x2ecc71 : 0xc8322b;
+      const bulb = lampLevel(clock); (lens.material as THREE.MeshStandardMaterial).emissiveIntensity = LAMP_LENS * bulb; lamp.intensity = LAMP_LIGHT * bulb;
     },
     dispose() { disposeObject(root); },
   };

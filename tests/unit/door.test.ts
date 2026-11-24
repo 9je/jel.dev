@@ -139,6 +139,24 @@ describe('buildDoor', () => {
   });
 });
 
+describe('lampLevel', () => {
+  it('blinks the standby lamp now and then, briefly, and never in step with the sign', () => {
+    expect(mod.LAMP_PERIOD).toBeGreaterThan(8);
+    // Not a near multiple of the sign's period, or the two would catch together.
+    const ratio = mod.NEON_PERIOD / mod.LAMP_PERIOD; expect(Math.abs(ratio - Math.round(ratio))).toBeGreaterThan(0.15);
+    const samples = Array.from({ length: Math.round(mod.LAMP_PERIOD * 100) }, (_, i) => mod.lampLevel(i * 0.01));
+    expect(Math.min(...samples)).toBeLessThan(0.3);
+    expect(samples.filter((l) => l < 0.9).length * 0.01).toBeLessThan(0.3);
+    expect(samples.filter((l) => l === 1).length).toBeGreaterThan(samples.length * 0.9);
+  });
+  it('dims the lamp\'s light and its lens together', () => {
+    const door = build();
+    door.update(0, 1); const on = door.lamp.intensity;
+    door.update(0, mod.LAMP_PERIOD + 0.02); expect(door.lamp.intensity).toBeLessThan(on * 0.3);
+    door.dispose();
+  });
+});
+
 describe('neonLevel', () => {
   it('runs near full between catches', () => {
     const levels = Array.from({ length: 200 }, (_, i) => mod.neonLevel(0.4 + i * 0.045));

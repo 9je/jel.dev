@@ -27,3 +27,16 @@ describe('booth lighting', () => {
     stage.dispose();
   });
 });
+
+describe('booth props', () => {
+  it('clamps the desk lamp to the desk\'s edge, its clamp top on the desktop', async () => {
+    const { LAMP_CLAMP, DESK } = await import('../../src/scenes/walk/stages/booth');
+    // The lamp is a clamp lamp with no base. Stood in the middle of the desk its clamp sank into the
+    // top and the arm read as growing out of the wood.
+    expect(LAMP_CLAMP.position[1]).toBeCloseTo(DESK.top, 3);
+    expect(LAMP_CLAMP.position[0]).toBeCloseTo(DESK.backX, 3);
+    // The jaw opens along the model's -z, the side its shade reaches toward. Turned, that has to point
+    // in over the desk (world -x from its back edge), or the clamp grips air.
+    const jawX = -Math.sin(LAMP_CLAMP.rotationY); expect(jawX).toBeLessThan(-0.8);
+  });
+});

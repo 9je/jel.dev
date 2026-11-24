@@ -14,6 +14,16 @@ import { STAGE_META } from './registry';
 // read sits inside a 3 m cone in front of the door.
 const W = 8, D = 8, H = 4.4, Z0 = 22, Z1 = 30;
 const DOOR_W = 6, DOOR_H = 3.6;
+/** The desk as it stands: its top's height, measured off the model, and its back edge in world x,
+ *  the long side away from the drawers. The model's top runs -0.469 to 0.448 in its own z, which the
+ *  quarter turn lays along world x. */
+export const DESK = { position: [1.55, 0, 23.9] as const, top: 0.7875, backX: 1.55 + 0.469 };
+/** The desk lamp is a clamp lamp: no base, a C clamp at its foot whose top jaw sits at the model's
+ *  origin and opens toward the model's -z, the side the shade reaches. Stood in the middle of the
+ *  desk the clamp sank into the top and the arm grew out of the wood. It grips the back edge, turned
+ *  as it always stood, which points the jaw in over the desk, so the shade still reaches toward the
+ *  stool with its bulb to the camera. Toward the shutter end, to stay left of the stop rail. */
+export const LAMP_CLAMP = { position: [DESK.backX, DESK.top, 23.1] as [number, number, number], rotationY: 2.1 };
 
 /** The room's placements. Pure, and exported, so the lighting can be checked against the rig's room
  *  budget without standing a scene up. The door's standby lamp and the neon sign's wash are the
@@ -24,7 +34,7 @@ export function boothLights(lamp: PointPlacement, glow: RectPlacement): Placemen
     // Cool ceiling strip washing down the shutter, warm pool at the desk.
     { kind: 'spot', position: [0, H - 0.3, 25.4], target: [0, 0.1, 23.3], color: 0x8fd0e0, intensity: 16, distance: 12, angle: Math.PI / 4.2, penumbra: 0.9, decay: 1.7, shadow: true },
     glow,
-    { kind: 'point', position: [1.18, 1, 23.68], color: 0xffc98a, intensity: 2.6, distance: 3.2, decay: 2 },
+    { kind: 'point', position: [1.68, 1.03, 23.38], color: 0xffc98a, intensity: 2.6, distance: 3.2, decay: 2 },
     lamp,
   ];
 }
@@ -51,9 +61,9 @@ export function build({ scene, store, anchors, tier, typeface }: StageContext): 
   const door = buildDoor(store, { width: DOOR_W, height: DOOR_H, position: [0, 0, Z0], typeface }); root.add(door.root);
 
   // Props sit in the right third of frame, clear of the copy that overlays the left half.
-  const desk = store.model('desk'); desk.position.set(1.55, 0, 23.9); desk.rotation.y = -Math.PI / 2; root.add(desk);
+  const desk = store.model('desk'); desk.position.set(...DESK.position); desk.rotation.y = -Math.PI / 2; root.add(desk);
   const stool = store.model('stool'); stool.position.set(0.62, 0, 23.7); root.add(stool);
-  const lamp = store.model('desk_lamp'); lamp.position.set(1.5, 0.76, 23.35); lamp.rotation.y = 2.1; root.add(lamp);
+  const lamp = store.model('desk_lamp'); lamp.position.set(...LAMP_CLAMP.position); lamp.rotation.y = LAMP_CLAMP.rotationY; root.add(lamp);
   // The lamp is a warm prop beside the light, not a second light. Left on the shared PBR setup its
   // chrome arm mirrored the warm point back at the camera and the whole armature read as lit from
   // inside. Dulling the reflection and holding the roughness up puts the glow back in the shade.
