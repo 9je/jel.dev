@@ -237,6 +237,9 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   // and not on the first step into it. The passes that draw the room with a material of their own,
   // the normal pass and the shadow pass, get their programs the same way.
   const scratch = post ? new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }) : null;
+  /** Warm draws that have to land on the canvas, run at the top of the next frame's draw (below). */
+  const onScreenWarm: { draw: () => void; done: () => void }[] = [];
+  let looping = false;
   const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
   // Only a container: fog, environment and lights are read from the room's scene, passed as the target.
   const probe = new THREE.Scene();
@@ -455,13 +458,23 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
         // several times as often: on a slow renderer each was a full frame of somebody else's
         // geometry, and a dock jump waiting on the room could not get a frame of its own in. The
         // lights are the rig's and stay, so the programs are the ones the real frame will ask for.
-        const hidden: THREE.Object3D[] = [];
-        for (const o of scene.children) if (o !== root && o.name !== 'rig' && o.visible) { o.visible = false; hidden.push(o); }
-        for (const g of warmed) if (g.visible) { g.visible = false; hidden.push(g); }
-        root.visible = true;
-        renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
-        root.visible = false;
-        for (const o of hidden) o.visible = true;
+        const draw = () => {
+          const hidden: THREE.Object3D[] = [];
+          for (const o of scene.children) if (o !== root && o.name !== 'rig' && o.visible) { o.visible = false; hidden.push(o); }
+          for (const g of warmed) if (g.visible) { g.visible = false; hidden.push(g); }
+          root.visible = true;
+          renderer.setRenderTarget(scratch); renderer.render(scene, camera); renderer.setRenderTarget(null);
+          root.visible = false;
+          for (const o of hidden) o.visible = true;
+        };
+        // With no scratch target (the tiers without post) this draw lands on the canvas itself, with
+        // everything but the far-off room hidden. Drawn here, between frames, the browser showed it:
+        // a black frame per batch, a run of them per room, which read as the booth flickering to
+        // black on Iris Xe. So it waits for the next frame and goes just before the real draw,
+        // which covers it before anything is presented.
+        // Under the loader there is no frame loop yet, and nothing on the canvas can be seen.
+        if (scratch || !looping) draw(); else await new Promise<void>((done) => { onScreenWarm.push({ draw, done }); });
+        if (disposed) return;
         for (const g of root.children) if (!warmed.includes(g)) warmed.push(g);
         batch = 0; fresh = 0;
         await new Promise(requestAnimationFrame);
@@ -627,6 +640,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   let before: ((now: number) => void) | null = null;
   function frame(now = performance.now()) {
     if (disposed) return;
+    looping = true;
     raf = requestAnimationFrame(frame);
     before?.(now);
     // Checked every frame as well as on the events: a viewport can change without firing either of
@@ -661,6 +675,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     if (Math.abs(lens - camera.fov) > 1e-4) { camera.fov = lens; camera.updateProjectionMatrix(); }
     grey.update(current, dt); for (const s of built.values()) s.update(current, dt);
     hoverFx.update(dt);
+    for (const w of onScreenWarm.splice(0)) { w.draw(); w.done(); }
     if (post) post.render(dt); else renderer.render(scene, camera);
   }
   resize(true); window.addEventListener('resize', onResize); window.visualViewport?.addEventListener('resize', onResize);
@@ -755,7 +770,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
     ready: (id) => { const d = defs.find((x) => x.stop === id); return !d || built.has(d.id) || settled.has(d.id); },
     whenReady: (id) => { wanted.add(id); return readiness.get(id)?.promise ?? Promise.resolve(); },
     dispose() {
-      disposed = true; cancelAnimationFrame(raf);
+      disposed = true; cancelAnimationFrame(raf); for (const w of onScreenWarm.splice(0)) w.done();
       window.removeEventListener('resize', onResize); window.visualViewport?.removeEventListener('resize', onResize);
       canvas.removeEventListener('webglcontextlost', onContextLost);
       hoverFx.dispose();
