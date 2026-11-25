@@ -45,27 +45,34 @@ jobs:
           tags: |
             ghcr.io/9je/jel.dev:latest
             ghcr.io/9je/jel.dev:${{ github.sha }}
+            ghcr.io/9je/jel.dev:sha-${{ github.sha }}
           build-args: |
             GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Deploys through 9je/infra's bin/deploy on vps.jel.dev: the key can only run "deploy jel-dev".
+      # stdin is the image tag, then this run's token (the server pulls with it, then forgets it).
       - name: Deploy to VPS
         env:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           HOST: ${{ secrets.DEPLOY_HOST }}
-          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ~/.ssh
           (umask 077; printf '%s\n' "$KEY" > ~/.ssh/deploy)
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes "$SSH_USER@$HOST" deploy
+          printf 'sha-%s\n%s\n' "$GITHUB_SHA" "$TOKEN" | ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o BatchMode=yes "deploy@$HOST" "deploy jel-dev"
 
       - name: Health check
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           for i in 1 2 3 4 5 6; do
-            if curl -fsS https://jel.dev/build.txt | grep -qx "$GITHUB_SHA" && curl -fsS https://jel.dev/ | grep -q "Jordan Eldridge Labs"; then echo "live"; exit 0; fi
+            # --connect-to checks the server deploy just updated, whatever DNS currently says.
+            if curl -fsS --connect-to "jel.dev:443:$HOST:443" https://jel.dev/build.txt | grep -qx "$GITHUB_SHA" \
+               && curl -fsS --connect-to "jel.dev:443:$HOST:443" https://jel.dev/ | grep -q "Jordan Eldridge Labs"; then echo "live"; exit 0; fi
             sleep 5
           done
           echo "jel.dev did not answer with the deployed build" >&2; exit 1
