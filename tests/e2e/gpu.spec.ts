@@ -31,3 +31,58 @@ test('the low tier never puts a frame on screen outside the frame loop while roo
   await page.waitForTimeout(90_000);
   expect(await page.evaluate(() => (window as unknown as { __stray: number }).__stray)).toBe(0);
 });
+
+test('a reader who scrolls on from the first frame never walks into a room that is not built', async ({ page }) => {
+  // Jordan's laptop: the low tier on Iris Xe, scrolling fast the moment the loader cleared, reached
+  // the break room before it was built and saw the greybox, then a hard stutter as it built in view.
+  // A quarter speed CPU stands in for that GPU: the rooms then build slower than the scroll.
+  test.setTimeout(300_000);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await page.setViewportSize({ width: 1528, height: 828 });
+  await page.goto('/?quality=low');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  // Every attribute change on the way: an unbuilt room is one the reader could see if the loading
+  // sign is not over it.
+  await page.evaluate(() => {
+    const w = window as unknown as { __bad: string[] }; w.__bad = [];
+    const root = document.querySelector('[data-walk]')!, pre = document.querySelector('[data-preloader]')!;
+    const check = () => {
+      if (pre.getAttribute('data-state') === 'hidden' && !root.hasAttribute('data-room-built')) w.__bad.push(location.hash);
+    };
+    new MutationObserver(check).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['data-room-built', 'data-state', 'data-active'] });
+  });
+  await page.mouse.move(700, 400);
+  const start = Date.now();
+  while (Date.now() - start < 90_000) {
+    await page.mouse.wheel(0, 400); await page.waitForTimeout(60);
+    if ((await page.evaluate(() => location.hash)) === '#file' && await page.locator('[data-walk]').evaluate((el) => el.hasAttribute('data-room-built'))) break;
+  }
+  const where = await page.evaluate(() => ({ hash: location.hash, waiting: document.querySelector<HTMLElement>('[data-walk]')?.dataset.waitingFor ?? '', loader: document.querySelector<HTMLElement>('[data-preloader]')?.dataset.state, y: Math.round(scrollY) }));
+  expect(where.hash, `stopped short of the file: ${JSON.stringify(where)}`).toBe('#file');
+  expect(await page.evaluate(() => (window as unknown as { __bad: string[] }).__bad)).toEqual([]);
+});
+
+test('a reader who opens a link deep in the walk and scrolls back never walks into a room that is not built', async ({ page }) => {
+  // A deep link builds the room it opens in and leaves the rooms behind it for later.
+  test.setTimeout(300_000);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await page.setViewportSize({ width: 1528, height: 828 });
+  await page.goto('/?quality=low#containment');
+  await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
+  await page.evaluate(() => {
+    const w = window as unknown as { __bad: string[] }; w.__bad = [];
+    const root = document.querySelector('[data-walk]')!, pre = document.querySelector('[data-preloader]')!;
+    new MutationObserver(() => { if (pre.getAttribute('data-state') === 'hidden' && !root.hasAttribute('data-room-built')) w.__bad.push(location.hash); })
+      .observe(document.body, { attributes: true, subtree: true, attributeFilter: ['data-room-built', 'data-state', 'data-active'] });
+  });
+  await page.mouse.move(700, 400);
+  const start = Date.now();
+  while (Date.now() - start < 90_000) {
+    await page.mouse.wheel(0, -400); await page.waitForTimeout(60);
+    if ((await page.evaluate(() => location.hash)) === '#booth') break;
+  }
+  expect(await page.evaluate(() => location.hash)).toBe('#booth');
+  expect(await page.evaluate(() => (window as unknown as { __bad: string[] }).__bad)).toEqual([]);
+});

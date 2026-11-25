@@ -13,7 +13,7 @@ import { greybox } from './stages/greybox';
 import { STAGES } from './stages/registry';
 import { LightRig, rigSizeFor } from './rig';
 import { createPacer } from './pace';
-import { createCalm, needed } from './calm';
+import { createCalm, buildNow } from './calm';
 import { disposeStray, disposeObject, anchorTiles } from './materials';
 import { createHover, pickHotspot } from './interact';
 
@@ -138,7 +138,7 @@ export async function mountWalk(canvas: HTMLCanvasElement, opts: WalkOptions): P
   const hurry = () => {
     if (disposed || !building) return true;
     const [enter, leave] = span(building.stop);
-    if (needed(current, enter, leave)) return true;
+    if (buildNow(current, enter, leave)) return true;
     return awaited();
   };
   /** Somebody jumped to a room that is not built and is looking at the loading sign until it is.

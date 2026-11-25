@@ -1,7 +1,8 @@
 import { chooseTier, pixelRatioCap, readTierInput, type Tier, type TierInput } from './quality';
 import type { WalkHandle } from './scene';
 import type { ScrollController } from './scroll';
-import { STOPS, stopAt, tForStop, type StopId } from './path';
+import { STOPS, roomAt, stopAt, tForStop, type StopId } from './path';
+import { doorHold, roomsOnTheWay } from './calm';
 import type { Hotspot } from './stages/types';
 import { armMedia, disarmMedia, parseHash } from './panel';
 import { onStreak, startStreakFeed } from './streak-feed';
@@ -95,6 +96,9 @@ let generation = 0;
 let handle: WalkHandle | null = null;
 let scroll: ScrollController | null = null;
 let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
+/** Waits, under the loading sign, until every room an automatic move to `to` would show is built.
+ *  Set while the full walk runs. */
+let roomsFor: ((to: number) => Promise<void>) | null = null;
 let pinRaf = 0;
 // Places the open exhibit card against its anchor. Held here so opening a card can place it in the
 // same frame rather than leaving it at the default for one, and so teardown can drop it.
@@ -299,6 +303,8 @@ async function goProject(id: string, els: WalkElements, opts: { push?: boolean; 
   const away = view !== undefined ? Math.abs((s?.progress() ?? view) - view) > 0.004 : !!s && stopAt(s.progress()).id !== stop;
   if (s && away) {
     heading = id;
+    await roomsFor?.(view ?? tForStop(stop));
+    if (gen !== generation) return;
     if (view !== undefined) s.walkTo(view); else await walkTo(stop);
     // The jump eases on after the room reports. Wait until the walk is where it was sent, since a
     // panel opened over a walk still moving is closed by it. Capped, for a jump that was cut short.
@@ -629,8 +635,45 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
     window.addEventListener('resize', resizeHold);
     scroll = createScroll();
     const sc = scroll; h.beforeFrame((now) => sc.tick(now));
+    /** The loading sign over the walk while a room builds: for a dock jump to it, and for a reader
+     *  who walked on faster than it built. Lifts when the room exists, or after 20 s regardless, so
+     *  a download that never settles does not strand the walk at 90%. */
+    let waiting = false;
+    // A second request while the sign is up waits its turn behind the first, then looks again.
+    let queue: Promise<void> = Promise.resolve();
+    const waitForRooms = (ids: StopId[], then: () => void): void => {
+      if (waiting) { void queue.then(() => { if (gen === generation) waitForRooms(ids, then); }); return; }
+      const missing = ids.filter((id) => !h.ready(id));
+      if (!missing.length) { then(); return; }
+      let release!: () => void; queue = new Promise<void>((r) => { release = r; });
+      waiting = true; els.root.dataset.waitingFor = missing.join(' ');
+      els.preloader.dataset.state = 'loading'; els.preloader.setAttribute('aria-busy', 'true');
+      setPreloader(els, 0.9);
+      // Cleared as soon as the race settles: readiness usually wins it, and a timer left armed
+      // would keep the tab awake for another twenty seconds for nothing.
+      let waitTimer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<void>((resolve) => { waitTimer = setTimeout(resolve, 20_000); });
+      void Promise.race([Promise.all(missing.map((id) => h.whenReady(id))), timeout]).then(() => {
+        clearTimeout(waitTimer);
+        waiting = false; delete els.root.dataset.waitingFor;
+        if (gen !== generation) { release(); return; }
+        setPreloader(els, 1); els.preloader.dataset.state = 'done'; els.preloader.setAttribute('aria-busy', 'false');
+        hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
+        then(); release();
+      });
+    };
+    let lastT = sc.progress();
+    roomsFor = (to) => new Promise<void>((resolve) => waitForRooms(roomsOnTheWay(sc.progress(), to), resolve));
     scroll.onProgress((t) => {
       handle?.setProgress(t);
+      // Nobody walks into a room that is not built. A reader who scrolls on faster than the next
+      // room builds is stopped as they leave this one, under the loading sign, until it stands.
+      // A jump or walk the page started is never held halfway: it waited for its rooms before it left.
+      const dir = t < lastT ? -1 : 1; lastT = t;
+      const next = waiting || sc.flying() ? null : doorHold(t, (id) => h.ready(id), dir);
+      if (next) { sc.hold(true); waitForRooms([next], () => sc.hold(false)); }
+      // Whether the room the camera is in stands built: what the walk's tests hold it to.
+      els.root.toggleAttribute('data-room-built', h.ready(roomAt(t).id));
       // The cue has done its job the moment the walk moves, and it never comes back.
       if (t > 0.01) els.root.dataset.scrolled = '';
       // Walking on puts an open project away, the way it always did the card.
@@ -654,27 +697,8 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
         e.preventDefault();
         const id = a.dataset.stopLink as StopId;
         closeCard(els);
-        if (handle && !handle.ready(id)) {
-          // The room is still building in the background. Show the tube, land when it exists, or
-          // after 20s regardless so a download that never settles doesn't strand the dock at 90%.
-          els.preloader.dataset.state = 'loading'; els.preloader.setAttribute('aria-busy', 'true');
-          setPreloader(els, 0.9);
-          // Cleared as soon as the race settles: readiness usually wins it, and a timer left armed
-          // would keep the tab awake for another twenty seconds for nothing.
-          let waitTimer: ReturnType<typeof setTimeout> | undefined;
-          const timeout = new Promise<void>((resolve) => { waitTimer = setTimeout(resolve, 20_000); });
-          void Promise.race([handle.whenReady(id), timeout]).then(() => {
-            clearTimeout(waitTimer);
-            if (gen !== generation) return;
-            setPreloader(els, 1); els.preloader.dataset.state = 'done'; els.preloader.setAttribute('aria-busy', 'false');
-            hiddenTimer = setTimeout(() => { if (els.preloader.dataset.state === 'done') els.preloader.dataset.state = 'hidden'; }, 1100);
-            scroll?.jumpTo(id);
-            focusHeading(id);
-          });
-          return;
-        }
-        scroll?.jumpTo(id);
-        focusHeading(id);
+        // The flight shows every room between here and there: it leaves once they all stand.
+        waitForRooms(roomsOnTheWay(sc.progress(), tForStop(id)), () => { scroll?.jumpTo(id); focusHeading(id); });
       });
     }
     unwire = wirePointer(els, coarse, interact);
@@ -712,6 +736,7 @@ async function startFull(els: WalkElements, tier: Tier, coarse: boolean, probed?
 
 function teardown() {
   generation++;
+  roomsFor = null;
   unwire?.(); unwire = null;
   sheetOff?.(); sheetOff = null;
   columnOff?.(); columnOff = null;

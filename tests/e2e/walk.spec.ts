@@ -476,12 +476,16 @@ test.describe('wide coarse pointer', () => {
 });
 
 test('one stop is readable at a time, and the leaving one is gone inside 450 ms', async ({ page }) => {
+  // A jump into a room not built yet waits under the loading sign, up to 20 s, and under SwiftShader
+  // the rooms behind the booth take that long: several of those waits overran the default budget.
+  test.setTimeout(420_000);
   await page.goto('/?quality=low');
   await expect(page.locator('[data-preloader]')).toHaveAttribute('data-state', 'hidden', { timeout: 120_000 });
   // Every stop and every transition between them: the camera never has two panels of copy up.
   for (const t of [0, 0.05, 0.13, 0.2, 0.3, 0.4, 0.48, 0.56, 0.63, 0.7, 0.77, 0.84, 0.92, 1]) {
     await page.evaluate((v) => { const max = document.documentElement.scrollHeight - window.innerHeight; window.scrollTo(0, v * max); }, t);
     await page.waitForTimeout(800);
+    await expect(page.locator('[data-walk]')).not.toHaveAttribute('data-waiting-for', /./, { timeout: 30_000 });
     await expect(page.locator('section[data-stop][data-active]')).toHaveCount(1);
   }
   // How the fade runs, read off the cascade rather than sampled off the screen: a CSS transition

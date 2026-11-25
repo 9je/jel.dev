@@ -11,6 +11,10 @@ export interface ScrollController {
   /** Walks to a point on the walk that is not a stop, in the walk's own scroll. */
   walkTo(t: number): void;
   onProgress(cb: (t: number) => void): () => void;
+  /** Stops the reader's scroll where it is, or lets it go again: wheel, touch and keys all halt. */
+  hold(on: boolean): void;
+  /** Whether a jump or walk the page started is still easing to where it was sent. */
+  flying(): boolean;
   onStop(cb: (id: StopId) => void): () => void;
   dispose(): void;
 }
@@ -25,7 +29,8 @@ export interface ScrollController {
 export function createScroll(): ScrollController {
   const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, wheelMultiplier: 0.9 });
 
-  let t = 0;
+  let t = 0, flights = 0;
+  const flown = () => { flights = Math.max(0, flights - 1); };
   let current: StopId | null = null;
   const progressCbs = new Set<(t: number) => void>();
   const stopCbs = new Set<(id: StopId) => void>();
@@ -60,10 +65,12 @@ export function createScroll(): ScrollController {
     jumpTo(id, immediate = false) {
       const target = pageAt(tForStop(id)) * maxScroll();
       if (immediate) lenis.scrollTo(target, { immediate: true, force: true });
-      else lenis.scrollTo(target, { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true });
+      else { flights++; lenis.scrollTo(target, { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true, onComplete: flown }); }
     },
-    walkTo(to) { lenis.scrollTo(pageAt(to) * maxScroll(), { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true }); },
+    walkTo(to) { flights++; lenis.scrollTo(pageAt(to) * maxScroll(), { duration: 1.6, easing: (x: number) => 1 - Math.pow(1 - x, 3), force: true, onComplete: flown }); },
     onProgress(cb) { progressCbs.add(cb); return () => progressCbs.delete(cb); },
+    hold(on) { if (on) lenis.stop(); else lenis.start(); },
+    flying: () => flights > 0,
     onStop(cb) { stopCbs.add(cb); return () => stopCbs.delete(cb); },
     dispose() { window.removeEventListener('resize', update); lenis.destroy(); },
   };

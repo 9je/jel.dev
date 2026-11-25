@@ -1,3 +1,5 @@
+import { STOPS, type StopId } from './path';
+
 /**
  * Holding the background build until the camera is standing still.
  *
@@ -17,6 +19,49 @@ export const APPROACH = 0.06;
 /** Whether the camera at `t` is in, or closing on, the room that spans `enter` to `leave`. */
 export function needed(t: number, enter: number, leave: number): boolean {
   return t >= enter - APPROACH && t <= leave + APPROACH;
+}
+
+/** Whether a room's build goes ahead with the camera moving. A room still ahead of the camera does:
+ *  a reader who scrolls on without stopping would otherwise reach it unbuilt, and on a slow GPU a
+ *  room takes seconds. The hitches that costs land on rooms already built and are a few frames; an
+ *  unbuilt room on screen is the whole room. Only a room behind the camera, which a dock jump past
+ *  it leaves, waits for the camera to park. */
+export function buildNow(t: number, enter: number, leave: number): boolean {
+  return needed(t, enter, leave) || enter >= t;
+}
+
+/** How far past the end of a room's hold the walk goes before an unbuilt next room stops it. */
+export const HOLD_LEAD = 0.004;
+
+/** The room a reader at `t` is about to see and that is not built yet, or null. The walk stops there
+ *  under the loading sign until it is: the corridor looks through the next doorway, so the stop
+ *  comes as the reader leaves a room's hold, before the unbuilt one can be seen. `dir` is the way
+ *  they are walking: back (-1) matters after a deep link, which builds the room it opens in and
+ *  leaves the ones behind it for later. */
+export function doorHold(t: number, ready: (id: StopId) => boolean, dir: 1 | -1 = 1): StopId | null {
+  if (dir < 0) {
+    // The last stop whose hold has begun at or before t: inside its hold the reader is reading it,
+    // past the hold they are in the transit, walking back into it.
+    let k = -1;
+    for (let i = 0; i < STOPS.length; i++) if (STOPS[i]!.hold[0] <= t) k = i;
+    if (k < 0 || t <= STOPS[k]!.hold[1] + HOLD_LEAD) return null;
+    return ready(STOPS[k]!.id) ? null : STOPS[k]!.id;
+  }
+  const i = STOPS.findIndex((s) => s.enter > t);
+  if (i <= 0) return null;
+  if (t <= STOPS[i - 1]!.hold[1] + HOLD_LEAD) return null;
+  return ready(STOPS[i]!.id) ? null : STOPS[i]!.id;
+}
+
+/** Every room an automatic move from `from` to `to` would show: each room it passes into on the way,
+ *  and the next one if it ends where `doorHold` would stop a reader. A dock jump or a project link
+ *  waits for these under the loading sign, then flies: a flight is never held halfway. */
+export function roomsOnTheWay(from: number, to: number): StopId[] {
+  const lo = Math.min(from, to), hi = Math.max(from, to);
+  const out = STOPS.filter((s) => s.enter > lo && s.enter <= hi).map((s) => s.id);
+  const end = doorHold(to, () => false);
+  if (end && !out.includes(end)) out.push(end);
+  return out;
 }
 
 export interface Calm {
